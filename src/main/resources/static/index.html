@@ -301,14 +301,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Năm Xuất Bản:</label>
-            <input
-              type="number"
-              id="bookYear"
-              min="1000"
-              max="2026"
-              value="2026"
-              placeholder="Chọn năm"
-            />
+            <input type="number" id="bookYear" placeholder="Chọn năm" />
           </div>
           <div class="form-group">
             <label>Mã Thể Loại:</label>
@@ -643,6 +636,43 @@
           console.error(error);
         }
       }
+
+      async function editBook(id, oldTitle, oldYear) {
+        const newTitle = prompt("Nhập tiêu đề mới:", oldTitle);
+        if (!newTitle) return;
+
+        const newYear = prompt("Nhập năm xuất bản mới:", oldYear);
+        if (!newYear) return;
+
+        const newAuthorId = prompt("Nhập mã thể loại mới:", "");
+        if (!newAuthorId) return;
+
+        try {
+          const response = await fetch(`${API_URL}/books/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: newTitle,
+              publishedYear: parseInt(newYear),
+              authorId: parseInt(newAuthorId),
+            }),
+          });
+
+          if (response.ok) {
+            alert("Cập nhật sách thành công!");
+            loadBooks();
+          } else {
+            const errorText = await response.text();
+            alert(errorText);
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Lỗi kết nối!");
+        }
+      }
+
       async function editAuthor(id, oldName, oldBio) {
         const newName = prompt("Nhập tên mới:", oldName);
         const newBio = prompt("Nhập quốc tịch mới:", oldBio);
@@ -769,6 +799,14 @@
         loadBooks();
         loadPrices();
       };
+      yearInput.addEventListener("input", function () {
+        const currentYear = new Date().getFullYear();
+
+        if (this.value > currentYear) {
+          this.value = currentYear;
+          alert("Năm không được vượt quá năm hiện tại!");
+        }
+      });
     </script>
   </body>
 </html>
