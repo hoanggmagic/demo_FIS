@@ -292,6 +292,95 @@
       .btn-cancel:hover {
         background: #7f8c8d;
       }
+
+      .price-range-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .price-range-value {
+        background: #667eea;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.9em;
+      }
+
+      .dual-range-slider {
+        position: relative;
+        height: 40px;
+        margin: 10px 0 20px;
+      }
+
+      .dual-range-track {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 10px;
+        transform: translateY(-50%);
+      }
+
+      .dual-range-fill {
+        position: absolute;
+        top: 50%;
+        height: 8px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        border-radius: 10px;
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+
+      .dual-range-slider input[type="range"] {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        transform: translateY(-50%);
+        background: transparent;
+        pointer-events: none;
+        margin: 0;
+        z-index: 2;
+      }
+
+      .dual-range-slider input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #667eea;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+        pointer-events: all;
+      }
+
+      .dual-range-slider input[type="range"]::-moz-range-thumb {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #667eea;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+        pointer-events: all;
+      }
+
+      .dual-range-slider input[type="range"]::-webkit-slider-runnable-track {
+        -webkit-appearance: none;
+        background: transparent;
+      }
+
+      .dual-range-slider #maxPrice {
+        z-index: 3;
+      }
     </style>
   </head>
   <body>
@@ -356,7 +445,12 @@
 
         <div class="form-group">
           <label>Giá Sách (VND):</label>
-          <input type="number" id="bookPrice" placeholder="Ví dụ: 150000" min="1" />
+          <input
+            type="number"
+            id="bookPrice"
+            placeholder="Ví dụ: 150000"
+            min="1"
+          />
         </div>
 
         <button onclick="addBook()">Thêm Sách</button>
@@ -394,32 +488,38 @@
 
         <button onclick="updatePrice()">Cập Nhật Giá</button>
 
-        <div class="form-row" style="margin-top: 30px">
-          <div class="form-group">
-            <label>Giá Tối Thiểu:</label>
-            <input type="number" id="minPrice" placeholder="VND" />
+        <div class="form-group" style="margin-top: 30px">
+          <label>Khoảng Giá Tìm Kiếm (VND)</label>
+          <div class="price-range-header">
+            <span class="price-range-value" id="priceRangeMinLabel">0 VND</span>
+            <span>—</span>
+            <span class="price-range-value" id="priceRangeMaxLabel"
+              >500.000 VND</span
+            >
           </div>
-          <div class="form-group">
-            <label>Giá Tối Đa:</label>
-            <input type="number" id="maxPrice" placeholder="VND" />
+          <div class="dual-range-slider">
+            <div class="dual-range-track">
+              <div class="dual-range-fill" id="priceRangeFill"></div>
+            </div>
+            <input
+              type="range"
+              id="minPrice"
+              min="0"
+              max="1000000"
+              step="10000"
+              value="0"
+            />
+            <input
+              type="range"
+              id="maxPrice"
+              min="0"
+              max="1000000"
+              step="10000"
+              value="500000"
+            />
           </div>
         </div>
         <button onclick="searchByPrice()">Tìm Sách Theo Giá</button>
-
-        <div class="form-group" style="margin-top: 30px">
-          <button
-            onclick="getCheapestBook()"
-            style="background: #16a085; width: auto; margin-right: 10px"
-          >
-            Sách Rẻ Nhất
-          </button>
-          <button
-            onclick="getMostExpensiveBook()"
-            style="background: #8b0000; width: auto"
-          >
-            Sách Đắt Nhất
-          </button>
-        </div>
 
         <div class="data-display">
           <h3>Giá Các Sách</h3>
@@ -435,7 +535,11 @@
 
         <div class="form-group">
           <label>Tiêu Đề:</label>
-          <input type="text" id="editBookTitle" placeholder="Nhập tiêu đề sách" />
+          <input
+            type="text"
+            id="editBookTitle"
+            placeholder="Nhập tiêu đề sách"
+          />
         </div>
 
         <div class="form-group">
@@ -726,7 +830,8 @@
             html = "<p>Không có sách nào.</p>";
           } else {
             books.forEach((book) => {
-              const authorLabel = book.authorName || `ID tác giả: ${book.authorId}`;
+              const authorLabel =
+                book.authorName || `ID tác giả: ${book.authorId}`;
               const priceLabel =
                 book.price > 0
                   ? book.price.toLocaleString("vi-VN") + " VND"
@@ -900,12 +1005,55 @@
         }
       }
 
+      function formatPriceVnd(value) {
+        return parseInt(value, 10).toLocaleString("vi-VN") + " VND";
+      }
+
+      function initPriceRangeSlider() {
+        const minSlider = document.getElementById("minPrice");
+        const maxSlider = document.getElementById("maxPrice");
+        const minLabel = document.getElementById("priceRangeMinLabel");
+        const maxLabel = document.getElementById("priceRangeMaxLabel");
+        const fill = document.getElementById("priceRangeFill");
+
+        function updatePriceRangeSlider(event) {
+          let minVal = parseInt(minSlider.value, 10);
+          let maxVal = parseInt(maxSlider.value, 10);
+
+          if (minVal > maxVal) {
+            if (event && event.target === minSlider) {
+              minVal = maxVal;
+              minSlider.value = maxVal;
+            } else {
+              maxVal = minVal;
+              maxSlider.value = minVal;
+            }
+          }
+
+          minLabel.textContent = formatPriceVnd(minSlider.value);
+          maxLabel.textContent = formatPriceVnd(maxSlider.value);
+
+          const rangeMin = parseInt(minSlider.min, 10);
+          const rangeMax = parseInt(minSlider.max, 10);
+          const minPercent =
+            ((minSlider.value - rangeMin) / (rangeMax - rangeMin)) * 100;
+          const maxPercent =
+            ((maxSlider.value - rangeMin) / (rangeMax - rangeMin)) * 100;
+          fill.style.left = minPercent + "%";
+          fill.style.width = maxPercent - minPercent + "%";
+        }
+
+        minSlider.addEventListener("input", updatePriceRangeSlider);
+        maxSlider.addEventListener("input", updatePriceRangeSlider);
+        updatePriceRangeSlider();
+      }
+
       async function searchByPrice() {
         const min = document.getElementById("minPrice").value;
         const max = document.getElementById("maxPrice").value;
 
-        if (!min || !max) {
-          alert("Vui lòng nhập khoảng giá!");
+        if (parseInt(min, 10) > parseInt(max, 10)) {
+          alert("Giá tối thiểu không được lớn hơn giá tối đa!");
           return;
         }
 
@@ -947,6 +1095,7 @@
         }
       }
       window.onload = function () {
+        initPriceRangeSlider();
         loadAuthors();
         populateBookAuthorSelect();
         populatePriceBookSelect();
