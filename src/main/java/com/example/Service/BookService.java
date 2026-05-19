@@ -67,9 +67,17 @@ public class BookService {
         return bookDAO.getAllBooksWithAuthors();
     }
 
-    public void addBook(String title, int publishedYear, int categoryId) throws SQLException {
+    public void addBook(String title, int publishedYear, int authorId, double price)
+            throws SQLException {
         validatePublishedYear(publishedYear);
-        bookDAO.insertBook(new Book(0, title, publishedYear, categoryId));
+        if (authorId <= 0) {
+            throw new IllegalArgumentException("Vui lòng chọn tác giả hợp lệ");
+        }
+        if (price <= 0) {
+            throw new IllegalArgumentException("Giá sách phải lớn hơn 0");
+        }
+        int bookId = bookDAO.insertBook(new Book(0, title, publishedYear, authorId));
+        priceDAO.insertBookPrice(bookId, price);
     }
 
     public void updateBook(int id, String title, int publishedYear, int categoryId)

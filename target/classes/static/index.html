@@ -249,6 +249,49 @@
         padding: 20px;
         color: #667eea;
       }
+
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-content h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .btn-cancel {
+        background: #95a5a6;
+      }
+
+      .btn-cancel:hover {
+        background: #7f8c8d;
+      }
     </style>
   </head>
   <body>
@@ -304,9 +347,16 @@
             <input type="number" id="bookYear" placeholder="Chọn năm" />
           </div>
           <div class="form-group">
-            <label>Mã Thể Loại:</label>
-            <input type="number" id="bookCategory" placeholder="Ví dụ: 1" />
+            <label>Tác Giả:</label>
+            <select id="bookAuthorId">
+              <option value="">-- Chọn tác giả --</option>
+            </select>
           </div>
+        </div>
+
+        <div class="form-group">
+          <label>Giá Sách (VND):</label>
+          <input type="number" id="bookPrice" placeholder="Ví dụ: 150000" min="1" />
         </div>
 
         <button onclick="addBook()">Thêm Sách</button>
@@ -331,8 +381,10 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label>ID Sách:</label>
-            <input type="number" id="priceBookId" placeholder="Nhập ID sách" />
+            <label>Tên Sách:</label>
+            <select id="priceBookTitle">
+              <option value="">-- Chọn sách --</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Giá (VND):</label>
@@ -372,6 +424,35 @@
         <div class="data-display">
           <h3>Giá Các Sách</h3>
           <div id="pricesList" class="loading"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="editBookModal" class="modal">
+      <div class="modal-content">
+        <h2>Sửa Sách</h2>
+        <input type="hidden" id="editBookId" />
+
+        <div class="form-group">
+          <label>Tiêu Đề:</label>
+          <input type="text" id="editBookTitle" placeholder="Nhập tiêu đề sách" />
+        </div>
+
+        <div class="form-group">
+          <label>Năm Xuất Bản:</label>
+          <input type="number" id="editBookYear" placeholder="Chọn năm" />
+        </div>
+
+        <div class="form-group">
+          <label>Tác Giả:</label>
+          <select id="editBookAuthorId">
+            <option value="">-- Chọn tác giả --</option>
+          </select>
+        </div>
+
+        <div class="modal-actions">
+          <button onclick="saveEditBook()">Lưu</button>
+          <button class="btn-cancel" onclick="closeEditBookModal()">Hủy</button>
         </div>
       </div>
     </div>
@@ -428,6 +509,7 @@
             document.getElementById("authorName").value = "";
             document.getElementById("authorBio").value = "";
             loadAuthors();
+            populateBookAuthorSelect();
           } else {
             alert("Lỗi khi thêm tác giả!");
           }
@@ -520,14 +602,85 @@
         }
       }
 
+      async function populateAuthorSelect(selectId, selectedId = "") {
+        const select = document.getElementById(selectId);
+        try {
+          const response = await fetch(`${API_URL}/authors`);
+          const authors = await response.json();
+          select.innerHTML = '<option value="">-- Chọn tác giả --</option>';
+          authors.forEach((author) => {
+            const selected = author.id === selectedId ? "selected" : "";
+            select.innerHTML += `<option value="${author.id}" ${selected}>${author.authorName}</option>`;
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      async function populateBookAuthorSelect() {
+        await populateAuthorSelect("bookAuthorId");
+      }
+
+      async function openEditBookModal(id, title, year, authorId) {
+        document.getElementById("editBookId").value = id;
+        document.getElementById("editBookTitle").value = title;
+        document.getElementById("editBookYear").value = year;
+        await populateAuthorSelect("editBookAuthorId", authorId);
+        document.getElementById("editBookModal").classList.add("active");
+      }
+
+      function closeEditBookModal() {
+        document.getElementById("editBookModal").classList.remove("active");
+      }
+
+      async function saveEditBook() {
+        const id = document.getElementById("editBookId").value;
+        const title = document.getElementById("editBookTitle").value.trim();
+        const year = document.getElementById("editBookYear").value;
+        const authorId = document.getElementById("editBookAuthorId").value;
+
+        if (!title || !year || !authorId) {
+          alert("Vui lòng nhập đầy đủ: tiêu đề, năm và tác giả!");
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/books/${id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: title,
+              publishedYear: parseInt(year),
+              authorId: parseInt(authorId),
+            }),
+          });
+
+          if (response.ok) {
+            alert("Cập nhật sách thành công!");
+            closeEditBookModal();
+            loadBooks();
+            populatePriceBookSelect();
+          } else {
+            const errorText = await response.text();
+            alert(errorText);
+          }
+        } catch (error) {
+          console.error(error);
+          alert("Lỗi kết nối!");
+        }
+      }
+
       // BOOK FUNCTIONS
       async function addBook() {
         const title = document.getElementById("bookTitle").value;
         const year = document.getElementById("bookYear").value;
-        const category = document.getElementById("bookCategory").value;
+        const authorId = document.getElementById("bookAuthorId").value;
+        const price = document.getElementById("bookPrice").value;
 
-        if (!title || !year || !category) {
-          alert("Vui lòng nhập đầy đủ thông tin!");
+        if (!title || !year || !authorId || !price) {
+          alert("Vui lòng nhập đầy đủ: tiêu đề, năm, tác giả và giá!");
           return;
         }
 
@@ -538,7 +691,8 @@
             body: JSON.stringify({
               title: title,
               publishedYear: parseInt(year),
-              authorId: parseInt(category),
+              authorId: parseInt(authorId),
+              price: parseFloat(price),
             }),
           });
 
@@ -547,8 +701,11 @@
             document.getElementById("bookTitle").value = "";
             const currentYear = new Date().getFullYear();
             document.getElementById("bookYear").value = currentYear;
-            document.getElementById("bookCategory").value = "";
+            document.getElementById("bookAuthorId").value = "";
+            document.getElementById("bookPrice").value = "";
             loadBooks();
+            loadPrices();
+            populatePriceBookSelect();
           } else {
             const errorText = await response.text();
             alert(errorText);
@@ -569,14 +726,23 @@
             html = "<p>Không có sách nào.</p>";
           } else {
             books.forEach((book) => {
+              const authorLabel = book.authorName || `ID tác giả: ${book.authorId}`;
+              const priceLabel =
+                book.price > 0
+                  ? book.price.toLocaleString("vi-VN") + " VND"
+                  : "Chưa có giá";
               html += `
                             <div class="item">
                                 <div>
                                     <strong>ID: ${book.id}</strong> | <strong>${book.title}</strong>
-                                    <p style="margin-top: 5px; color: #666;">Năm: ${book.publishedYear}</p>
+                                    <p style="margin-top: 5px; color: #666;">
+                                      Năm: ${book.publishedYear} |
+                                      Tác giả: ${authorLabel} |
+                                      Giá: ${priceLabel}
+                                    </p>
                                 </div>
                                 <div class="item-actions">
-                                    <button class="btn-small btn-edit" onclick="editBook(${book.id}, '${book.title}', ${book.publishedYear})">
+                                    <button class="btn-small btn-edit" onclick='openEditBookModal(${book.id}, ${JSON.stringify(book.title)}, ${book.publishedYear}, ${book.authorId})'>
                                         Sửa
                                     </button>
                                     <button class="btn-small btn-delete" onclick="deleteBook(${book.id})">
@@ -631,45 +797,11 @@
           if (response.ok) {
             alert("Xóa thành công!");
             loadBooks();
+            loadPrices();
+            populatePriceBookSelect();
           }
         } catch (error) {
           console.error(error);
-        }
-      }
-
-      async function editBook(id, oldTitle, oldYear) {
-        const newTitle = prompt("Nhập tiêu đề mới:", oldTitle);
-        if (!newTitle) return;
-
-        const newYear = prompt("Nhập năm xuất bản mới:", oldYear);
-        if (!newYear) return;
-
-        const newAuthorId = prompt("Nhập mã thể loại mới:", "");
-        if (!newAuthorId) return;
-
-        try {
-          const response = await fetch(`${API_URL}/books/${id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              title: newTitle,
-              publishedYear: parseInt(newYear),
-              authorId: parseInt(newAuthorId),
-            }),
-          });
-
-          if (response.ok) {
-            alert("Cập nhật sách thành công!");
-            loadBooks();
-          } else {
-            const errorText = await response.text();
-            alert(errorText);
-          }
-        } catch (error) {
-          console.error(error);
-          alert("Lỗi kết nối!");
         }
       }
 
@@ -703,6 +835,24 @@
         }
       }
 
+      async function populatePriceBookSelect() {
+        const select = document.getElementById("priceBookTitle");
+        try {
+          const response = await fetch(`${API_URL}/books`);
+          const books = await response.json();
+          select.innerHTML = '<option value="">-- Chọn sách --</option>';
+          books.forEach((book) => {
+            const priceLabel =
+              book.price > 0
+                ? ` (${book.price.toLocaleString("vi-VN")} VND)`
+                : "";
+            select.innerHTML += `<option value="${book.id}">${book.title}${priceLabel}</option>`;
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
       // PRICE FUNCTIONS
       async function loadPrices() {
         try {
@@ -722,11 +872,11 @@
       }
 
       async function updatePrice() {
-        const bookId = document.getElementById("priceBookId").value;
+        const bookId = document.getElementById("priceBookTitle").value;
         const price = document.getElementById("priceValue").value;
 
         if (!bookId || !price) {
-          alert("Vui lòng nhập đầy đủ thông tin!");
+          alert("Vui lòng chọn sách và nhập giá!");
           return;
         }
 
@@ -740,7 +890,9 @@
 
           if (response.ok) {
             alert("Cập nhật giá thành công!");
+            document.getElementById("priceValue").value = "";
             loadPrices();
+            populatePriceBookSelect();
           }
         } catch (error) {
           console.error(error);
@@ -796,9 +948,12 @@
       }
       window.onload = function () {
         loadAuthors();
+        populateBookAuthorSelect();
+        populatePriceBookSelect();
         loadBooks();
         loadPrices();
       };
+      const yearInput = document.getElementById("bookYear");
       yearInput.addEventListener("input", function () {
         const currentYear = new Date().getFullYear();
 

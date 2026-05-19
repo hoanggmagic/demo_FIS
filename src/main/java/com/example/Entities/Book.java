@@ -5,6 +5,8 @@ public class Book {
     private String title;
     private int publishedYear;
     private int authorId;
+    private String authorName;
+    private double price;
 
     public Book() {}
 
@@ -45,5 +47,21 @@ public class Book {
 
     public void setAuthorId(int authorId) {
         this.authorId = authorId;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
     }
 }

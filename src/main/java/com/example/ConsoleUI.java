@@ -224,9 +224,12 @@ public class ConsoleUI {
         String title = scanner.nextLine();
         System.out.print("Nhập năm xuất bản: ");
         int year = getInput();
-        System.out.print("Nhập mã thể loại: ");
-        int categoryId = getInput();
-        service.addBook(title, year, categoryId);
+        System.out.print("Nhập ID tác giả: ");
+        int authorId = getInput();
+        System.out.print("Nhập giá sách (VND): ");
+        double price = scanner.nextDouble();
+        scanner.nextLine();
+        service.addBook(title, year, authorId, price);
     }
 
     private void updateBook() throws Exception {

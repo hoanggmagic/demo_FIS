@@ -88,7 +88,11 @@ public class BookController {
         try {
             Connection conn = dataSource.getConnection();
             BookService service = new BookService(conn);
-            service.addBook(book.getTitle(), book.getPublishedYear(), book.getAuthorId());
+            service.addBook(
+                    book.getTitle(),
+                    book.getPublishedYear(),
+                    book.getAuthorId(),
+                    book.getPrice());
             conn.close();
             return ResponseEntity.ok("Thêm sách thành công!");
         } catch (IllegalArgumentException e) {

@@ -15,8 +15,13 @@ public class BookDAO {
     // Lấy tất cả sách
     public List<Book> getAllBooks() throws SQLException {
         List<Book> books = new ArrayList<>();
-        String query = "SELECT id, title, published_year, author_id FROM books";
-        
+        String query = "SELECT b.id, b.title, b.published_year, b.author_id, "
+                + "a.author_name, bp.price "
+                + "FROM books b "
+                + "LEFT JOIN authors a ON b.author_id = a.id "
+                + "LEFT JOIN book_prices bp ON b.id = bp.book_id "
+                + "ORDER BY b.id";
+
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
@@ -26,6 +31,8 @@ public class BookDAO {
                     rs.getInt("published_year"),
                     rs.getInt("author_id")
                 );
+                book.setAuthorName(rs.getString("author_name"));
+                book.setPrice(rs.getDouble("price"));
                 books.add(book);
             }
         }
@@ -74,17 +81,23 @@ public class BookDAO {
         return books;
     }
 
-    // Thêm sách mới
-    public void insertBook(Book book) throws SQLException {
-        String query = "INSERT INTO books (title, published_year, author_id) VALUES (?, ?, ?)";
-        
+    // Thêm sách mới, trả về id vừa tạo
+    public int insertBook(Book book) throws SQLException {
+        String query = "INSERT INTO books (title, published_year, author_id) VALUES (?, ?, ?) RETURNING id";
+
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, book.getTitle());
             pstmt.setInt(2, book.getPublishedYear());
             pstmt.setInt(3, book.getAuthorId());
-            pstmt.executeUpdate();
-            System.out.println("✓ Thêm sách: " + book.getTitle());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    int id = rs.getInt("id");
+                    System.out.println("✓ Thêm sách: " + book.getTitle());
+                    return id;
+                }
+            }
         }
+        throw new SQLException("Không lấy được id sách vừa thêm");
     }
 
     // Cập nhật sách

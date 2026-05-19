@@ -38,11 +38,23 @@ public class BookPriceDAO {
             pstmt.setInt(1, bookId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getDouble("GiaBia");
+                    return rs.getDouble("price");
                 }
             }
         }
         return 0;
+    }
+
+    // Thêm giá cho sách mới
+    public void insertBookPrice(int bookId, double price) throws SQLException {
+        String query = "INSERT INTO book_prices (book_id, price) VALUES (?, ?)";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setInt(1, bookId);
+            pstmt.setDouble(2, price);
+            pstmt.executeUpdate();
+            System.out.println("✓ Thêm giá sách ID " + bookId + ": " + price + " VND");
+        }
     }
 
     // Cập nhật giá sách
