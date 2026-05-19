@@ -96,6 +96,57 @@
         transition: border-color 0.3s ease;
       }
 
+      input[type="range"] {
+        padding: 0;
+        height: 8px;
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        background: linear-gradient(to right, #667eea 0%, #667eea 100%);
+        border-radius: 10px;
+        outline: none;
+      }
+
+      input[type="number"] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 1.2em;
+        font-weight: 600;
+        text-align: center;
+        transition: border-color 0.3s ease;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: outer-spin-button;
+        height: 30px;
+      }
+
+      .year-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .year-value {
+        background: #667eea;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        min-width: 80px;
+        text-align: center;
+        display: none;
+      }
+
       input:focus,
       textarea:focus,
       select:focus {
@@ -250,7 +301,14 @@
         <div class="form-row">
           <div class="form-group">
             <label>Năm Xuất Bản:</label>
-            <input type="number" id="bookYear" placeholder="Ví dụ: 2023" />
+            <input
+              type="number"
+              id="bookYear"
+              min="1000"
+              max="2026"
+              value="2026"
+              placeholder="Chọn năm"
+            />
           </div>
           <div class="form-group">
             <label>Mã Thể Loại:</label>
@@ -328,6 +386,18 @@
     <script>
       const API_URL = "http://localhost:8080/api";
 
+      // Update year display when slider changes
+      document.addEventListener("DOMContentLoaded", function () {
+        const yearSlider = document.getElementById("bookYear");
+        const yearDisplay = document.getElementById("yearDisplay");
+
+        if (yearSlider && yearDisplay) {
+          yearSlider.addEventListener("input", function () {
+            yearDisplay.textContent = this.value;
+          });
+        }
+      });
+
       // Switch between tabs
       function switchTab(tabName) {
         document.querySelectorAll(".tab-content").forEach((tab) => {
@@ -391,14 +461,13 @@
                                     <p style="margin-top: 5px; color: #666;">${author.nationality}</p>
                                 </div>
                                 <div class="item-actions">
-    <button class="btn-small btn-edit" onclick="editAuthor(${author.id}, '${author.authorName}', '${author.nationality}')">
-        Sửa
-    </button>
-
-    <button class="btn-small btn-delete" onclick="deleteAuthor(${author.id})">
-        Xóa
-    </button>
-</div>
+                                  <button class="btn-small btn-edit" onclick="editAuthor(${author.id}, '${author.authorName}', '${author.nationality}')">
+                                    Sửa
+                                  </button>
+                                  <button class="btn-small btn-delete" onclick="deleteAuthor(${author.id})">
+                                    Xóa
+                                  </button>
+                                </div>
                             </div>
                         `;
             });
@@ -483,9 +552,13 @@
           if (response.ok) {
             alert("Thêm sách thành công!");
             document.getElementById("bookTitle").value = "";
-            document.getElementById("bookYear").value = "";
+            const currentYear = new Date().getFullYear();
+            document.getElementById("bookYear").value = currentYear;
             document.getElementById("bookCategory").value = "";
             loadBooks();
+          } else {
+            const errorText = await response.text();
+            alert(errorText);
           }
         } catch (error) {
           console.error(error);

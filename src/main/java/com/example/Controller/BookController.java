@@ -1,13 +1,22 @@
 package com.example.Controller;
 
-import com.example.DAO.BookDAO;
-import com.example.Entities.Book;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.util.List;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.example.DAO.BookDAO;
+import com.example.Entities.Book;
+import com.example.Service.BookService;
 
 @RestController
 @RequestMapping("/api/books")
@@ -78,10 +87,12 @@ public class BookController {
     public ResponseEntity<String> createBook(@RequestBody Book book) {
         try {
             Connection conn = dataSource.getConnection();
-            BookDAO dao = new BookDAO(conn);
-            dao.insertBook(book);
+            BookService service = new BookService(conn);
+            service.addBook(book.getTitle(), book.getPublishedYear(), book.getAuthorId());
             conn.close();
             return ResponseEntity.ok("Thêm sách thành công!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
@@ -92,11 +103,12 @@ public class BookController {
     public ResponseEntity<String> updateBook(@PathVariable int id, @RequestBody Book book) {
         try {
             Connection conn = dataSource.getConnection();
-            BookDAO dao = new BookDAO(conn);
-            book.setId(id);
-            dao.updateBook(book);
+            BookService service = new BookService(conn);
+            service.updateBook(id, book.getTitle(), book.getPublishedYear(), book.getAuthorId());
             conn.close();
             return ResponseEntity.ok("Cập nhật sách thành công!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }

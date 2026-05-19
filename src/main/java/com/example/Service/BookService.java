@@ -1,13 +1,14 @@
 package com.example.Service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Calendar;
+import java.util.List;
 import com.example.DAO.AuthorDAO;
 import com.example.DAO.BookDAO;
 import com.example.DAO.BookPriceDAO;
 import com.example.Entities.Author;
 import com.example.Entities.Book;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.List;
 
 public class BookService {
     private AuthorDAO authorDAO;
@@ -18,6 +19,14 @@ public class BookService {
         this.authorDAO = new AuthorDAO(connection);
         this.bookDAO = new BookDAO(connection);
         this.priceDAO = new BookPriceDAO(connection);
+    }
+
+    private void validatePublishedYear(int publishedYear) throws IllegalArgumentException {
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        if (publishedYear > currentYear) {
+            throw new IllegalArgumentException(
+                    "Năm xuất bản không được vượt quá năm hiện tại: " + currentYear);
+        }
     }
 
     // ===== AUTHOR OPERATIONS =====
@@ -59,10 +68,13 @@ public class BookService {
     }
 
     public void addBook(String title, int publishedYear, int categoryId) throws SQLException {
+        validatePublishedYear(publishedYear);
         bookDAO.insertBook(new Book(0, title, publishedYear, categoryId));
     }
 
-    public void updateBook(int id, String title, int publishedYear, int categoryId) throws SQLException {
+    public void updateBook(int id, String title, int publishedYear, int categoryId)
+            throws SQLException {
+        validatePublishedYear(publishedYear);
         bookDAO.updateBook(new Book(id, title, publishedYear, categoryId));
     }
 
