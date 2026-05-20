@@ -1,0 +1,14 @@
+com\example\Entities\BookPrice.class
+com\example\DAO\BookPriceDAO.class
+com\example\Main.class
+com\example\Controller\HomeController.class
+com\example\Service\BookService.class
+com\example\Controller\BookController.class
+com\example\Entities\Book.class
+com\example\Controller\AuthorController.class
+com\example\DAO\BookDAO.class
+com\example\App.class
+com\example\Entities\Author.class
+com\example\ConsoleUI.class
+com\example\DAO\AuthorDAO.class
+com\example\Controller\BookPriceController.class
