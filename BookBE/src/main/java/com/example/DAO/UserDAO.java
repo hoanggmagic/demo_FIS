@@ -1,8 +1,5 @@
 package com.example.DAO;
 
-import com.example.Entities.Author;
-import com.example.Entities.User;
-import com.example.Util.PasswordUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,6 +7,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.Entities.Author;
+import com.example.Entities.User;
+import com.example.Util.PasswordUtil;
 
 public class UserDAO {
     private final Connection connection;
@@ -19,8 +19,9 @@ public class UserDAO {
     }
 
     public User findByUsername(String username) throws SQLException {
-        String query = "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
-                + "FROM users WHERE username = ?";
+        String query =
+                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
+                        + "FROM users WHERE username = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -33,8 +34,9 @@ public class UserDAO {
     }
 
     public User getUserById(int id) throws SQLException {
-        String query = "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
-                + "FROM users WHERE id = ?";
+        String query =
+                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
+                        + "FROM users WHERE id = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -51,7 +53,7 @@ public class UserDAO {
         String query = "SELECT id, username, email, full_name, nationality, biography, is_active "
                 + "FROM users WHERE role = 'AUTHOR' ORDER BY id";
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+                ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 authors.add(mapAuthor(rs));
             }
@@ -64,7 +66,7 @@ public class UserDAO {
         String query = "SELECT id, username, email, full_name, nationality, biography, is_active "
                 + "FROM users WHERE role = 'AUTHOR' AND is_active = TRUE ORDER BY id";
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+                ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 authors.add(mapAuthor(rs));
             }
@@ -107,8 +109,9 @@ public class UserDAO {
     }
 
     public int insertAuthor(User user) throws SQLException {
-        String query = "INSERT INTO users (username, email, password, full_name, nationality, biography, role) "
-                + "VALUES (?, ?, ?, ?, ?, ?, 'AUTHOR') RETURNING id";
+        String query =
+                "INSERT INTO users (username, email, password, full_name, nationality, biography, role) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, 'AUTHOR') RETURNING id";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, user.getUsername());
             pstmt.setString(2, user.getEmail());
@@ -153,8 +156,40 @@ public class UserDAO {
         updatePasswordIfNeeded("user01", "user123", passwordUtil);
     }
 
-    private void updatePasswordIfNeeded(String username, String rawPassword, PasswordUtil passwordUtil)
-            throws SQLException {
+    public int insertUser(User user) throws SQLException {
+
+        String query = """
+                    INSERT INTO users
+                    (username, email, password, full_name, role)
+                    VALUES (?, ?, ?, ?, 'USER')
+                    RETURNING id
+                """;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setString(1, user.getUsername());
+            pstmt.setString(2, user.getEmail());
+            pstmt.setString(3, user.getPassword());
+            pstmt.setString(4, user.getFullName());
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+
+                if (rs.next()) {
+
+                    int userId = rs.getInt("id");
+
+                    createWalletForUser(userId);
+
+                    return userId;
+                }
+            }
+        }
+
+        throw new SQLException("Không tạo được user");
+    }
+
+    private void updatePasswordIfNeeded(String username, String rawPassword,
+            PasswordUtil passwordUtil) throws SQLException {
         User user = findByUsername(username);
         if (user == null) {
             return;
@@ -198,14 +233,13 @@ public class UserDAO {
     }
 
     private Author mapAuthor(ResultSet rs) throws SQLException {
-        Author author = new Author(
-                rs.getInt("id"),
-                rs.getString("full_name"),
-                rs.getString("nationality"));
+        Author author =
+                new Author(rs.getInt("id"), rs.getString("full_name"), rs.getString("nationality"));
         author.setUsername(rs.getString("username"));
         author.setEmail(rs.getString("email"));
         author.setBiography(rs.getString("biography"));
         author.setActive(rs.getBoolean("is_active"));
         return author;
     }
+
 }

@@ -1,5 +1,15 @@
 package com.example.Controller;
 
+import java.sql.Connection;
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import com.example.DAO.UserDAO;
 import com.example.Entities.User;
 import com.example.Service.AuthService;
@@ -11,16 +21,6 @@ import com.example.dto.AuthResponse;
 import com.example.dto.LoginRequest;
 import com.example.dto.UserProfile;
 import jakarta.servlet.http.HttpServletRequest;
-import java.sql.Connection;
-import javax.sql.DataSource;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -47,6 +47,36 @@ public class AuthController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(e.getMessage());
         } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody User body) {
+
+        try (Connection conn = dataSource.getConnection()) {
+
+            UserDAO dao = new UserDAO(conn);
+
+            // kiểm tra username
+            if (dao.usernameExists(body.getUsername())) {
+
+                return ResponseEntity.badRequest().body("Username đã tồn tại");
+            }
+
+            // hash password
+            body.setPassword(passwordUtil.hash(body.getPassword()));
+
+            // role mặc định
+            body.setRole("USER");
+
+            // lưu DB
+            dao.insertUser(body);
+
+            return ResponseEntity.ok("Đăng ký thành công");
+
+        } catch (Exception e) {
+
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }

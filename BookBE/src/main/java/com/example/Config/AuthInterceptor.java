@@ -1,12 +1,12 @@
 package com.example.Config;
 
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
 import com.example.Util.AuthContext;
 import com.example.Util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
@@ -20,14 +20,15 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+            Object handler) throws Exception {
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
 
         String path = request.getRequestURI();
-        if (path.startsWith("/api/auth/login")) {
+
+        if (path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register")) {
             return true;
         }
 

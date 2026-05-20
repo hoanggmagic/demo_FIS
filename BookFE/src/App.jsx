@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Login from "./Components/Login";
+import Register from "./Components/Register";
 import BookForm from "./Components/BookForm";
 import BookList from "./Components/BookList";
 import AuthorForm from "./Components/AuthorForm";
@@ -13,20 +14,26 @@ export default function App() {
   const [editingAuthor, setEditingAuthor] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // PAGE
+  const [page, setPage] = useState("login");
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const saved = localStorage.getItem("user");
+
     if (!token) {
       setLoading(false);
       return;
     }
+
     if (saved) {
       try {
         setUser(JSON.parse(saved));
       } catch {
-        /* ignore */
+        //
       }
     }
+
     getMe()
       .then((res) => {
         setUser(res.data);
@@ -45,33 +52,50 @@ export default function App() {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
     setUser(null);
+
     setEditingBook(null);
     setEditingAuthor(null);
+
+    setPage("login");
   };
 
   if (loading) {
-    return <motion className="container">Đang tải...</motion>;
+    return <div>Đang tải...</div>;
   }
 
+  // LOGIN / REGISTER
   if (!user) {
-    return <Login onSuccess={setUser} />;
+    if (page === "login") {
+      return (
+        <Login onSuccess={setUser} goToRegister={() => setPage("register")} />
+      );
+    }
+
+    if (page === "register") {
+      return <Register goToLogin={() => setPage("login")} />;
+    }
   }
 
-  const roleLabel = { ADMIN: "Quản trị", AUTHOR: "Tác giả", USER: "Người mua" }[
-    user.role
-  ];
+  const roleLabel = {
+    ADMIN: "Quản trị",
+    AUTHOR: "Tác giả",
+    USER: "Người mua",
+  }[user.role];
 
   return (
     <div className="container">
       <header className="header">
         <div>
           <h1>📚 Digital Book Platform</h1>
+
           <p className="user-badge">
             {user.fullName} ·{" "}
             <span className={`role role-${user.role}`}>{roleLabel}</span>
           </p>
         </div>
+
         <button type="button" className="btn-secondary" onClick={logout}>
           Đăng xuất
         </button>
@@ -85,6 +109,7 @@ export default function App() {
             onSaved={refresh}
             onCancelEdit={() => setEditingAuthor(null)}
           />
+
           <BookForm
             user={user}
             editing={editingBook}

@@ -30,20 +30,30 @@ export default function AuthorList({ user, reload, onEdit }) {
       {authors.map((a) => (
         <div key={a.id} className="card">
           <h4>{a.name}</h4>
-          <p>@{a.username} · {a.email}</p>
+          <p>
+            @{a.username} · {a.email}
+          </p>
           <p>🌍 {a.nationality || "—"}</p>
           {a.biography && <p className="desc">{a.biography}</p>}
           <p>📌 {a.active === false ? "INACTIVE" : "ACTIVE"}</p>
 
           <div className="form-actions">
             {(isAdmin || user.id === a.id) && (
-              <button type="button" className="btn-secondary" onClick={() => onEdit(a)}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => onEdit(a)}
+              >
                 Sửa
               </button>
             )}
             {isAdmin && (
-              <button type="button" className="btn-delete" onClick={() => handleDelete(a.id)}>
-                Vô hiệu hóa
+              <button
+                type="button"
+                className={a.active === false ? "btn-secondary" : "btn-delete"}
+                onClick={() => handleDelete(a.id)}
+              >
+                {a.active === false ? "Mở lại" : "Vô hiệu hóa"}
               </button>
             )}
           </div>
