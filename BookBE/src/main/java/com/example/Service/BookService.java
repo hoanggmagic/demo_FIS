@@ -137,14 +137,23 @@ public class BookService {
         userDAO.updateAuthor(author);
     }
 
-    public void deleteAuthor(int id, AuthContext ctx) throws SQLException {
+    public boolean deleteAuthor(int id, AuthContext ctx) throws SQLException {
 
         if (!ctx.isAdmin()) {
-
             throw new IllegalArgumentException("Chỉ ADMIN được vô hiệu hóa tác giả");
         }
 
-        userDAO.deleteAuthor(id);
+        User user = userDAO.findById(id);
+
+        if (user == null) {
+            throw new IllegalArgumentException("Không tìm thấy user");
+        }
+
+        boolean newStatus = !user.isActive();
+
+        userDAO.updateStatus(id, newStatus);
+
+        return newStatus;
     }
 
     public void addAuthorDemo(String fullName, String nationality) throws SQLException {

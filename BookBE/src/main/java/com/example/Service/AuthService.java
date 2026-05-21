@@ -1,11 +1,11 @@
 package com.example.Service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import com.example.DAO.UserDAO;
 import com.example.Entities.User;
 import com.example.Util.PasswordUtil;
 import com.example.dto.UserProfile;
-import java.sql.Connection;
-import java.sql.SQLException;
 
 public class AuthService {
     private final UserDAO userDAO;
@@ -37,5 +37,17 @@ public class AuthService {
         profile.setNationality(user.getNationality());
         profile.setBiography(user.getBiography());
         return profile;
+    }
+
+    public void toggleUserStatus(int id) throws SQLException {
+        User user = userDAO.findById(id);
+
+        if (user == null) {
+            throw new IllegalArgumentException("Không tìm thấy người dùng");
+        }
+
+        boolean newStatus = !user.isActive();
+
+        userDAO.updateStatus(id, newStatus);
     }
 }

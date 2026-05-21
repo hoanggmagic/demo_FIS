@@ -142,12 +142,34 @@ public class UserDAO {
         }
     }
 
-    public void deleteAuthor(int id) throws SQLException {
-        String query = "UPDATE users SET is_active = FALSE WHERE id = ? AND role = 'AUTHOR'";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, id);
-            pstmt.executeUpdate();
+    public boolean toggleAuthorStatus(int id) throws SQLException {
+
+        String selectSql = "SELECT is_active FROM users WHERE id = ?";
+
+        boolean current;
+
+        try (PreparedStatement ps = connection.prepareStatement(selectSql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+
+            if (!rs.next()) {
+                throw new IllegalArgumentException("Không tìm thấy user");
+            }
+
+            current = rs.getBoolean("is_active");
         }
+
+        boolean newStatus = !current;
+
+        String updateSql = "UPDATE users SET is_active = ? WHERE id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
+            ps.setBoolean(1, newStatus);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+
+        return newStatus;
     }
 
     public void ensureDemoPasswords(PasswordUtil passwordUtil) throws SQLException {
@@ -242,4 +264,34 @@ public class UserDAO {
         return author;
     }
 
+    public User findById(int id) throws SQLException {
+        String sql = "SELECT * FROM users WHERE id = ?";
+
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setInt(1, id);
+
+        ResultSet rs = ps.executeQuery();
+
+        if (rs.next()) {
+            User user = new User();
+            user.setId(rs.getInt("id"));
+            user.setUsername(rs.getString("username"));
+            user.setPassword(rs.getString("password"));
+            user.setActive(rs.getBoolean("is_active")); // cũng nên sửa luôn
+            return user;
+        }
+
+        return null;
+    }
+
+    public void updateStatus(int id, boolean active) throws SQLException {
+        String sql = "UPDATE users SET is_active = ? WHERE id = ?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setBoolean(1, active);
+            ps.setInt(2, id);
+
+            ps.executeUpdate();
+        }
+    }
 }

@@ -1,12 +1,5 @@
 package com.example.Controller;
 
-import com.example.Entities.Author;
-import com.example.Service.BookService;
-import com.example.Util.AuthContext;
-import com.example.Util.PasswordUtil;
-import com.example.Util.RequestAuth;
-import com.example.dto.AuthorRequest;
-import jakarta.servlet.http.HttpServletRequest;
 import java.sql.Connection;
 import java.util.List;
 import javax.sql.DataSource;
@@ -21,6 +14,14 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.DAO.UserDAO;
+import com.example.Entities.Author;
+import com.example.Service.BookService;
+import com.example.Util.AuthContext;
+import com.example.Util.PasswordUtil;
+import com.example.Util.RequestAuth;
+import com.example.dto.AuthorRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/authors")
@@ -59,8 +60,8 @@ public class AuthorController {
     }
 
     @PostMapping
-    public ResponseEntity<String> createAuthor(
-            @RequestBody AuthorRequest body, HttpServletRequest request) {
+    public ResponseEntity<String> createAuthor(@RequestBody AuthorRequest body,
+            HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdmin(ctx);
@@ -75,8 +76,8 @@ public class AuthorController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateAuthor(
-            @PathVariable int id, @RequestBody Author author, HttpServletRequest request) {
+    public ResponseEntity<String> updateAuthor(@PathVariable int id, @RequestBody Author author,
+            HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             BookService service = new BookService(conn, passwordUtil);
@@ -92,13 +93,20 @@ public class AuthorController {
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteAuthor(@PathVariable int id, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
+
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdmin(ctx);
-            BookService service = new BookService(conn, passwordUtil);
-            service.deleteAuthor(id, ctx);
-            return ResponseEntity.ok("Vô hiệu hóa tác giả thành công!");
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
+
+            UserDAO dao = new UserDAO(conn);
+
+            boolean newStatus = dao.toggleAuthorStatus(id);
+
+            if (newStatus) {
+                return ResponseEntity.ok("Mở lại thành công!");
+            } else {
+                return ResponseEntity.ok("Vô hiệu hóa thành công!");
+            }
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
