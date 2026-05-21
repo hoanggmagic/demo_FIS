@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getBooks, deleteBook } from "../../Api/Admin/BookApi";
+import "../../Style/Admin/listBooks.css";
 
 export default function BookList({ user, reload, onEdit }) {
   const [books, setBooks] = useState([]);
@@ -23,38 +24,54 @@ export default function BookList({ user, reload, onEdit }) {
   return (
     <section>
       <h3>📚 Danh sách sách</h3>
-      {books.length === 0 && <p>Chưa có sách.</p>}
 
-      {books.map((b) => (
-        <div key={b.id} className="card book-item">
-          <h4>{b.title}</h4>
-          {b.description && <p className="desc">{b.description}</p>}
-          <p>💰 Giá: {Number(b.price || 0).toLocaleString()} VND</p>
-          <p>📅 Năm: {b.publishedYear}</p>
-          <p>👤 Tác giả: {b.authorName || "—"}</p>
-          <p>📦 Tồn kho: {b.quantity ?? 0}</p>
-          <p>📌 {b.status}</p>
+      {books.length === 0 ? (
+        <p>Chưa có sách.</p>
+      ) : (
+        <table className="book-table">
+          <thead>
+            <tr>
+              <th>Tiêu đề</th>
+              <th>Mô tả</th>
+              <th>Giá</th>
+              <th>Năm</th>
+              <th>Tác giả</th>
+              <th>Tồn kho</th>
+              <th>Trạng thái</th>
+              {canModify && <th>Hành động</th>}
+            </tr>
+          </thead>
 
-          {canModify && (
-            <div className="form-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => onEdit(b)}
-              >
-                Sửa
-              </button>
-              <button
-                type="button"
-                className="btn-delete"
-                onClick={() => handleDelete(b.id)}
-              >
-                Xóa
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+          <tbody>
+            {books.map((b) => (
+              <tr key={b.id}>
+                <td>{b.title}</td>
+                <td>{b.description || "—"}</td>
+                <td>{Number(b.price || 0).toLocaleString()} VND</td>
+                <td>{b.publishedYear}</td>
+                <td>{b.authorName || "—"}</td>
+                <td>{b.quantity ?? 0}</td>
+                <td>{b.status}</td>
+
+                {canModify && (
+                  <td>
+                    <button className="btn-secondary" onClick={() => onEdit(b)}>
+                      Sửa
+                    </button>
+
+                    <button
+                      className="btn-delete"
+                      onClick={() => handleDelete(b.id)}
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

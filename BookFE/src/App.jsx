@@ -123,7 +123,6 @@ export default function App() {
       {user.role === "ADMIN" && (
         <>
           <AuthorList user={user} reload={reload} onEdit={setEditingAuthor} />
-
           <BookList user={user} reload={reload} onEdit={setEditingBook} />
         </>
       )}

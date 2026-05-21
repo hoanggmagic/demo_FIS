@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { getAuthors, deleteAuthor } from "../../Api/Admin/authorApi";
+import "../../Style/Admin/listBooks.css";
 
 export default function AuthorList({ user, reload, onEdit }) {
   const [authors, setAuthors] = useState([]);
-  const isAdmin = user?.role === "ADMIN";
+
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
   const load = async () => {
-    console.log("call getAuthors...");
-    const data = await getAuthors();
-    console.log("data:", data);
-    setAuthors(data.data);
+    const res = await getAuthors();
+    setAuthors(res.data || []);
   };
+
   useEffect(() => {
     load();
   }, [reload]);
@@ -29,40 +30,60 @@ export default function AuthorList({ user, reload, onEdit }) {
   return (
     <section>
       <h3>👤 Danh sách tác giả</h3>
-      {authors.length === 0 && <p>Chưa có tác giả.</p>}
 
-      {authors.map((a) => (
-        <div key={a.id} className="card">
-          <h4>{a.name}</h4>
-          <p>
-            @{a.username} · {a.email}
-          </p>
-          <p>🌍 {a.nationality || "—"}</p>
-          {a.biography && <p className="desc">{a.biography}</p>}
-          <p>📌 {a.active === false ? "INACTIVE" : "ACTIVE"}</p>
+      {authors.length === 0 ? (
+        <p>Chưa có tác giả.</p>
+      ) : (
+        <table className="book-table">
+          <thead>
+            <tr>
+              <th>Tên</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Quốc tịch</th>
+              <th>Tiểu sử</th>
+              <th>Trạng thái</th>
 
-          <div className="form-actions">
-            {(isAdmin || user.id === a.id) && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => onEdit(a)}
-              >
-                Sửa
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                type="button"
-                className={a.active === false ? "btn-secondary" : "btn-delete"}
-                onClick={() => handleDelete(a)}
-              >
-                {a.active === false ? "Mở lại" : "Vô hiệu hóa"}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+              {isAdmin && <th>Hành động</th>}
+            </tr>
+          </thead>
+
+          <tbody>
+            {authors.map((a) => (
+              <tr key={a.id}>
+                <td>{a.name}</td>
+                <td>@{a.username}</td>
+                <td>{a.email}</td>
+                <td>{a.nationality || "—"}</td>
+                <td>{a.biography || "—"}</td>
+                <td>{a.active === false ? "INACTIVE" : "ACTIVE"}</td>
+
+                {isAdmin && (
+                  <td>
+                    {(isAdmin || user?.id === a.id) && (
+                      <button
+                        className="btn-secondary"
+                        onClick={() => onEdit(a)}
+                      >
+                        Sửa
+                      </button>
+                    )}
+
+                    <button
+                      className={
+                        a.active === false ? "btn-secondary" : "btn-delete"
+                      }
+                      onClick={() => handleDelete(a)}
+                    >
+                      {a.active === false ? "Mở lại" : "Vô hiệu hóa"}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

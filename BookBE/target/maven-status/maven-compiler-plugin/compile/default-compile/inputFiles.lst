@@ -32,6 +32,7 @@ D:\Intern_FIS\BookBE\src\main\java\com\example\ConsoleUI.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\Controller\HomeController.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\dto\LoginRequest.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\Service\ServiceImpl\UserServiceImpl.java
+D:\Intern_FIS\BookBE\src\main\java\com\example\Config\SecurityConfig.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\Service\AuthService.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\Util\AuthContext.java
 D:\Intern_FIS\BookBE\src\main\java\com\example\App.java
