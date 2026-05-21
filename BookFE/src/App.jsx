@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import Login from "./Components/Login";
-import Register from "./Components/Register";
-import BookForm from "./Components/BookForm";
-import BookList from "./Components/BookList";
-import AuthorForm from "./Components/AuthorForm";
-import AuthorList from "./Components/AuthorList";
-import { getMe } from "./Api/authApi";
+import Login from "./Components/Auth/Login";
+import Register from "./Components/Auth/Register";
+import BookForm from "./Components/Admin/BookForm";
+import BookList from "./Components/Admin/BookList";
+import AuthorForm from "./Components/Admin/AuthorForm";
+import AuthorList from "./Components/Admin/AuthorList";
+import Profile from "./Components/Authors/profile";
+import { getMe } from "./Api/Auth/authApi";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -101,7 +102,7 @@ export default function App() {
         </button>
       </header>
 
-      {(user.role === "ADMIN" || user.role === "AUTHOR") && (
+      {user.role === "ADMIN" && (
         <section className="grid-2">
           <AuthorForm
             user={user}
@@ -119,9 +120,25 @@ export default function App() {
         </section>
       )}
 
-      <AuthorList user={user} reload={reload} onEdit={setEditingAuthor} />
+      {user.role === "ADMIN" && (
+        <>
+          <AuthorList user={user} reload={reload} onEdit={setEditingAuthor} />
 
-      <BookList user={user} reload={reload} onEdit={setEditingBook} />
+          <BookList user={user} reload={reload} onEdit={setEditingBook} />
+        </>
+      )}
+      {user.role === "AUTHOR" && (
+        <>
+          <Profile />
+          <BookForm
+            user={user}
+            editing={editingBook}
+            onSaved={refresh}
+            onCancelEdit={() => setEditingBook(null)}
+          />
+          <BookList user={user} reload={reload} onEdit={setEditingBook} />
+        </>
+      )}
     </div>
   );
 }

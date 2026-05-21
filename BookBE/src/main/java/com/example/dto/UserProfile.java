@@ -8,6 +8,9 @@ public class UserProfile {
     private String role;
     private String nationality;
     private String biography;
+    private String currentPassword;
+    private String newPassword;
+
 
     public int getId() {
         return id;
@@ -63,5 +66,20 @@ public class UserProfile {
 
     public void setBiography(String biography) {
         this.biography = biography;
+    }
+     public String getCurrentPassword() {
+        return currentPassword;
+    }
+
+    public void setCurrentPassword(String currentPassword) {
+        this.currentPassword = currentPassword;
+    }
+
+    public String getNewPassword() {
+        return newPassword;
+    }
+
+    public void setNewPassword(String newPassword) {
+        this.newPassword = newPassword;
     }
 }
