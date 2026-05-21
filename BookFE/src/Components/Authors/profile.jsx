@@ -81,7 +81,7 @@ function Profile() {
 
     try {
       await axios.put(
-        "http://localhost:8080/api/author/change-password",
+        "http://localhost:8080/api/author/profile/change-password",
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

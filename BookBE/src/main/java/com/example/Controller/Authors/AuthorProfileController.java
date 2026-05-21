@@ -1,15 +1,17 @@
 package com.example.Controller.Authors;
 
 import java.sql.Connection;
-
+import java.sql.PreparedStatement;
 import javax.sql.DataSource;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import com.example.DAO.UserDAO;
 import com.example.Entities.Author;
 import com.example.Entities.User;
@@ -17,7 +19,6 @@ import com.example.Service.UserService;
 import com.example.Util.AuthContext;
 import com.example.Util.RequestAuth;
 import com.example.dto.ChangePasswordRequest;
-
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -63,8 +64,7 @@ public class AuthorProfileController {
     // UPDATE PROFILE
     // =========================
     @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestBody Author author,
-                                          HttpServletRequest request) {
+    public ResponseEntity<?> updateProfile(@RequestBody Author author, HttpServletRequest request) {
 
         try (Connection conn = dataSource.getConnection()) {
 
@@ -87,34 +87,33 @@ public class AuthorProfileController {
     // =========================
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest req,
-                                           Authentication authentication) {
+            HttpServletRequest request) {
 
-        try {
-            String email = authentication.getName();
+        try (Connection conn = dataSource.getConnection()) {
 
-            // ⚠️ FIX: dùng repository style qua service đúng thiết kế
-            User user = userService.getAllUsers()
-                    .stream()
-                    .filter(u -> u.getEmail().equals(email))
-                    .findFirst()
-                    .orElse(null);
+            AuthContext ctx = RequestAuth.require(request);
+
+            UserDAO dao = new UserDAO(conn);
+            User user = dao.getUserById(ctx.getUserId()); // ← dùng getUserById có sẵn
 
             if (user == null) {
                 return ResponseEntity.badRequest().body("User không tồn tại");
             }
 
-            // check password
             if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
-                return ResponseEntity.badRequest().body("Current password incorrect");
+                return ResponseEntity.badRequest().body("Mật khẩu hiện tại không đúng");
             }
 
-            // update password
-            user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+            // Update password trực tiếp qua SQL
+            String newHashed = passwordEncoder.encode(req.getNewPassword());
+            String sql = "UPDATE users SET password = ? WHERE id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, newHashed);
+                ps.setInt(2, ctx.getUserId());
+                ps.executeUpdate();
+            }
 
-            // ⚠️ FIX QUAN TRỌNG: không dùng save()
-            userService.updateUser(user.getId(), user);
-
-            return ResponseEntity.ok("Password changed successfully");
+            return ResponseEntity.ok("Đổi mật khẩu thành công");
 
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
