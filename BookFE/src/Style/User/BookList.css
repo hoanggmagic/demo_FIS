@@ -1,0 +1,85 @@
+.user-book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.book-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+  transition: transform 0.2s;
+}
+
+.book-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.book-card h4 {
+  margin: 0;
+  font-size: 15px;
+  color: #222;
+}
+
+.book-card .author {
+  color: #888;
+  font-size: 13px;
+}
+.book-card .price {
+  color: #e53935;
+  font-weight: bold;
+  font-size: 15px;
+}
+.book-card .status {
+  font-size: 12px;
+  color: #666;
+}
+
+.btn-add-cart {
+  margin-top: auto;
+  padding: 8px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.btn-add-cart:hover {
+  background: #1565c0;
+}
+.btn-add-cart:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 0;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.search-bar button {
+  padding: 8px 16px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}

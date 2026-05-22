@@ -7,6 +7,7 @@ import AuthorForm from "./Components/Admin/AuthorForm";
 import AuthorList from "./Components/Admin/AuthorList";
 import Profile from "./Components/Authors/profile";
 import { getMe } from "./Api/Auth/authApi";
+import UserPage from "./Page/User/UserPage";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -138,6 +139,7 @@ export default function App() {
           <BookList user={user} reload={reload} onEdit={setEditingBook} />
         </>
       )}
+      {user.role === "USER" && <UserPage user={user} />}
     </div>
   );
 }
