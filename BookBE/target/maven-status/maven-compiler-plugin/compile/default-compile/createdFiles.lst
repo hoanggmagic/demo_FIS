@@ -2,11 +2,11 @@ com\example\Util\PasswordUtil.class
 com\example\Config\AuthInterceptor.class
 com\example\Util\AuthContext.class
 com\example\Util\JwtUtil.class
-com\example\Config\DataInitializer.class
-com\example\Entities\Book.class
 com\example\Entities\Wallet.class
-com\example\dto\AuthorRequest.class
-com\example\Config\WebConfig.class
 com\example\DAO\WalletDAO.class
 com\example\Util\RequestAuth.class
 com\example\Config\WebConfig$1.class
+com\example\Config\DataInitializer.class
+com\example\Entities\Book.class
+com\example\dto\AuthorRequest.class
+com\example\Config\WebConfig.class

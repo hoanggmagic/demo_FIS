@@ -2,6 +2,7 @@ package com.example.Controller.Authors;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.HashMap;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,12 +20,17 @@ import com.example.Service.UserService;
 import com.example.Util.AuthContext;
 import com.example.Util.RequestAuth;
 import com.example.dto.ChangePasswordRequest;
+import com.example.dto.OtpData;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
+import java.util.HashMap;
+import com.example.dto.OtpData;
 
 @RestController
 @RequestMapping("/api/author/profile")
 @CrossOrigin(origins = "*")
 public class AuthorProfileController {
+    private Map<String, OtpData> otpStorage = new HashMap<>();
 
     @Autowired
     private DataSource dataSource;

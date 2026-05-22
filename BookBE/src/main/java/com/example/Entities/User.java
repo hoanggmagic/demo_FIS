@@ -18,6 +18,7 @@ public class User {
     private String role;
     private boolean active;
     private Timestamp createdAt;
+    private String otp;
 
     public User() {}
 
@@ -107,5 +108,9 @@ public class User {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getOtp() {
+        return otp;
     }
 }

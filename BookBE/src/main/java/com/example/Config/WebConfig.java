@@ -9,26 +9,49 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig {
 
-  private final AuthInterceptor authInterceptor;
+    private final AuthInterceptor authInterceptor;
 
-  public WebConfig(AuthInterceptor authInterceptor) {
-    this.authInterceptor = authInterceptor;
-  }
+    public WebConfig(AuthInterceptor authInterceptor) {
+        this.authInterceptor = authInterceptor;
+    }
 
-  @Bean
-  public WebMvcConfigurer webMvcConfigurer() {
-    return new WebMvcConfigurer() {
-      @Override
-      public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**").allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS").allowedHeaders("*")
-            .exposedHeaders("Authorization");
-      }
+    @Bean
+    public WebMvcConfigurer webMvcConfigurer() {
 
-      @Override
-      public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authInterceptor).addPathPatterns("/api/**");
-      }
-    };
-  }
+        return new WebMvcConfigurer() {
+
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+
+                registry.addMapping("/**")
+                        .allowedOrigins(
+                                "http://localhost:5173",
+                                "http://127.0.0.1:5173"
+                        )
+                        .allowedMethods(
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "OPTIONS"
+                        )
+                        .allowedHeaders("*")
+                        .exposedHeaders("Authorization");
+            }
+
+            @Override
+            public void addInterceptors(InterceptorRegistry registry) {
+
+                registry.addInterceptor(authInterceptor)
+
+                        // áp dụng cho api
+                        .addPathPatterns("/api/**")
+
+                        // bỏ qua auth api
+                        .excludePathPatterns(
+                                "/api/auth/**"
+                        );
+            }
+        };
+    }
 }
