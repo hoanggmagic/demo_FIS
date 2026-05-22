@@ -2,22 +2,26 @@ package com.example.Controller.Users;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.HashMap;
+import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.DAO.UserDAO;
 import com.example.Entities.User;
+import com.example.Service.MailService;
 import com.example.Service.UserService;
 import com.example.Util.AuthContext;
 import com.example.Util.RequestAuth;
-import com.example.dto.ChangePasswordRequest;
+import com.example.dto.OtpData;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -33,6 +37,9 @@ public class UserProfileController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private MailService mailService;
+    private Map<String, OtpData> otpStorage = new HashMap<>();
 
     // =========================
     // GET PROFILE
@@ -86,33 +93,27 @@ public class UserProfileController {
     // =========================
     // CHANGE PASSWORD
     // =========================
-    @PutMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest req,
-            HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+    @PostMapping("/send-reset-otp")
+    public ResponseEntity<?> sendResetOtp(@RequestBody Map<String, String> body) {
 
-            AuthContext ctx = RequestAuth.require(request);
+        try {
 
-            UserDAO dao = new UserDAO(conn);
-            User user = dao.getUserById(ctx.getUserId());
+            String email = body.get("email");
 
-            if (user == null) {
-                return ResponseEntity.badRequest().body("User không tồn tại");
+            if (email == null || email.isEmpty()) {
+                return ResponseEntity.badRequest().body("Email không được để trống");
             }
 
-            if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPassword())) {
-                return ResponseEntity.badRequest().body("Mật khẩu hiện tại không đúng");
-            }
+            String otp = String.valueOf((int) ((Math.random() * 900000) + 100000));
 
-            String newHashed = passwordEncoder.encode(req.getNewPassword());
-            String sql = "UPDATE users SET password = ? WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, newHashed);
-                ps.setInt(2, ctx.getUserId());
-                ps.executeUpdate();
-            }
+            long expireTime = System.currentTimeMillis() + (5 * 60 * 1000);
 
-            return ResponseEntity.ok("Đổi mật khẩu thành công");
+            otpStorage.put(email, new OtpData(otp, expireTime));
+
+            mailService.sendMail(email, "Reset Password OTP",
+                    "OTP đổi mật khẩu của bạn là: " + otp + "\nCó hiệu lực 5 phút.");
+
+            return ResponseEntity.ok("OTP reset password đã gửi");
 
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());

@@ -5,6 +5,7 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     private String newPassword;
+    private String otp;
 
     public String getCurrentPassword() {
         return currentPassword;
@@ -20,5 +21,13 @@ public class ChangePasswordRequest {
 
     public void setNewPassword(String newPassword) {
         this.newPassword = newPassword;
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
     }
 }
