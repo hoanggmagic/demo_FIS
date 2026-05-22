@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "../../Style/Authors/Profile.css";
+import "../../Style/User/UserProfile.css";
 
-function Profile() {
+function UserProfile() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState({
     id: "",
-    name: "",
+    fullName: "",
     nationality: "",
-    biography: "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -30,7 +29,7 @@ function Profile() {
       navigate("/login");
       return;
     }
-    if (user.role?.toUpperCase() !== "AUTHOR") {
+    if (user.role?.toUpperCase() !== "USER") {
       navigate("/");
       return;
     }
@@ -39,7 +38,7 @@ function Profile() {
 
   const loadProfile = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/author/profile", {
+      const res = await axios.get("http://localhost:8080/api/user/profile", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setProfile(res.data);
@@ -52,7 +51,7 @@ function Profile() {
 
   const updateProfile = async () => {
     try {
-      await axios.put("http://localhost:8080/api/author/profile", profile, {
+      await axios.put("http://localhost:8080/api/user/profile", profile, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -65,13 +64,17 @@ function Profile() {
   };
 
   const changePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      setPassMsg({ text: "❌ Vui lòng nhập đầy đủ thông tin!", ok: false });
+      return;
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPassMsg({ text: "❌ Mật khẩu xác nhận không khớp!", ok: false });
       return;
     }
     try {
       await axios.put(
-        "http://localhost:8080/api/author/profile/change-password",
+        "http://localhost:8080/api/user/profile/change-password",
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
@@ -116,48 +119,41 @@ function Profile() {
 
   return (
     <div className="profile-page">
-      {/* HEADER */}
+      {/* Header */}
       <div className="profile-header">
         <div className="profile-avatar">
-          {profile.name ? profile.name[0].toUpperCase() : "A"}
+          {profile.name ? profile.name[0].toUpperCase() : "U"}
         </div>
-
         <div className="profile-header-info">
-          <h2 className="profile-header-name">{profile.name || "Tác giả"}</h2>
-          <span className="profile-badge">✍️ AUTHOR</span>
+          <h2 className="profile-header-name">
+            {profile.name || "Người dùng"}
+          </h2>
+          <span className="profile-badge">👤 USER</span>
         </div>
       </div>
 
-      {/* BODY */}
       <div className="profile-grid">
-        {/* LEFT - INFO */}
+        {/* Card: Thông tin */}
         <div className="profile-card">
           <h3 className="profile-card-title">👤 Thông tin cá nhân</h3>
 
           <div className="profile-group">
             <label>Họ tên</label>
             <input
+              type="text"
+              placeholder="Nhập họ tên"
               value={profile.name || ""}
               onChange={(e) => setProfile({ ...profile, name: e.target.value })}
             />
           </div>
-
           <div className="profile-group">
             <label>Quốc tịch</label>
             <input
+              type="text"
+              placeholder="Nhập quốc tịch"
               value={profile.nationality || ""}
               onChange={(e) =>
                 setProfile({ ...profile, nationality: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="profile-group">
-            <label>Tiểu sử</label>
-            <textarea
-              value={profile.biography || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, biography: e.target.value })
               }
             />
           </div>
@@ -175,7 +171,7 @@ function Profile() {
           </button>
         </div>
 
-        {/* RIGHT - PASSWORD */}
+        {/* Card: Đổi mật khẩu */}
         <div className="profile-card">
           <h3 className="profile-card-title">🔒 Đổi mật khẩu</h3>
 
@@ -183,6 +179,7 @@ function Profile() {
             <label>Mật khẩu hiện tại</label>
             <input
               type="password"
+              placeholder="••••••••"
               value={passwordData.currentPassword}
               onChange={(e) =>
                 setPasswordData({
@@ -197,6 +194,7 @@ function Profile() {
             <label>Mật khẩu mới</label>
             <input
               type="password"
+              placeholder="••••••••"
               value={passwordData.newPassword}
               onChange={(e) =>
                 setPasswordData({
@@ -208,9 +206,10 @@ function Profile() {
           </div>
 
           <div className="profile-group">
-            <label>Xác nhận mật khẩu</label>
+            <label>Xác nhận mật khẩu mới</label>
             <input
               type="password"
+              placeholder="••••••••"
               value={passwordData.confirmPassword}
               onChange={(e) =>
                 setPasswordData({
@@ -230,10 +229,12 @@ function Profile() {
           <button className="btn-warning" onClick={changePassword}>
             🔑 Đổi mật khẩu
           </button>
+
+          <hr className="profile-divider" />
         </div>
       </div>
     </div>
   );
 }
 
-export default Profile;
+export default UserProfile;

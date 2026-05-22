@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import UserBookList from "../../Components/User/BookList";
 import Cart from "../../Components/User/Cart";
 import { getCart } from "../../Api/User/CartApi";
+import Profile from "../../Components/User/UserProfile";
 
 export default function UserPage({ user }) {
   const [tab, setTab] = useState("books"); // mặc định vào sách
@@ -96,11 +97,26 @@ export default function UserPage({ user }) {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setTab("profile")}
+          style={{
+            padding: "8px 16px",
+            border: "none",
+            borderRadius: 6,
+            cursor: "pointer",
+            background: tab === "profile" ? "#1976d2" : "#f0f0f0",
+            color: tab === "profile" ? "#fff" : "#333",
+            fontWeight: tab === "profile" ? "bold" : "normal",
+          }}
+        >
+          📚 Hồ sơ cá nhân
+        </button>
       </nav>
 
       {/* Nội dung */}
       {tab === "books" && <UserBookList onCartUpdate={handleCartUpdate} />}
       {tab === "cart" && <Cart reload={cartReload} />}
+      {tab === "profile" && user && <Profile user={user} />}
     </div>
   );
 }

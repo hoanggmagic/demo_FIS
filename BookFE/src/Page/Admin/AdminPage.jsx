@@ -3,9 +3,8 @@ import BookForm from "../../Components/Admin/BookForm";
 import BookList from "../../Components/Admin/BookList";
 import AuthorForm from "../../Components/Admin/AuthorForm";
 import AuthorList from "../../Components/Admin/AuthorList";
-import Profile from "../../Components/Authors/profile";
 
-export default function AuthorsPage({ user }) {
+export default function AdminPage({ user }) {
   const [tab, setTab] = useState("books");
   const [editingBook, setEditingBook] = useState(null);
   const [editingAuthor, setEditingAuthor] = useState(null);
@@ -34,6 +33,7 @@ export default function AuthorsPage({ user }) {
 
   return (
     <div>
+      {/* Header nav */}
       <nav
         style={{
           display: "flex",
@@ -49,10 +49,12 @@ export default function AuthorsPage({ user }) {
         </span>
 
         {navBtn("books", "📚 Sách")}
-        {isAdmin && navBtn("authors", "👤 Tác giả")}
-        {isAuthor && navBtn("profile", "👤 Hồ sơ")}
+        {/* Author tab: admin thấy full, author chỉ thấy hồ sơ */}
+        {(isAdmin || isAuthor) &&
+          navBtn("authors", isAuthor ? "👤 Hồ sơ" : "👤 Tác giả")}
       </nav>
 
+      {/* Tab: Sách */}
       {tab === "books" && (
         <>
           <BookForm
@@ -75,7 +77,8 @@ export default function AuthorsPage({ user }) {
         </>
       )}
 
-      {tab === "authors" && isAdmin && (
+      {/* Tab: Tác giả / Hồ sơ */}
+      {tab === "authors" && (
         <>
           <AuthorForm
             user={user}
@@ -96,8 +99,6 @@ export default function AuthorsPage({ user }) {
           />
         </>
       )}
-
-      {tab === "profile" && isAuthor && <Profile />}
     </div>
   );
 }

@@ -6,7 +6,6 @@ import java.sql.Timestamp;
 public class Order {
     private int id;
     private int userId;
-    private int bookId;
     private BigDecimal totalPrice;
     private BigDecimal authorIncome;
     private BigDecimal platformIncome;
@@ -29,14 +28,6 @@ public class Order {
 
     public void setUserId(int userId) {
         this.userId = userId;
-    }
-
-    public int getBookId() {
-        return bookId;
-    }
-
-    public void setBookId(int bookId) {
-        this.bookId = bookId;
     }
 
     public BigDecimal getTotalPrice() {

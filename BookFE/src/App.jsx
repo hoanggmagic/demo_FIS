@@ -6,8 +6,11 @@ import BookList from "./Components/Admin/BookList";
 import AuthorForm from "./Components/Admin/AuthorForm";
 import AuthorList from "./Components/Admin/AuthorList";
 import Profile from "./Components/Authors/profile";
+import UserProfile from "./Components/User/UserProfile";
 import { getMe } from "./Api/Auth/authApi";
 import UserPage from "./Page/User/UserPage";
+import AdminPage from "./Page/Admin/AdminPage";
+import AuthorsPage from "./Page/Authors/AuthorsPage";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -103,42 +106,8 @@ export default function App() {
         </button>
       </header>
 
-      {user.role === "ADMIN" && (
-        <section className="grid-2">
-          <AuthorForm
-            user={user}
-            editing={editingAuthor}
-            onSaved={refresh}
-            onCancelEdit={() => setEditingAuthor(null)}
-          />
-
-          <BookForm
-            user={user}
-            editing={editingBook}
-            onSaved={refresh}
-            onCancelEdit={() => setEditingBook(null)}
-          />
-        </section>
-      )}
-
-      {user.role === "ADMIN" && (
-        <>
-          <AuthorList user={user} reload={reload} onEdit={setEditingAuthor} />
-          <BookList user={user} reload={reload} onEdit={setEditingBook} />
-        </>
-      )}
-      {user.role === "AUTHOR" && (
-        <>
-          <Profile />
-          <BookForm
-            user={user}
-            editing={editingBook}
-            onSaved={refresh}
-            onCancelEdit={() => setEditingBook(null)}
-          />
-          <BookList user={user} reload={reload} onEdit={setEditingBook} />
-        </>
-      )}
+      {user.role === "ADMIN" && <AdminPage user={user} />}
+      {user.role === "AUTHOR" && <AuthorsPage user={user} />}
       {user.role === "USER" && <UserPage user={user} />}
     </div>
   );
