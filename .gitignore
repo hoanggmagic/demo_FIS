@@ -1,0 +1,26 @@
+node_modules
+.env
+dist
+build
+application.properties
+application.yml
+# React
+node_modules
+dist
+build
+
+# Env
+.env
+.env.local
+
+# Spring Boot
+target
+application.properties
+application.yml
+
+# Logs
+*.log
+
+# IDE
+.idea
+.vscode
