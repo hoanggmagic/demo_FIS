@@ -1,10 +1,4 @@
-node_modules
-.env
-dist
-build
-application.properties
-application.yml
-# React
+# Node / React
 node_modules
 dist
 build
