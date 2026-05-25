@@ -6,12 +6,6 @@ import "../../Style/User/UserProfile.css";
 function UserProfile() {
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState({
-    id: "",
-    fullName: "",
-    nationality: "",
-  });
-
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -19,31 +13,45 @@ function UserProfile() {
     otp: "",
   });
 
+  const [profile, setProfile] = useState({
+    id: "",
+    name: "",
+    nationality: "",
+    avatar: "",
+  });
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [profileMsg, setProfileMsg] = useState({ text: "", ok: true });
   const [passMsg, setPassMsg] = useState({ text: "", ok: true });
-  const [otpSent, setOtpSent] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
+
     if (!token || !user) {
       navigate("/login");
       return;
     }
+
     if (user.role?.toUpperCase() !== "USER") {
       navigate("/");
       return;
     }
+
     loadProfile();
   }, []);
 
   const loadProfile = async () => {
     try {
       const res = await axios.get("http://localhost:8080/api/user/profile", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
+
       setProfile(res.data);
     } catch (error) {
       if (error.response?.status === 401) logout();
@@ -52,19 +60,9 @@ function UserProfile() {
     }
   };
 
-  const updateProfile = async () => {
-    try {
-      await axios.put("http://localhost:8080/api/user/profile", profile, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      setProfileMsg({ text: "✅ Cập nhật thông tin thành công!", ok: true });
-    } catch {
-      setProfileMsg({ text: "❌ Cập nhật thất bại!", ok: false });
-    }
-  };
+  // =========================
+  // SEND OTP
+  // =========================
   const sendOtp = async () => {
     setSendingOtp(true);
 
@@ -85,27 +83,52 @@ function UserProfile() {
         text: "📩 OTP đã gửi về email!",
         ok: true,
       });
-    } catch (error) {
+    } catch (err) {
       setPassMsg({
         text: "❌ Gửi OTP thất bại!",
         ok: false,
       });
-
-      console.log(error);
     } finally {
       setSendingOtp(false);
     }
   };
 
+  // =========================
+  // UPDATE PROFILE
+  // =========================
+  const updateProfile = async () => {
+    try {
+      await axios.put("http://localhost:8080/api/user/profile", profile, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      setProfileMsg({
+        text: "✅ Cập nhật thông tin thành công!",
+        ok: true,
+      });
+    } catch {
+      setProfileMsg({
+        text: "❌ Cập nhật thất bại!",
+        ok: false,
+      });
+    }
+  };
+
+  // =========================
+  // CHANGE PASSWORD + OTP
+  // =========================
   const changePassword = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword) {
-      setPassMsg({ text: "❌ Vui lòng nhập đầy đủ thông tin!", ok: false });
-      return;
-    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPassMsg({ text: "❌ Mật khẩu xác nhận không khớp!", ok: false });
+      setPassMsg({
+        text: "❌ Mật khẩu xác nhận không khớp!",
+        ok: false,
+      });
       return;
     }
+
     if (!otpSent) {
       setPassMsg({
         text: "❌ Bạn chưa gửi OTP!",
@@ -113,6 +136,7 @@ function UserProfile() {
       });
       return;
     }
+
     try {
       await axios.put(
         "http://localhost:8080/api/user/profile/change-password",
@@ -123,12 +147,16 @@ function UserProfile() {
         },
         {
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         },
       );
-      setPassMsg({ text: "✅ Đổi mật khẩu thành công!", ok: true });
+
+      setPassMsg({
+        text: "✅ Đổi mật khẩu thành công!",
+        ok: true,
+      });
+
       setPasswordData({
         currentPassword: "",
         newPassword: "",
@@ -141,7 +169,7 @@ function UserProfile() {
       setPassMsg({
         text:
           error.response?.status === 400
-            ? "❌ Mật khẩu hiện tại không đúng!"
+            ? "❌ OTP hoặc mật khẩu không đúng!"
             : "❌ Đổi mật khẩu thất bại!",
         ok: false,
       });
@@ -164,141 +192,121 @@ function UserProfile() {
 
   return (
     <div className="profile-page">
-      {/* Header */}
+      {/* HEADER */}
       <div className="profile-header">
         <div className="profile-avatar">
-          {profile.name ? profile.name[0].toUpperCase() : "U"}
+          {profile.username ? profile.username[0].toUpperCase() : "U"}
         </div>
+
         <div className="profile-header-info">
           <h2 className="profile-header-name">
-            {profile.name || "Người dùng"}
+            {profile.username || "Người dùng"}
           </h2>
+
           <span className="profile-badge">👤 USER</span>
         </div>
       </div>
 
       <div className="profile-grid">
-        {/* Card: Thông tin */}
+        {/* LEFT - PROFILE */}
         <div className="profile-card">
-          <h3 className="profile-card-title">👤 Thông tin cá nhân</h3>
+          <h3>👤 Thông tin cá nhân</h3>
 
-          <div className="profile-group">
-            <label>Họ tên</label>
-            <input
-              type="text"
-              placeholder="Nhập họ tên"
-              value={profile.name || ""}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            />
-          </div>
-          <div className="profile-group">
-            <label>Quốc tịch</label>
-            <input
-              type="text"
-              placeholder="Nhập quốc tịch"
-              value={profile.nationality || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, nationality: e.target.value })
-              }
-            />
-          </div>
+          <input
+            value={profile.username}
+            onChange={(e) =>
+              setProfile({
+                ...profile,
+                username: e.target.value,
+              })
+            }
+            placeholder="Tên người dùng"
+          />
+
+          <input
+            value={profile.nationality}
+            onChange={(e) =>
+              setProfile({
+                ...profile,
+                nationality: e.target.value,
+              })
+            }
+            placeholder="Quốc tịch"
+          />
 
           {profileMsg.text && (
-            <div
-              className={`profile-msg ${profileMsg.ok ? "success" : "error"}`}
-            >
+            <p className={profileMsg.ok ? "success" : "error"}>
               {profileMsg.text}
-            </div>
+            </p>
           )}
 
-          <button className="btn-primary" onClick={updateProfile}>
-            💾 Lưu thay đổi
-          </button>
+          <button onClick={updateProfile}>💾 Lưu</button>
         </div>
 
-        {/* Card: Đổi mật khẩu */}
+        {/* RIGHT - PASSWORD + OTP */}
         <div className="profile-card">
-          <h3 className="profile-card-title">🔒 Đổi mật khẩu</h3>
+          <h3>🔒 Đổi mật khẩu (OTP)</h3>
 
-          <div className="profile-group">
-            <label>Mật khẩu hiện tại</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.currentPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  currentPassword: e.target.value,
-                })
-              }
-            />
-          </div>
+          <input
+            type="password"
+            placeholder="Mật khẩu hiện tại"
+            value={passwordData.currentPassword}
+            onChange={(e) =>
+              setPasswordData({
+                ...passwordData,
+                currentPassword: e.target.value,
+              })
+            }
+          />
 
-          <div className="profile-group">
-            <label>Mật khẩu mới</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.newPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  newPassword: e.target.value,
-                })
-              }
-            />
-          </div>
+          <input
+            type="password"
+            placeholder="Mật khẩu mới"
+            value={passwordData.newPassword}
+            onChange={(e) =>
+              setPasswordData({
+                ...passwordData,
+                newPassword: e.target.value,
+              })
+            }
+          />
 
-          <div className="profile-group">
-            <label>Xác nhận mật khẩu mới</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={passwordData.confirmPassword}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  confirmPassword: e.target.value,
-                })
-              }
-            />
-          </div>
-          <button
-            className="btn-primary"
-            onClick={sendOtp}
-            disabled={sendingOtp}
-          >
+          <input
+            type="password"
+            placeholder="Xác nhận mật khẩu"
+            value={passwordData.confirmPassword}
+            onChange={(e) =>
+              setPasswordData({
+                ...passwordData,
+                confirmPassword: e.target.value,
+              })
+            }
+          />
+
+          {/* SEND OTP */}
+          <button onClick={sendOtp} disabled={sendingOtp}>
             {sendingOtp ? "Đang gửi OTP..." : "📩 Gửi OTP"}
           </button>
-          {passMsg.text && (
-            <div className={`profile-msg ${passMsg.ok ? "success" : "error"}`}>
-              {passMsg.text}
-            </div>
-          )}
+
+          {/* OTP INPUT */}
           {otpSent && (
-            <div className="profile-group">
-              <label>OTP</label>
-
-              <input
-                type="text"
-                placeholder="Nhập OTP"
-                value={passwordData.otp}
-                onChange={(e) =>
-                  setPasswordData({
-                    ...passwordData,
-                    otp: e.target.value,
-                  })
-                }
-              />
-            </div>
+            <input
+              placeholder="Nhập OTP"
+              value={passwordData.otp}
+              onChange={(e) =>
+                setPasswordData({
+                  ...passwordData,
+                  otp: e.target.value,
+                })
+              }
+            />
           )}
 
-          <button className="btn-warning" onClick={changePassword}>
-            🔑 Đổi mật khẩu
-          </button>
+          {passMsg.text && (
+            <p className={passMsg.ok ? "success" : "error"}>{passMsg.text}</p>
+          )}
 
-          <hr className="profile-divider" />
+          <button onClick={changePassword}>🔑 Đổi mật khẩu</button>
         </div>
       </div>
     </div>
