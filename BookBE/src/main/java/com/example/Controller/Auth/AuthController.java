@@ -149,19 +149,38 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfile> me(HttpServletRequest request) {
+    public ResponseEntity<?> me(HttpServletRequest request) {
+
         try {
+
+            System.out.println("=== /me called ===");
+
+            String authHeader = request.getHeader("Authorization");
+
+            System.out.println("AUTH HEADER: " + authHeader);
+
             AuthContext ctx = RequestAuth.require(request);
+
+            System.out.println("USER ID: " + ctx.getUserId());
+
             try (Connection conn = dataSource.getConnection()) {
+
                 UserDAO dao = new UserDAO(conn);
+
                 User user = dao.getUserById(ctx.getUserId());
+
                 if (user == null) {
-                    return ResponseEntity.status(404).build();
+                    return ResponseEntity.status(404).body("User not found");
                 }
+
                 return ResponseEntity.ok(AuthService.toProfile(user));
             }
+
         } catch (Exception e) {
-            return ResponseEntity.status(500).build();
+
+            e.printStackTrace();
+
+            return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 }

@@ -16,11 +16,14 @@ function UserProfile() {
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    otp: "",
   });
 
   const [loading, setLoading] = useState(true);
   const [profileMsg, setProfileMsg] = useState({ text: "", ok: true });
   const [passMsg, setPassMsg] = useState({ text: "", ok: true });
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -62,6 +65,37 @@ function UserProfile() {
       setProfileMsg({ text: "❌ Cập nhật thất bại!", ok: false });
     }
   };
+  const sendOtp = async () => {
+    setSendingOtp(true);
+
+    try {
+      await axios.post(
+        "http://localhost:8080/api/user/profile/send-reset-otp",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      setOtpSent(true);
+
+      setPassMsg({
+        text: "📩 OTP đã gửi về email!",
+        ok: true,
+      });
+    } catch (error) {
+      setPassMsg({
+        text: "❌ Gửi OTP thất bại!",
+        ok: false,
+      });
+
+      console.log(error);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
   const changePassword = async () => {
     if (!passwordData.currentPassword || !passwordData.newPassword) {
@@ -72,12 +106,20 @@ function UserProfile() {
       setPassMsg({ text: "❌ Mật khẩu xác nhận không khớp!", ok: false });
       return;
     }
+    if (!otpSent) {
+      setPassMsg({
+        text: "❌ Bạn chưa gửi OTP!",
+        ok: false,
+      });
+      return;
+    }
     try {
       await axios.put(
         "http://localhost:8080/api/user/profile/change-password",
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
+          otp: passwordData.otp,
         },
         {
           headers: {
@@ -91,7 +133,10 @@ function UserProfile() {
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
+        otp: "",
       });
+
+      setOtpSent(false);
     } catch (error) {
       setPassMsg({
         text:
@@ -219,10 +264,33 @@ function UserProfile() {
               }
             />
           </div>
-
+          <button
+            className="btn-primary"
+            onClick={sendOtp}
+            disabled={sendingOtp}
+          >
+            {sendingOtp ? "Đang gửi OTP..." : "📩 Gửi OTP"}
+          </button>
           {passMsg.text && (
             <div className={`profile-msg ${passMsg.ok ? "success" : "error"}`}>
               {passMsg.text}
+            </div>
+          )}
+          {otpSent && (
+            <div className="profile-group">
+              <label>OTP</label>
+
+              <input
+                type="text"
+                placeholder="Nhập OTP"
+                value={passwordData.otp}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    otp: e.target.value,
+                  })
+                }
+              />
             </div>
           )}
 

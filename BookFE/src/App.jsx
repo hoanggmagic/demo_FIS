@@ -7,7 +7,6 @@ import AuthorForm from "./Components/Admin/AuthorForm";
 import AuthorList from "./Components/Admin/AuthorList";
 import Profile from "./Components/Authors/profile";
 import UserProfile from "./Components/User/UserProfile";
-import { getMe } from "./Api/Auth/authApi";
 import UserPage from "./Page/User/UserPage";
 import AdminPage from "./Page/Admin/AdminPage";
 import AuthorsPage from "./Page/Authors/AuthorsPage";
@@ -39,17 +38,7 @@ export default function App() {
       }
     }
 
-    getMe()
-      .then((res) => {
-        setUser(res.data);
-        localStorage.setItem("user", JSON.stringify(res.data));
-      })
-      .catch(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+    setLoading(false);
   }, []);
 
   const refresh = () => setReload((p) => !p);
