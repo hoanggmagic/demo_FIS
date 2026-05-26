@@ -6,9 +6,12 @@ import {
   clearCart,
 } from "../../Api/User/CartApi";
 import "../../Style/User/Cart.css";
-
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { createOrder } from "../../Api/User/OrderApi";
 export default function Cart({ reload }) {
   const [items, setItems] = useState([]);
+  const navigate = useNavigate();
 
   const load = async () => {
     const res = await getCart();
@@ -18,7 +21,30 @@ export default function Cart({ reload }) {
   useEffect(() => {
     load();
   }, [reload]);
+  const handleCheckout = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user"));
 
+      const orderRes = await createOrder({
+        userId: user.id,
+        items: items.map((i) => ({
+          bookId: i.bookId,
+          qty: i.quantity,
+        })),
+      });
+
+      const orderId = orderRes.data.orderId;
+
+      navigate("/payment", {
+        state: {
+          orderId,
+          amount: total,
+        },
+      });
+    } catch (err) {
+      console.log(err);
+    }
+  };
   const handleQty = async (cartItemId, newQty) => {
     if (newQty < 1) return;
     await updateCartItem(cartItemId, newQty);
@@ -102,10 +128,7 @@ export default function Cart({ reload }) {
             <span className="cart-total">
               Tổng: {Number(total).toLocaleString()} VND
             </span>
-            <button
-              className="btn-checkout"
-              onClick={() => alert("Chức năng thanh toán sắp có!")}
-            >
+            <button type="button" onClick={handleCheckout}>
               💳 Thanh toán
             </button>
           </div>

@@ -1,9 +1,9 @@
 package com.example.Util;
 
-import com.example.Config.AuthInterceptor;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.Config.AuthInterceptor;
+import jakarta.servlet.http.HttpServletRequest;
 
 public final class RequestAuth {
     private RequestAuth() {}

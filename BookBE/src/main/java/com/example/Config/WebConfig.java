@@ -24,33 +24,17 @@ public class WebConfig {
             public void addCorsMappings(CorsRegistry registry) {
 
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                                "http://localhost:5173",
-                                "http://127.0.0.1:5173"
-                        )
-                        .allowedMethods(
-                                "GET",
-                                "POST",
-                                "PUT",
-                                "DELETE",
-                                "OPTIONS"
-                        )
-                        .allowedHeaders("*")
-                        .exposedHeaders("Authorization");
+                        .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedHeaders("*").exposedHeaders("Authorization");
             }
 
             @Override
             public void addInterceptors(InterceptorRegistry registry) {
-
-                registry.addInterceptor(authInterceptor)
-
-                        // áp dụng cho api
-                        .addPathPatterns("/api/**")
-
-                        // bỏ qua auth api
-                        .excludePathPatterns(
-                                "/api/auth/**"
-                        );
+                registry.addInterceptor(authInterceptor).addPathPatterns("/api/**")
+                        .excludePathPatterns("/api/auth/**", "/api/payments/webhook" // ← thêm dòng
+                                                                                     // này
+                );
             }
         };
     }
