@@ -109,13 +109,6 @@ public class AdminWalletController {
             String accountHolder = rs.getString("account_holder");
             String email = rs.getString("email");
             String fullName = rs.getString("full_name");
-
-            // Trừ ví admin
-            String deductSql = "UPDATE wallets SET balance = balance - ? WHERE user_id = 7";
-            PreparedStatement deduct = conn.prepareStatement(deductSql);
-            deduct.setBigDecimal(1, amount);
-            deduct.executeUpdate();
-
             // Cập nhật status
             String updateSql = "UPDATE withdraw_requests SET status = 'APPROVED' WHERE id = ?";
             PreparedStatement update = conn.prepareStatement(updateSql);

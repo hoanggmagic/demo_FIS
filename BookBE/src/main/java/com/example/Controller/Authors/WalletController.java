@@ -89,8 +89,8 @@ public class WalletController {
             String accountNumber = (String) body.get("accountNumber");
             String accountHolder = (String) body.get("accountHolder");
 
-            if (amount.compareTo(BigDecimal.valueOf(10000)) < 0) {
-                return ResponseEntity.badRequest().body("Số tiền rút tối thiểu 10,000 VND");
+            if (amount.compareTo(BigDecimal.valueOf(1000)) < 0) {
+                return ResponseEntity.badRequest().body("Số tiền rút tối thiểu 1,000 VND");
             }
 
             // Kiểm tra số dư

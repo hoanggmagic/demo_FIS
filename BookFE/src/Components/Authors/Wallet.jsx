@@ -170,7 +170,7 @@ export default function Wallet() {
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               required
-              min={10000}
+              min={1000}
               style={input}
             />
             <input
