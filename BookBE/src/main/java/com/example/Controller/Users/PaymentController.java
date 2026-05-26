@@ -92,7 +92,14 @@ public class PaymentController {
                 PreparedStatement clearStmt = conn.prepareStatement(clearCart);
                 clearStmt.setInt(1, userId);
                 clearStmt.executeUpdate();
-
+                String updateStock = """
+                            UPDATE books SET quantity = books.quantity - oi.quantity
+                            FROM order_items oi
+                            WHERE oi.book_id = books.id AND oi.order_id = ?
+                        """;
+                PreparedStatement updateStockStmt = conn.prepareStatement(updateStock);
+                updateStockStmt.setInt(1, orderId);
+                updateStockStmt.executeUpdate();
                 System.out
                         .println("Order " + orderId + " SUCCESS, cart cleared for user " + userId);
             }

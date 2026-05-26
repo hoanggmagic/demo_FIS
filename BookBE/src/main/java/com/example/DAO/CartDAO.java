@@ -13,6 +13,7 @@ public class CartDAO {
 
     private Connection conn;
 
+
     public CartDAO(Connection conn) {
         this.conn = conn;
     }
@@ -22,7 +23,8 @@ public class CartDAO {
         List<Map<String, Object>> cart = new ArrayList<>();
         String sql = """
                     SELECT c.id, c.book_id, b.title, b.author_id, c.quantity, p.price,
-                           (c.quantity * p.price) AS subtotal
+                           (c.quantity * p.price) AS subtotal,
+                           b.quantity AS stock
                     FROM cart c
                     JOIN books b ON c.book_id = b.id
                     JOIN book_prices p ON b.id = p.book_id
@@ -39,6 +41,7 @@ public class CartDAO {
             item.put("quantity", rs.getInt("quantity"));
             item.put("price", rs.getDouble("price"));
             item.put("subtotal", rs.getDouble("subtotal"));
+            item.put("stock", rs.getInt("stock"));
             cart.add(item);
         }
         return cart;

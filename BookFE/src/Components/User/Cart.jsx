@@ -47,6 +47,11 @@ export default function Cart({ reload }) {
   };
   const handleQty = async (cartItemId, newQty) => {
     if (newQty < 1) return;
+    const item = items.find((i) => i.cartItemId === cartItemId);
+    if (item && newQty > item.stock) {
+      alert(`❌ Chỉ còn ${item.stock} sản phẩm trong kho!`);
+      return;
+    }
     await updateCartItem(cartItemId, newQty);
     load();
   };
@@ -102,6 +107,7 @@ export default function Cart({ reload }) {
                         onClick={() =>
                           handleQty(item.cartItemId, item.quantity + 1)
                         }
+                        disabled={item.quantity >= item.stock}
                       >
                         +
                       </button>
