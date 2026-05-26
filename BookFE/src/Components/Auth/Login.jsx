@@ -3,7 +3,7 @@ import { login } from "../../Api/Auth/authApi";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
-export default function Login({ onSuccess, goToRegister }) {
+export default function Login({ onSuccess, goToRegister, goToRegisterAuthor }) {
   const [form, setForm] = useState({
     username: "",
     password: "",
@@ -106,6 +106,12 @@ export default function Login({ onSuccess, goToRegister }) {
           Chưa có tài khoản?{" "}
           <button type="button" onClick={goToRegister}>
             Đăng ký
+          </button>
+        </p>
+        <p>
+          Là tác giả?{" "}
+          <button type="button" onClick={goToRegisterAuthor}>
+            Đăng ký tác giả
           </button>
         </p>
       </form>

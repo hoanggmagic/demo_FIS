@@ -12,6 +12,7 @@ import UserPage from "./Page/User/UserPage";
 import AdminPage from "./Page/Admin/AdminPage";
 import AuthorsPage from "./Page/Authors/AuthorsPage";
 import Payment from "./Components/User/Payment";
+import RegisterAuthor from "./Components/Auth/RegisterAuthor";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -58,11 +59,18 @@ export default function App() {
   if (!user) {
     if (page === "login") {
       return (
-        <Login onSuccess={setUser} goToRegister={() => setPage("register")} />
+        <Login
+          onSuccess={setUser}
+          goToRegister={() => setPage("register")}
+          goToRegisterAuthor={() => setPage("register-author")} // ← thêm
+        />
       );
     }
     if (page === "register") {
       return <Register goToLogin={() => setPage("login")} />;
+    }
+    if (page === "register-author") {
+      return <RegisterAuthor goToLogin={() => setPage("login")} />; // ← thêm
     }
   }
 

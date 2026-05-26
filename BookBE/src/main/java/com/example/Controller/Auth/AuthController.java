@@ -115,6 +115,43 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/register-author")
+    public ResponseEntity<?> registerAuthor(@RequestBody User body) {
+        try (Connection conn = dataSource.getConnection()) {
+            UserDAO dao = new UserDAO(conn);
+
+            if (dao.usernameExists(body.getUsername())) {
+                return ResponseEntity.badRequest().body("Username đã tồn tại");
+            }
+
+            OtpData otpData = otpStorage.get(body.getEmail());
+            if (otpData == null) {
+                return ResponseEntity.badRequest().body("Vui lòng gửi OTP trước");
+            }
+            if (System.currentTimeMillis() > otpData.getExpireTime()) {
+                otpStorage.remove(body.getEmail());
+                return ResponseEntity.badRequest().body("OTP đã hết hạn");
+            }
+            if (!otpData.getOtp().equals(body.getOtp())) {
+                return ResponseEntity.badRequest().body("OTP không đúng");
+            }
+
+            body.setPassword(passwordUtil.hash(body.getPassword()));
+
+            dao.insertAuthor(body); // ← tự tạo ví luôn bên trong
+
+            otpStorage.remove(body.getEmail());
+
+            mailService.sendMail(body.getEmail(), "Đăng ký tác giả thành công",
+                    "Chào " + body.getUsername() + ", tài khoản tác giả của bạn đã được tạo!");
+
+            return ResponseEntity.ok("Đăng ký tác giả thành công");
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/send-otp")
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
 

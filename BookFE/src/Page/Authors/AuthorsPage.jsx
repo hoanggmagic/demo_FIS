@@ -4,6 +4,7 @@ import BookList from "../../Components/Admin/BookList";
 import AuthorForm from "../../Components/Admin/AuthorForm";
 import AuthorList from "../../Components/Admin/AuthorList";
 import Profile from "../../Components/Authors/profile";
+import Wallet from "../../Components/Authors/Wallet";
 
 export default function AuthorsPage({ user }) {
   const [tab, setTab] = useState("books");
@@ -51,6 +52,7 @@ export default function AuthorsPage({ user }) {
         {navBtn("books", "📚 Sách")}
         {isAdmin && navBtn("authors", "👤 Tác giả")}
         {isAuthor && navBtn("profile", "👤 Hồ sơ")}
+        {isAuthor && navBtn("wallet", "💰 Ví")}
       </nav>
 
       {tab === "books" && (
@@ -98,6 +100,7 @@ export default function AuthorsPage({ user }) {
       )}
 
       {tab === "profile" && isAuthor && <Profile />}
+      {tab === "wallet" && isAuthor && <Wallet />}
     </div>
   );
 }
