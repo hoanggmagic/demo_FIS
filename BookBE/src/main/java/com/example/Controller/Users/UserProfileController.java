@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -65,28 +66,40 @@ public class UserProfileController {
         }
     }
 
-    // =========================
-    // UPDATE PROFILE (chỉ name)
-    // =========================
-    @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestBody User userUpdate,
+    // =================================================
+    // UPDATE PROFILE (Sửa tại Controller - Giữ nguyên DAO)
+    // =================================================
+    // Cập nhật user
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable int id, @RequestBody Map<String, String> body,
             HttpServletRequest request) {
+
         try (Connection conn = dataSource.getConnection()) {
 
-            AuthContext ctx = RequestAuth.require(request);
+            RequestAuth.require(request);
 
-            // Chỉ cho phép update name
-            String sql = "UPDATE users SET full_name = ?, nationality = ? WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, userUpdate.getFullName());
-                ps.setString(2, userUpdate.getNationality()); // 🆕
-                ps.setInt(3, ctx.getUserId());
-                ps.executeUpdate();
+            String sql = """
+                    UPDATE users
+                    SET email = ?, full_name = ?
+                    WHERE id = ?
+                    """;
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, body.get("email"));
+            ps.setString(2, body.get("fullName"));
+            ps.setInt(3, id);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                return ResponseEntity.badRequest().body("Không tìm thấy user");
             }
 
-            return ResponseEntity.ok("Cập nhật profile thành công!");
+            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công"));
 
         } catch (Exception e) {
+
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }

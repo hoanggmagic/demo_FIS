@@ -57,6 +57,41 @@ public class UserController {
         }
     }
 
+    // Cập nhật user
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable int id, @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+
+        try (Connection conn = dataSource.getConnection()) {
+
+            RequestAuth.require(request);
+
+            String sql = """
+                    UPDATE users
+                    SET email = ?, full_name = ?
+                    WHERE id = ?
+                    """;
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, body.get("email"));
+            ps.setString(2, body.get("fullName"));
+            ps.setInt(3, id);
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                return ResponseEntity.badRequest().body("Không tìm thấy user");
+            }
+
+            return ResponseEntity.ok(Map.of("message", "Cập nhật thành công"));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
     // Danh sách user
     @GetMapping
     public ResponseEntity<?> getUsers(HttpServletRequest request) {
@@ -109,6 +144,7 @@ public class UserController {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
+
 
     // Xóa user
     @DeleteMapping("/{id}")

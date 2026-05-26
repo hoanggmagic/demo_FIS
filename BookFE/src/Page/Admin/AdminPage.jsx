@@ -1,17 +1,11 @@
 import { useState } from "react";
-import BookForm from "../../Components/Admin/BookForm";
-import BookList from "../../Components/Admin/BookList";
-import AuthorForm from "../../Components/Admin/AuthorForm";
-import AuthorList from "../../Components/Admin/AuthorList";
+import BookManagement from "../../Components/Admin/BookManagement";
+import AuthorManagement from "../../Components/Admin/AuthorManagement";
 import AdminWallet from "../../Components/Admin/AdminWallet";
 import UserManagement from "../../Components/Admin/UserManagement";
 
 export default function AdminPage({ user }) {
   const [tab, setTab] = useState("books");
-  const [editingBook, setEditingBook] = useState(null);
-  const [editingAuthor, setEditingAuthor] = useState(null);
-  const [bookReload, setBookReload] = useState(0);
-  const [authorReload, setAuthorReload] = useState(0);
 
   const isAdmin = user?.role === "ADMIN";
   const isAuthor = user?.role === "AUTHOR";
@@ -35,7 +29,6 @@ export default function AdminPage({ user }) {
 
   return (
     <div>
-      {/* Header nav */}
       <nav
         style={{
           display: "flex",
@@ -47,64 +40,18 @@ export default function AdminPage({ user }) {
         }}
       >
         <span style={{ flex: 1, fontWeight: "bold", fontSize: 18 }}>
-          {isAdmin ? "🛠️ Admin Panel" : "✍️ Author Panel"}
+          🛠️ Admin Panel
         </span>
-
         {navBtn("books", "📚 Sách")}
-        {/* Author tab: admin thấy full, author chỉ thấy hồ sơ */}
-        {(isAdmin || isAuthor) &&
-          navBtn("authors", isAuthor ? "👤 Hồ sơ" : "👤 Tác giả")}
-        {isAdmin && navBtn("users", "👥 Quản lý người dùng")}
+        {isAdmin && navBtn("authors", "👤 Tác giả")}
+        {isAdmin && navBtn("users", "👥 Người dùng")}
         {isAdmin && navBtn("wallet", "💰 Ví & Rút tiền")}
       </nav>
 
-      {/* Tab: Sách */}
-      {tab === "books" && (
-        <>
-          <BookForm
-            user={user}
-            editing={editingBook}
-            onSaved={() => {
-              setBookReload((r) => r + 1);
-              setEditingBook(null);
-            }}
-            onCancelEdit={() => setEditingBook(null)}
-          />
-          <BookList
-            user={user}
-            reload={bookReload}
-            onEdit={(b) => {
-              setEditingBook(b);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-          />
-        </>
-      )}
-
-      {/* Tab: Tác giả / Hồ sơ */}
-      {tab === "authors" && (
-        <>
-          <AuthorForm
-            user={user}
-            editing={editingAuthor}
-            onSaved={() => {
-              setAuthorReload((r) => r + 1);
-              setEditingAuthor(null);
-            }}
-            onCancelEdit={() => setEditingAuthor(null)}
-          />
-          <AuthorList
-            user={user}
-            reload={authorReload}
-            onEdit={(a) => {
-              setEditingAuthor(a);
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-          />
-        </>
-      )}
-      {tab === "wallet" && isAdmin && <AdminWallet />}
+      {tab === "books" && <BookManagement user={user} />}
+      {tab === "authors" && <AuthorManagement user={user} />}
       {tab === "users" && isAdmin && <UserManagement />}
+      {tab === "wallet" && isAdmin && <AdminWallet />}
     </div>
   );
 }

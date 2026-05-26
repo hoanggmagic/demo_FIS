@@ -7,14 +7,12 @@ const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
-const roleColor = (r) =>
-  ({ ADMIN: "#9c27b0", AUTHOR: "#1976d2", USER: "#4caf50" })[r] || "#999";
-
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -49,6 +47,25 @@ export default function UserManagement() {
     }
   };
 
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(
+        `${API}/${editing.id}`,
+        { fullName: form.fullName, email: form.email },
+        getHeaders(),
+      );
+      setMessage("✅ " + res.data.message);
+      setEditing(null);
+      setForm({ username: "", email: "", fullName: "", password: "" });
+      setShowForm(false);
+      load();
+      setTimeout(() => setMessage(""), 3000);
+    } catch (err) {
+      setMessage("❌ " + (err.response?.data || "Lỗi cập nhật"));
+    }
+  };
+
   const handleToggle = async (id, username) => {
     if (!window.confirm(`Khóa/mở khóa tài khoản "${username}"?`)) return;
     try {
@@ -78,6 +95,24 @@ export default function UserManagement() {
     }
   };
 
+  const handleEditClick = (u) => {
+    setEditing(u);
+    setForm({
+      username: u.username,
+      email: u.email || "",
+      fullName: u.fullName || "",
+      password: "",
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancel = () => {
+    setEditing(null);
+    setShowForm(false);
+    setForm({ username: "", email: "", fullName: "", password: "" });
+  };
+
   const filtered = users.filter(
     (u) =>
       u.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -91,7 +126,15 @@ export default function UserManagement() {
 
       {/* Nút mở form */}
       <button
-        onClick={() => setShowForm(!showForm)}
+        onClick={() => {
+          if (showForm && !editing) {
+            setShowForm(false);
+          } else {
+            setEditing(null);
+            setForm({ username: "", email: "", fullName: "", password: "" });
+            setShowForm(true);
+          }
+        }}
         style={{
           marginBottom: 16,
           padding: "10px 20px",
@@ -103,13 +146,13 @@ export default function UserManagement() {
           fontWeight: "bold",
         }}
       >
-        {showForm ? "✕ Đóng" : "➕ Thêm user"}
+        {showForm && !editing ? "✕ Đóng" : "➕ Thêm user"}
       </button>
 
-      {/* Form thêm user */}
+      {/* Form */}
       {showForm && (
         <form
-          onSubmit={handleCreate}
+          onSubmit={editing ? handleUpdate : handleCreate}
           style={{
             background: "#f9f9f9",
             padding: 20,
@@ -120,14 +163,21 @@ export default function UserManagement() {
             gap: 10,
           }}
         >
-          <h3 style={{ margin: 0 }}>➕ Thêm user mới</h3>
+          <h3 style={{ margin: 0 }}>
+            {editing ? "✏️ Sửa user" : "➕ Thêm user mới"}
+          </h3>
+
           <div style={{ display: "flex", gap: 10 }}>
             <input
               placeholder="Username *"
               value={form.username}
-              required
+              required={!editing}
+              disabled={!!editing}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
-              style={inputStyle}
+              style={{
+                ...inputStyle,
+                background: editing ? "#f0f0f0" : "#fff",
+              }}
             />
             <input
               placeholder="Họ tên"
@@ -136,6 +186,7 @@ export default function UserManagement() {
               style={inputStyle}
             />
           </div>
+
           <div style={{ display: "flex", gap: 10 }}>
             <input
               placeholder="Email"
@@ -144,29 +195,50 @@ export default function UserManagement() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               style={inputStyle}
             />
-            <input
-              placeholder="Mật khẩu *"
-              type="password"
-              value={form.password}
-              required
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              style={inputStyle}
-            />
+            {!editing && (
+              <input
+                placeholder="Mật khẩu *"
+                type="password"
+                value={form.password}
+                required
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                style={inputStyle}
+              />
+            )}
           </div>
-          <button
-            type="submit"
-            style={{
-              padding: "10px",
-              background: "#4caf50",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            ✅ Tạo user
-          </button>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              type="submit"
+              style={{
+                padding: "10px 20px",
+                background: "#4caf50",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              ✅ {editing ? "Lưu" : "Tạo user"}
+            </button>
+            {editing && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                style={{
+                  padding: "10px 20px",
+                  background: "#999",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                }}
+              >
+                Hủy
+              </button>
+            )}
+          </div>
         </form>
       )}
 
@@ -252,6 +324,20 @@ export default function UserManagement() {
                 <td style={td}>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
+                      onClick={() => handleEditClick(u)}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 6,
+                        border: "none",
+                        cursor: "pointer",
+                        background: "#1976d2",
+                        color: "#fff",
+                        fontSize: 12,
+                      }}
+                    >
+                      ✏️ Sửa
+                    </button>
+                    <button
                       onClick={() => handleToggle(u.id, u.username)}
                       style={{
                         padding: "5px 10px",
@@ -264,6 +350,20 @@ export default function UserManagement() {
                       }}
                     >
                       {u.active ? "🔒 Khóa" : "🔓 Mở"}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(u.id, u.username)}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: 6,
+                        border: "none",
+                        cursor: "pointer",
+                        background: "#e53935",
+                        color: "#fff",
+                        fontSize: 12,
+                      }}
+                    >
+                      🗑️ Xóa
                     </button>
                   </div>
                 </td>
