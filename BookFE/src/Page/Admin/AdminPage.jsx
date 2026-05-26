@@ -4,6 +4,7 @@ import BookList from "../../Components/Admin/BookList";
 import AuthorForm from "../../Components/Admin/AuthorForm";
 import AuthorList from "../../Components/Admin/AuthorList";
 import AdminWallet from "../../Components/Admin/AdminWallet";
+import UserManagement from "../../Components/Admin/UserManagement";
 
 export default function AdminPage({ user }) {
   const [tab, setTab] = useState("books");
@@ -53,6 +54,7 @@ export default function AdminPage({ user }) {
         {/* Author tab: admin thấy full, author chỉ thấy hồ sơ */}
         {(isAdmin || isAuthor) &&
           navBtn("authors", isAuthor ? "👤 Hồ sơ" : "👤 Tác giả")}
+        {isAdmin && navBtn("users", "👥 Quản lý người dùng")}
         {isAdmin && navBtn("wallet", "💰 Ví & Rút tiền")}
       </nav>
 
@@ -102,6 +104,7 @@ export default function AdminPage({ user }) {
         </>
       )}
       {tab === "wallet" && isAdmin && <AdminWallet />}
+      {tab === "users" && isAdmin && <UserManagement />}
     </div>
   );
 }
