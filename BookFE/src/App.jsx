@@ -56,60 +56,66 @@ function AuthGate({ onLogin }) {
 // ── role routes ───────────────────────────────────────────────────────────────
 
 function RoleRoutes({ user, onLogout }) {
-  // ADMIN — dùng AdminLayout + route-based navigation
+  // ADMIN
   if (user.role === "ADMIN") {
     return (
       <AdminLayout user={user} onLogout={onLogout}>
         <Routes>
           <Route path="/" element={<AdminPage user={user} />} />
+
           <Route path="/admin/books" element={<AdminBooksPage user={user} />} />
+
           <Route
             path="/admin/authors"
             element={<AdminAuthorsPage user={user} />}
           />
+
           <Route path="/admin/users" element={<AdminUsersPage />} />
+
           <Route path="/admin/wallet" element={<AdminWalletPage />} />
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>
     );
   }
 
-  // AUTHOR & USER — layout cũ giữ nguyên
+  // USER + AUTHOR
   return (
-    <div className="container">
+    <div className="main-layout">
       <header className="header">
-        <div>
-          <h1>📚 Digital Book Platform</h1>
-          <p className="user-badge">
-            {user.fullName} ·{" "}
-            <span className={`role role-${user.role}`}>
-              {{ AUTHOR: "Tác giả", USER: "Người mua" }[user.role]}
-            </span>
-          </p>
+        <h1>📚 Digital Book Platform</h1>
+
+        <div className="header-right">
+          <span className="user-name">{user.fullName}</span>
+
+          <button type="button" className="btn-secondary" onClick={onLogout}>
+            Đăng xuất
+          </button>
         </div>
-        <button type="button" className="btn-secondary" onClick={onLogout}>
-          Đăng xuất
-        </button>
       </header>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            user.role === "AUTHOR" ? (
-              <AuthorsPage user={user} />
-            ) : (
-              <UserPage user={user} />
-            )
-          }
-        />
-        <Route path="/payment" element={<Payment />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+
+      <main className="page-content">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              user.role === "AUTHOR" ? (
+                <AuthorsPage user={user} />
+              ) : (
+                <UserPage user={user} />
+              )
+            }
+          />
+
+          <Route path="/payment" element={<Payment />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </div>
   );
 }
-
 // ── root ──────────────────────────────────────────────────────────────────────
 
 export default function App() {

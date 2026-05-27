@@ -156,16 +156,24 @@ function Topbar({ user, onToggle, onLogout }) {
 
   return (
     <nav
-      className="app-header navbar navbar-expand bg-body"
+      className="app-header navbar navbar-expand bg-body px-3"
       data-bs-theme="light"
+      style={{
+        height: "50px",
+        paddingTop: 0,
+        paddingBottom: 0,
+      }}
     >
-      <div className="container-fluid">
+      <div
+        className="container-fluid d-flex align-items-center justify-content-between"
+        style={{ height: "50px" }}
+      >
         {/* Toggle sidebar */}
-        <ul className="navbar-nav">
+        <ul className="navbar-nav align-items-center">
           <li className="nav-item">
             <button
               type="button"
-              className="nav-link"
+              className="nav-link py-0 d-flex align-items-center"
               onClick={onToggle}
               aria-label="Toggle sidebar"
             >
@@ -179,7 +187,7 @@ function Topbar({ user, onToggle, onLogout }) {
         </ul>
 
         {/* Right side */}
-        <ul className="navbar-nav ms-auto">
+        <ul className="navbar-nav ms-auto align-items-center">
           {/* Notifications */}
           <li className="nav-item">
             <button
@@ -203,7 +211,7 @@ function Topbar({ user, onToggle, onLogout }) {
           <li className="nav-item dropdown">
             <button
               type="button"
-              className="nav-link d-flex align-items-center gap-2"
+              className="nav-link py-0 d-flex align-items-center gap-2"
               onClick={() => setDdOpen((v) => !v)}
               aria-expanded={ddOpen}
             >
@@ -294,7 +302,6 @@ export default function AdminLayout({ user, onLogout, children }) {
   return (
     <div
       className={`layout-fixed sidebar-expand-lg${collapsed ? " sidebar-collapse" : ""}`}
-      style={{ minHeight: "100vh" }}
     >
       {/* Sidebar */}
       <Sidebar collapsed={collapsed} user={user} />
@@ -311,7 +318,79 @@ export default function AdminLayout({ user, onLogout, children }) {
         {/* Content */}
         <main className="app-main">
           <div className="app-content-header">
-            {/* Page title & breadcrumb injected by child pages via context nếu cần */}
+            <div
+              className="rounded-4 shadow-sm overflow-hidden position-relative"
+              style={{
+                height: "220px",
+                background:
+                  "linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)",
+              }}
+            >
+              <div
+                className="h-100 d-flex flex-column justify-content-center"
+                style={{
+                  padding: "40px",
+                  color: "white",
+                  position: "relative",
+                  zIndex: 2,
+                }}
+              >
+                <h1
+                  style={{
+                    fontSize: "32px",
+                    fontWeight: "700",
+                    marginBottom: "10px",
+                  }}
+                >
+                  Welcome back 👋
+                </h1>
+
+                <p
+                  style={{
+                    fontSize: "15px",
+                    opacity: 0.9,
+                    maxWidth: "600px",
+                  }}
+                >
+                  Manage books, users, orders and revenue from your dashboard.
+                </p>
+
+                <button
+                  className="btn btn-light mt-3"
+                  style={{
+                    width: "fit-content",
+                    fontWeight: 600,
+                  }}
+                >
+                  View Analytics
+                </button>
+              </div>
+
+              {/* Decorations */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-60px",
+                  right: "-60px",
+                  width: "220px",
+                  height: "220px",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.08)",
+                }}
+              />
+
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "-40px",
+                  right: "120px",
+                  width: "140px",
+                  height: "140px",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.05)",
+                }}
+              />
+            </div>
           </div>
           <div className="app-content">
             <div className="container-fluid">{children}</div>
