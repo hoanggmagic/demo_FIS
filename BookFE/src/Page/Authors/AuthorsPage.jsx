@@ -1,57 +1,33 @@
-import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import BookManagement from "../../Components/Admin/BookManagement";
 import AuthorManagement from "../../Components/Admin/AuthorManagement";
 import Profile from "../../Components/Authors/profile";
 import Wallet from "../../Components/Authors/Wallet";
 
 export default function AuthorsPage({ user }) {
-  const [tab, setTab] = useState("books");
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   const isAdmin = user?.role === "ADMIN";
   const isAuthor = user?.role === "AUTHOR";
 
-  const navBtn = (key, label) => (
-    <button
-      onClick={() => setTab(key)}
-      style={{
-        padding: "8px 16px",
-        border: "none",
-        borderRadius: 6,
-        cursor: "pointer",
-        background: tab === key ? "#1976d2" : "#f0f0f0",
-        color: tab === key ? "#fff" : "#333",
-        fontWeight: tab === key ? "bold" : "normal",
-      }}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div>
-      <nav
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "12px 20px",
-          borderBottom: "2px solid #eee",
-          background: "#fff",
-        }}
-      >
-        <span style={{ flex: 1, fontWeight: "bold", fontSize: 18 }}>
-          ✍️ Author Panel
-        </span>
-        {navBtn("books", "📚 Sách")}
-        {isAdmin && navBtn("authors", "👤 Tác giả")}
-        {isAuthor && navBtn("profile", "👤 Hồ sơ")}
-        {isAuthor && navBtn("wallet", "💰 Ví")}
-      </nav>
+    <div className="card shadow-sm p-4 bg-white rounded-3">
+      {/* 1. Nếu ở trang chủ "/" hoặc "/author/books" -> Hiện Quản lý Sách */}
+      {(currentPath === "/" || currentPath === "/author/books") && (
+        <BookManagement user={user} />
+      )}
 
-      {tab === "books" && <BookManagement user={user} />}
-      {tab === "authors" && isAdmin && <AuthorManagement user={user} />}
-      {tab === "profile" && isAuthor && <Profile />}
-      {tab === "wallet" && isAuthor && <Wallet />}
+      {/* 2. Nếu là Admin và vào path authors (dành cho trường hợp mở rộng sau này) */}
+      {currentPath === "/author/authors" && isAdmin && (
+        <AuthorManagement user={user} />
+      )}
+
+      {/* 3. Nếu là Author và vào đường dẫn profile */}
+      {currentPath === "/author/profile" && isAuthor && <Profile />}
+
+      {/* 4. Nếu là Author và vào đường dẫn wallet */}
+      {currentPath === "/author/wallet" && isAuthor && <Wallet />}
     </div>
   );
 }

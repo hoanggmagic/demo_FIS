@@ -16,8 +16,8 @@ export const getUserProfile = async () => {
 /**
  * Cập nhật profile user
  */
-export const updateUserProfile = async (data) => {
-  return await axios.put(`${BASE_URL}/profile`, data, {
+export const updateUserProfile = async (id, data) => {
+  return await axios.put(`${BASE_URL}/profile/${id}`, data, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
       "Content-Type": "application/json",

@@ -98,12 +98,19 @@ function UserProfile() {
   // =========================
   const updateProfile = async () => {
     try {
-      await axios.put("http://localhost:8080/api/user/profile", profile, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      await axios.put(
+        `http://localhost:8080/api/user/profile/${profile.id}`,
+        {
+          email: profile.email,
+          fullName: profile.fullName,
         },
-      });
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
 
       setProfileMsg({
         text: "✅ Cập nhật thông tin thành công!",
@@ -195,12 +202,12 @@ function UserProfile() {
       {/* HEADER */}
       <div className="profile-header">
         <div className="profile-avatar">
-          {profile.username ? profile.username[0].toUpperCase() : "U"}
+          {profile.fullName ? profile.fullName[0].toUpperCase() : "U"}
         </div>
 
         <div className="profile-header-info">
           <h2 className="profile-header-name">
-            {profile.username || "Người dùng"}
+            {profile.fullName || "Người dùng"}
           </h2>
 
           <span className="profile-badge">👤 USER</span>
@@ -213,11 +220,11 @@ function UserProfile() {
           <h3>👤 Thông tin cá nhân</h3>
 
           <input
-            value={profile.username}
+            value={profile.fullName}
             onChange={(e) =>
               setProfile({
                 ...profile,
-                username: e.target.value,
+                fullName: e.target.value,
               })
             }
             placeholder="Tên người dùng"

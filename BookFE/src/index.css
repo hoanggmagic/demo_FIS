@@ -122,3 +122,112 @@ code {
     margin-left: 0;
   }
 }
+
+/* FIX FULL AUTHOR LAYOUT */
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* main wrapper */
+.content-wrapper {
+  margin-left: 250px !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  min-height: 100vh;
+  background: #f4f6f9;
+  transition: all 0.3s ease;
+}
+
+/* sidebar collapse */
+.sidebar-collapse .content-wrapper {
+  margin-left: 0 !important;
+}
+
+/* sidebar */
+.app-sidebar {
+  width: 250px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1038;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-collapse .app-sidebar {
+  transform: translateX(-250px);
+}
+
+/* remove ALL spacing */
+.app-main,
+.app-content,
+.app-content-header {
+  margin: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* topbar */
+.app-header {
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* hero spacing */
+.app-content-header {
+  padding: 20px !important;
+}
+
+/* content */
+.app-content {
+  padding: 0 20px 20px !important;
+}
+
+/* Fix topbar không bị đẩy xuống */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Fix khoảng trắng phía trên content */
+.app-main {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.app-content-header {
+  padding: 20px 20px 0 20px !important;
+  margin: 0 !important;
+}
+
+.app-content {
+  padding: 20px !important;
+}
+
+/* content-wrapper cho AuthorLayout */
+.content-wrapper {
+  margin-left: 250px !important;
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  min-height: 100vh;
+  background: #f4f6f9;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-collapse .content-wrapper {
+  margin-left: 0 !important;
+}
+.app-header.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  width: 100%;
+}
