@@ -286,10 +286,7 @@ export default function App() {
   const handleGuest = () => {
     setIsGuest(true);
   };
-  const handleShowLogin = () => {
-    setIsGuest(false);
-    setUser(null);
-  };
+  const handleShowLogin = () => setIsGuest("login");
 
   if (user === undefined) {
     return (
@@ -308,15 +305,22 @@ export default function App() {
     );
   }
 
-  if (!user && !isGuest) {
-    return <AuthGate onLogin={handleLogin} onGuest={handleGuest} />;
+  if (!user && isGuest === "login") {
+    return (
+      <UserLayout
+        user={null}
+        onLogout={null}
+        onShowLogin={() => setIsGuest("login")}
+      >
+        <AuthGate onLogin={handleLogin} onGuest={() => setIsGuest(false)} />
+      </UserLayout>
+    );
   }
-
   return (
     <RoleRoutes
       user={user}
       onLogout={handleLogout}
-      onShowLogin={handleShowLogin}
+      onShowLogin={() => setIsGuest("login")}
     />
   );
 }
