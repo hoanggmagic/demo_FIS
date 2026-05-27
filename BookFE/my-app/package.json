@@ -1,5 +1,5 @@
 {
-  "name": "bookfe",
+  "name": "my-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,12 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "admin-lte": "^4.0.0",
-    "axios": "^1.16.1",
-    "bootstrap-icons": "^1.13.1",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

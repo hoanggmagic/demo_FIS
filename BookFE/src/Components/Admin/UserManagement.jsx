@@ -2,30 +2,31 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API = "http://localhost:8080/api/admin/users";
-
 const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
+const emptyForm = { username: "", email: "", fullName: "", password: "" };
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    fullName: "",
-    password: "",
-  });
+  const [form, setForm] = useState(emptyForm);
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const load = async () => {
     try {
       const res = await axios.get(API, getHeaders());
       setUsers(res.data.filter((u) => u.role === "USER"));
     } catch (err) {
-      console.error("Load error:", err);
+      console.error(err);
     }
   };
 
@@ -33,65 +34,58 @@ export default function UserManagement() {
     load();
   }, []);
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(API, form, getHeaders());
-      setMessage("✅ " + res.data.message);
-      setForm({ username: "", email: "", fullName: "", password: "" });
-      setShowForm(false);
-      load();
-      setTimeout(() => setMessage(""), 3000);
-    } catch (err) {
-      setMessage("❌ " + (err.response?.data || "Lỗi tạo user"));
-    }
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.put(
-        `${API}/${editing.id}`,
-        { fullName: form.fullName, email: form.email },
-        getHeaders(),
-      );
-      setMessage("✅ " + res.data.message);
+      if (editing) {
+        await axios.put(
+          `${API}/${editing.id}`,
+          { fullName: form.fullName, email: form.email },
+          getHeaders(),
+        );
+        showToast("success", "Cập nhật người dùng thành công!");
+      } else {
+        await axios.post(API, form, getHeaders());
+        showToast("success", "Tạo người dùng thành công!");
+      }
+      setForm(emptyForm);
       setEditing(null);
-      setForm({ username: "", email: "", fullName: "", password: "" });
       setShowForm(false);
       load();
-      setTimeout(() => setMessage(""), 3000);
     } catch (err) {
-      setMessage("❌ " + (err.response?.data || "Lỗi cập nhật"));
+      showToast("danger", err.response?.data || "Lỗi xử lý");
     }
   };
 
-  const handleToggle = async (id, username) => {
-    if (!window.confirm(`Khóa/mở khóa tài khoản "${username}"?`)) return;
-    try {
-      const res = await axios.put(`${API}/${id}/toggle`, {}, getHeaders());
-      setMessage("✅ " + res.data.message);
-      load();
-      setTimeout(() => setMessage(""), 3000);
-    } catch (err) {
-      setMessage("❌ " + (err.response?.data || "Lỗi"));
-    }
-  };
-
-  const handleDelete = async (id, username) => {
+  const handleToggle = async (u) => {
     if (
       !window.confirm(
-        `Xóa vĩnh viễn tài khoản "${username}"? Không thể hoàn tác!`,
+        `${u.active ? "Khóa" : "Mở khóa"} tài khoản "${u.username}"?`,
       )
     )
       return;
     try {
-      const res = await axios.delete(`${API}/${id}`, getHeaders());
-      setMessage("✅ " + res.data.message);
+      await axios.put(`${API}/${u.id}/toggle`, {}, getHeaders());
+      showToast("success", `Đã ${u.active ? "khóa" : "mở khóa"} tài khoản!`);
       load();
-      setTimeout(() => setMessage(""), 3000);
-    } catch (err) {
-      setMessage("❌ " + (err.response?.data || "Lỗi"));
+    } catch {
+      showToast("danger", "Lỗi xử lý");
+    }
+  };
+
+  const handleDelete = async (u) => {
+    if (
+      !window.confirm(
+        `Xóa vĩnh viễn tài khoản "${u.username}"? Không thể hoàn tác!`,
+      )
+    )
+      return;
+    try {
+      await axios.delete(`${API}/${u.id}`, getHeaders());
+      showToast("success", "Đã xóa tài khoản!");
+      load();
+    } catch {
+      showToast("danger", "Lỗi xóa tài khoản");
     }
   };
 
@@ -104,13 +98,12 @@ export default function UserManagement() {
       password: "",
     });
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleCancel = () => {
     setEditing(null);
     setShowForm(false);
-    setForm({ username: "", email: "", fullName: "", password: "" });
+    setForm(emptyForm);
   };
 
   const filtered = users.filter(
@@ -121,272 +114,265 @@ export default function UserManagement() {
   );
 
   return (
-    <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
-      <h2>👥 Quản lý người dùng</h2>
+    <div>
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`alert alert-${toast.type} alert-dismissible d-flex align-items-center gap-2 mb-3`}
+        >
+          <i
+            className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill"}`}
+          />
+          {toast.msg}
+          <button
+            type="button"
+            className="btn-close ms-auto"
+            onClick={() => setToast(null)}
+          />
+        </div>
+      )}
 
-      {/* Nút mở form */}
-      <button
-        onClick={() => {
-          if (showForm && !editing) {
-            setShowForm(false);
-          } else {
+      {/* Header row */}
+      <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <div className="input-group" style={{ maxWidth: 360 }}>
+          <span className="input-group-text bg-white">
+            <i className="bi bi-search text-muted" />
+          </span>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Tìm theo username, email, họ tên..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <button
+          className={`btn ${showForm && !editing ? "btn-secondary" : "btn-primary"} d-flex align-items-center gap-2`}
+          onClick={() => {
             setEditing(null);
-            setForm({ username: "", email: "", fullName: "", password: "" });
-            setShowForm(true);
-          }
-        }}
-        style={{
-          marginBottom: 16,
-          padding: "10px 20px",
-          background: "#1976d2",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-      >
-        {showForm && !editing ? "✕ Đóng" : "➕ Thêm user"}
-      </button>
+            setForm(emptyForm);
+            setShowForm((v) => !v);
+          }}
+        >
+          <i
+            className={`bi ${showForm && !editing ? "bi-x-lg" : "bi-person-plus"}`}
+          />
+          {showForm && !editing ? "Đóng" : "Thêm user"}
+        </button>
+      </div>
 
       {/* Form */}
       {showForm && (
-        <form
-          onSubmit={editing ? handleUpdate : handleCreate}
-          style={{
-            background: "#f9f9f9",
-            padding: 20,
-            borderRadius: 12,
-            marginBottom: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          <h3 style={{ margin: 0 }}>
-            {editing ? "✏️ Sửa user" : "➕ Thêm user mới"}
-          </h3>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <input
-              placeholder="Username *"
-              value={form.username}
-              required={!editing}
-              disabled={!!editing}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              style={{
-                ...inputStyle,
-                background: editing ? "#f0f0f0" : "#fff",
-              }}
+        <div className="card mb-4">
+          <div className="card-header d-flex align-items-center gap-2">
+            <i
+              className={`bi ${editing ? "bi-pencil-square" : "bi-person-plus-fill"} text-primary`}
             />
-            <input
-              placeholder="Họ tên"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-              style={inputStyle}
-            />
+            <strong>
+              {editing ? "Sửa người dùng" : "Thêm người dùng mới"}
+            </strong>
           </div>
+          <div className="card-body">
+            <form onSubmit={handleSubmit}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">
+                    Username{" "}
+                    {!editing && <span className="text-danger">*</span>}
+                  </label>
+                  <input
+                    className="form-control"
+                    placeholder="username"
+                    value={form.username}
+                    required={!editing}
+                    disabled={!!editing}
+                    onChange={(e) =>
+                      setForm({ ...form, username: e.target.value })
+                    }
+                    style={{ background: editing ? "#f8f9fa" : undefined }}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Họ tên</label>
+                  <input
+                    className="form-control"
+                    placeholder="Nguyễn Văn A"
+                    value={form.fullName}
+                    onChange={(e) =>
+                      setForm({ ...form, fullName: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Email</label>
+                  <input
+                    className="form-control"
+                    type="email"
+                    placeholder="email@example.com"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                  />
+                </div>
+                {!editing && (
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      Mật khẩu <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      className="form-control"
+                      type="password"
+                      placeholder="••••••"
+                      value={form.password}
+                      required
+                      onChange={(e) =>
+                        setForm({ ...form, password: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
+              </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
-            <input
-              placeholder="Email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              style={inputStyle}
-            />
-            {!editing && (
-              <input
-                placeholder="Mật khẩu *"
-                type="password"
-                value={form.password}
-                required
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                style={inputStyle}
-              />
-            )}
+              <div className="d-flex gap-2 mt-3">
+                <button
+                  type="submit"
+                  className="btn btn-success d-flex align-items-center gap-2"
+                >
+                  <i className="bi bi-check-lg" />{" "}
+                  {editing ? "Lưu thay đổi" : "Tạo tài khoản"}
+                </button>
+                {editing && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleCancel}
+                  >
+                    Hủy
+                  </button>
+                )}
+              </div>
+            </form>
           </div>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              type="submit"
-              style={{
-                padding: "10px 20px",
-                background: "#4caf50",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              ✅ {editing ? "Lưu" : "Tạo user"}
-            </button>
-            {editing && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                style={{
-                  padding: "10px 20px",
-                  background: "#999",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                }}
-              >
-                Hủy
-              </button>
-            )}
-          </div>
-        </form>
-      )}
-
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="🔍 Tìm theo username, email, họ tên..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 8,
-          border: "1px solid #ddd",
-          fontSize: 14,
-          marginBottom: 16,
-          boxSizing: "border-box",
-        }}
-      />
-
-      {message && (
-        <p
-          style={{
-            color: message.includes("✅") ? "green" : "red",
-            fontWeight: "bold",
-            marginBottom: 12,
-          }}
-        >
-          {message}
-        </p>
+        </div>
       )}
 
       {/* Table */}
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ background: "#f5f5f5" }}>
-            <th style={th}>ID</th>
-            <th style={th}>Username</th>
-            <th style={th}>Họ tên</th>
-            <th style={th}>Email</th>
-            <th style={th}>Trạng thái</th>
-            <th style={th}>Ngày tạo</th>
-            <th style={th}>Hành động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 ? (
-            <tr>
-              <td
-                colSpan={7}
-                style={{ textAlign: "center", padding: 20, color: "#999" }}
-              >
-                Không có user nào
-              </td>
-            </tr>
-          ) : (
-            filtered.map((u) => (
-              <tr key={u.id} style={{ opacity: u.active ? 1 : 0.5 }}>
-                <td style={td}>{u.id}</td>
-                <td style={td}>
-                  <strong>{u.username}</strong>
-                </td>
-                <td style={td}>{u.fullName || "—"}</td>
-                <td style={td}>{u.email || "—"}</td>
-                <td style={td}>
-                  <span
-                    style={{
-                      padding: "3px 10px",
-                      borderRadius: 20,
-                      background: u.active ? "#4caf50" : "#e53935",
-                      color: "#fff",
-                      fontSize: 12,
-                    }}
-                  >
-                    {u.active ? "Hoạt động" : "Bị khóa"}
-                  </span>
-                </td>
-                <td style={td}>
-                  {u.createdAt
-                    ? new Date(u.createdAt).toLocaleDateString("vi-VN")
-                    : "—"}
-                </td>
-                <td style={td}>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      onClick={() => handleEditClick(u)}
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: 6,
-                        border: "none",
-                        cursor: "pointer",
-                        background: "#1976d2",
-                        color: "#fff",
-                        fontSize: 12,
-                      }}
-                    >
-                      ✏️ Sửa
-                    </button>
-                    <button
-                      onClick={() => handleToggle(u.id, u.username)}
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: 6,
-                        border: "none",
-                        cursor: "pointer",
-                        background: u.active ? "#ff9800" : "#4caf50",
-                        color: "#fff",
-                        fontSize: 12,
-                      }}
-                    >
-                      {u.active ? "🔒 Khóa" : "🔓 Mở"}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(u.id, u.username)}
-                      style={{
-                        padding: "5px 10px",
-                        borderRadius: 6,
-                        border: "none",
-                        cursor: "pointer",
-                        background: "#e53935",
-                        color: "#fff",
-                        fontSize: 12,
-                      }}
-                    >
-                      🗑️ Xóa
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <span className="d-flex align-items-center gap-2">
+            <i className="bi bi-people text-primary" />
+            <strong>Danh sách người dùng</strong>
+          </span>
+          <span className="badge bg-primary">{filtered.length} người dùng</span>
+        </div>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover table-striped align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Người dùng</th>
+                  <th>Email</th>
+                  <th className="text-center">Trạng thái</th>
+                  <th>Ngày tạo</th>
+                  <th className="text-center">Hành động</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center text-muted py-4">
+                      <i className="bi bi-inbox fs-4 d-block mb-1" />
+                      Không có người dùng nào
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((u) => (
+                    <tr key={u.id} style={{ opacity: u.active ? 1 : 0.55 }}>
+                      <td className="text-muted" style={{ width: 60 }}>
+                        #{u.id}
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: "50%",
+                              background: "#3b7ddd20",
+                              color: "#3b7ddd",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 600,
+                              fontSize: 13,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(u.fullName || u.username)
+                              ?.charAt(0)
+                              ?.toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: 14 }}>
+                              {u.fullName || "—"}
+                            </div>
+                            <div
+                              className="text-muted"
+                              style={{ fontSize: 12 }}
+                            >
+                              @{u.username}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{u.email || "—"}</td>
+                      <td className="text-center">
+                        <span
+                          className={`badge ${u.active ? "bg-success" : "bg-danger"}`}
+                        >
+                          {u.active ? "Hoạt động" : "Bị khóa"}
+                        </span>
+                      </td>
+                      <td className="text-muted" style={{ fontSize: 13 }}>
+                        {u.createdAt
+                          ? new Date(u.createdAt).toLocaleDateString("vi-VN")
+                          : "—"}
+                      </td>
+                      <td className="text-center">
+                        <div className="d-flex gap-1 justify-content-center">
+                          <button
+                            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                            onClick={() => handleEditClick(u)}
+                          >
+                            <i className="bi bi-pencil" /> Sửa
+                          </button>
+                          <button
+                            className={`btn btn-sm d-flex align-items-center gap-1 ${u.active ? "btn-outline-warning" : "btn-outline-success"}`}
+                            onClick={() => handleToggle(u)}
+                          >
+                            <i
+                              className={`bi ${u.active ? "bi-lock" : "bi-unlock"}`}
+                            />
+                            {u.active ? "Khóa" : "Mở"}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                            onClick={() => handleDelete(u)}
+                          >
+                            <i className="bi bi-trash" /> Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-const th = {
-  padding: "10px 12px",
-  textAlign: "left",
-  fontWeight: "bold",
-  borderBottom: "2px solid #ddd",
-};
-const td = { padding: "10px 12px", borderBottom: "1px solid #eee" };
-const inputStyle = {
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: "1px solid #ddd",
-  fontSize: 14,
-  flex: 1,
-};

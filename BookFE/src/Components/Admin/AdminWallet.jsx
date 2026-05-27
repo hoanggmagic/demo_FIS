@@ -2,22 +2,26 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API = "http://localhost:8080/api/admin/wallet";
-
 const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
-const statusColor = (s) =>
-  ({ PENDING: "#ff9800", APPROVED: "#4caf50", REJECTED: "#e53935" })[s] ||
-  "#999";
-const statusLabel = (s) =>
-  ({ PENDING: "Chờ duyệt", APPROVED: "Đã duyệt", REJECTED: "Từ chối" })[s] || s;
+const STATUS = {
+  PENDING: { label: "Chờ duyệt", cls: "bg-warning text-dark" },
+  APPROVED: { label: "Đã duyệt", cls: "bg-success" },
+  REJECTED: { label: "Từ chối", cls: "bg-danger" },
+};
 
 export default function AdminWallet() {
   const [balance, setBalance] = useState(0);
   const [requests, setRequests] = useState([]);
-  const [tab, setTab] = useState("requests");
-  const [message, setMessage] = useState("");
+  const [tab, setTab] = useState("pending");
+  const [toast, setToast] = useState(null);
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const load = async () => {
     try {
@@ -28,7 +32,7 @@ export default function AdminWallet() {
       setBalance(balRes.data.balance);
       setRequests(reqRes.data);
     } catch (err) {
-      console.error("Load error:", err);
+      console.error(err);
     }
   };
 
@@ -36,238 +40,259 @@ export default function AdminWallet() {
     load();
   }, []);
 
-  const handleAction = async (id, action, requestData) => {
-    if (action === "approve") {
-      const confirm = window.confirm(
-        `Xác nhận duyệt yêu cầu rút tiền?\n\n` +
-          `Tác giả: ${requestData.fullName}\n` +
-          `Số tiền: ${Number(requestData.amount).toLocaleString()} VND\n` +
-          `Ngân hàng: ${requestData.bankName}\n` +
-          `STK: ${requestData.accountNumber}\n` +
-          `Chủ TK: ${requestData.accountHolder}`,
-      );
-      if (!confirm) return;
-    } else {
-      if (
-        !window.confirm(`Xác nhận từ chối yêu cầu của ${requestData.fullName}?`)
-      )
-        return;
-    }
+  const handleAction = async (id, action, r) => {
+    const label = action === "approve" ? "duyệt" : "từ chối";
+    const detail =
+      action === "approve"
+        ? `Tác giả: ${r.fullName}\nSố tiền: ${Number(r.amount).toLocaleString()} VND\nNgân hàng: ${r.bankName}\nSTK: ${r.accountNumber}\nChủ TK: ${r.accountHolder}`
+        : `Từ chối yêu cầu của ${r.fullName}?`;
+    if (!window.confirm(`Xác nhận ${label}?\n\n${detail}`)) return;
     try {
       const res = await axios.put(
         `${API}/withdraw-requests/${id}/${action}`,
         {},
         getHeaders(),
       );
-      setMessage("✅ " + res.data.message);
+      showToast("success", res.data.message);
       load();
-      setTimeout(() => setMessage(""), 3000);
     } catch (err) {
-      setMessage("❌ " + (err.response?.data || "Lỗi xử lý"));
+      showToast("danger", err.response?.data || "Lỗi xử lý");
     }
   };
 
   const pending = requests.filter((r) => r.status === "PENDING");
   const done = requests.filter((r) => r.status !== "PENDING");
+  const list = tab === "pending" ? pending : done;
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "0 auto" }}>
-      <h2>💰 Quản lý ví</h2>
-
-      {/* Số dư admin */}
-      <div
-        style={{
-          padding: 24,
-          background: "#1976d2",
-          borderRadius: 16,
-          color: "#fff",
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div>
-          <p style={{ margin: 0, opacity: 0.8 }}>Số dư ví Admin</p>
-          <h1 style={{ margin: "4px 0", fontSize: 32 }}>
-            {Number(balance).toLocaleString()} VND
-          </h1>
-        </div>
-        <div style={{ fontSize: 48 }}>🏦</div>
-      </div>
-
-      {message && (
-        <p
-          style={{
-            color: message.includes("✅") ? "green" : "red",
-            fontWeight: "bold",
-            marginBottom: 16,
-          }}
+    <div>
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`alert alert-${toast.type} alert-dismissible d-flex align-items-center gap-2 mb-3`}
         >
-          {message}
-        </p>
+          <i
+            className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill"}`}
+          />
+          {toast.msg}
+          <button
+            type="button"
+            className="btn-close ms-auto"
+            onClick={() => setToast(null)}
+          />
+        </div>
       )}
 
-      {/* Tab */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {[
-          ["requests", `⏳ Chờ duyệt (${pending.length})`],
-          ["done", "✅ Đã xử lý"],
-        ].map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              background: tab === key ? "#1976d2" : "#eee",
-              color: tab === key ? "#fff" : "#333",
-              fontWeight: "bold",
-            }}
+      {/* Balance card */}
+      <div className="row g-3 mb-4">
+        <div className="col-md-4">
+          <div
+            className="card border-0 text-white"
+            style={{ background: "linear-gradient(135deg, #1976d2, #42a5f5)" }}
           >
-            {label}
-          </button>
-        ))}
+            <div className="card-body d-flex align-items-center justify-content-between p-4">
+              <div>
+                <p className="mb-1 opacity-75" style={{ fontSize: 13 }}>
+                  Số dư ví Admin
+                </p>
+                <h3 className="mb-0 fw-bold">
+                  {Number(balance).toLocaleString()} VND
+                </h3>
+              </div>
+              <i
+                className="bi bi-bank2"
+                style={{ fontSize: 40, opacity: 0.4 }}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div
+            className="card border-0 h-100"
+            style={{ background: "#fff3e0" }}
+          >
+            <div className="card-body d-flex align-items-center justify-content-between p-4">
+              <div>
+                <p className="mb-1 text-muted" style={{ fontSize: 13 }}>
+                  Chờ duyệt
+                </p>
+                <h3 className="mb-0 fw-bold" style={{ color: "#e65100" }}>
+                  {pending.length}
+                </h3>
+              </div>
+              <i
+                className="bi bi-hourglass-split"
+                style={{ fontSize: 36, color: "#ff9800", opacity: 0.6 }}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div
+            className="card border-0 h-100"
+            style={{ background: "#e8f5e9" }}
+          >
+            <div className="card-body d-flex align-items-center justify-content-between p-4">
+              <div>
+                <p className="mb-1 text-muted" style={{ fontSize: 13 }}>
+                  Đã xử lý
+                </p>
+                <h3 className="mb-0 fw-bold" style={{ color: "#2e7d32" }}>
+                  {done.length}
+                </h3>
+              </div>
+              <i
+                className="bi bi-check-circle"
+                style={{ fontSize: 36, color: "#4caf50", opacity: 0.6 }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Tab: Chờ duyệt */}
-      {tab === "requests" && (
-        <div>
-          {pending.length === 0 ? (
-            <p>Không có yêu cầu nào đang chờ.</p>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <th style={th}>Tác giả</th>
-                  <th style={th}>Số tiền</th>
-                  <th style={th}>Ngân hàng</th>
-                  <th style={th}>STK</th>
-                  <th style={th}>Chủ TK</th>
-                  <th style={th}>Ngày</th>
-                  <th style={th}>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pending.map((r) => (
-                  <tr key={r.id}>
-                    <td style={td}>
-                      <strong>{r.fullName}</strong>
-                      <br />
-                      <small>{r.username}</small>
-                    </td>
-                    <td style={{ ...td, fontWeight: "bold", color: "#e53935" }}>
-                      {Number(r.amount).toLocaleString()} VND
-                    </td>
-                    <td style={td}>{r.bankName}</td>
-                    <td style={td}>{r.accountNumber}</td>
-                    <td style={td}>{r.accountHolder}</td>
-                    <td style={td}>
-                      {new Date(r.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td style={td}>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button
-                          onClick={() => handleAction(r.id, "approve", r)}
-                          style={{
-                            padding: "6px 12px",
-                            background: "#4caf50",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            r,
-                          }}
-                        >
-                          ✅ Duyệt
-                        </button>
-                        <button
-                          onClick={() => handleAction(r.id, "reject", r)}
-                          style={{
-                            padding: "6px 12px",
-                            background: "#e53935",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: 6,
-                            cursor: "pointer",
-                            r,
-                          }}
-                        >
-                          ❌ Từ chối
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {/* Tabs */}
+      <div className="card">
+        <div className="card-header">
+          <ul className="nav nav-tabs card-header-tabs">
+            <li className="nav-item">
+              <button
+                className={`nav-link d-flex align-items-center gap-2 ${tab === "pending" ? "active" : ""}`}
+                onClick={() => setTab("pending")}
+              >
+                <i className="bi bi-hourglass-split" />
+                Chờ duyệt
+                {pending.length > 0 && (
+                  <span className="badge bg-warning text-dark ms-1">
+                    {pending.length}
+                  </span>
+                )}
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`nav-link d-flex align-items-center gap-2 ${tab === "done" ? "active" : ""}`}
+                onClick={() => setTab("done")}
+              >
+                <i className="bi bi-check2-all" />
+                Đã xử lý
+                <span className="badge bg-secondary ms-1">{done.length}</span>
+              </button>
+            </li>
+          </ul>
         </div>
-      )}
 
-      {/* Tab: Đã xử lý */}
-      {tab === "done" && (
-        <div>
-          {done.length === 0 ? (
-            <p>Chưa có yêu cầu nào được xử lý.</p>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <th style={th}>Tác giả</th>
-                  <th style={th}>Số tiền</th>
-                  <th style={th}>Ngân hàng</th>
-                  <th style={th}>STK</th>
-                  <th style={th}>Trạng thái</th>
-                  <th style={th}>Ngày</th>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover table-striped align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Tác giả</th>
+                  <th>Số tiền</th>
+                  <th>Ngân hàng</th>
+                  <th>STK</th>
+                  <th>Chủ TK</th>
+                  <th>Ngày</th>
+                  {tab === "done" && (
+                    <th className="text-center">Trạng thái</th>
+                  )}
+                  {tab === "pending" && (
+                    <th className="text-center">Hành động</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {done.map((r) => (
-                  <tr key={r.id}>
-                    <td style={td}>
-                      <strong>{r.fullName}</strong>
-                      <br />
-                      <small>{r.username}</small>
-                    </td>
-                    <td style={{ ...td, fontWeight: "bold" }}>
-                      {Number(r.amount).toLocaleString()} VND
-                    </td>
-                    <td style={td}>{r.bankName}</td>
-                    <td style={td}>{r.accountNumber}</td>
-                    <td style={td}>
-                      <span
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: 20,
-                          background: statusColor(r.status),
-                          color: "#fff",
-                          fontSize: 12,
-                        }}
-                      >
-                        {statusLabel(r.status)}
-                      </span>
-                    </td>
-                    <td style={td}>
-                      {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                {list.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-muted py-4">
+                      <i className="bi bi-inbox fs-4 d-block mb-1" />
+                      {tab === "pending"
+                        ? "Không có yêu cầu nào đang chờ"
+                        : "Chưa có yêu cầu nào được xử lý"}
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  list.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: "#3b7ddd20",
+                              color: "#3b7ddd",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontWeight: 600,
+                              fontSize: 13,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {r.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500, fontSize: 14 }}>
+                              {r.fullName}
+                            </div>
+                            <div
+                              className="text-muted"
+                              style={{ fontSize: 12 }}
+                            >
+                              @{r.username}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="fw-bold text-danger">
+                          {Number(r.amount).toLocaleString()} VND
+                        </span>
+                      </td>
+                      <td>{r.bankName}</td>
+                      <td>
+                        <code>{r.accountNumber}</code>
+                      </td>
+                      <td>{r.accountHolder}</td>
+                      <td className="text-muted" style={{ fontSize: 13 }}>
+                        {new Date(r.createdAt).toLocaleDateString("vi-VN")}
+                      </td>
+                      {tab === "done" && (
+                        <td className="text-center">
+                          <span
+                            className={`badge ${STATUS[r.status]?.cls ?? "bg-secondary"}`}
+                          >
+                            {STATUS[r.status]?.label ?? r.status}
+                          </span>
+                        </td>
+                      )}
+                      {tab === "pending" && (
+                        <td className="text-center">
+                          <div className="d-flex gap-1 justify-content-center">
+                            <button
+                              className="btn btn-sm btn-success d-flex align-items-center gap-1"
+                              onClick={() => handleAction(r.id, "approve", r)}
+                            >
+                              <i className="bi bi-check-lg" /> Duyệt
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                              onClick={() => handleAction(r.id, "reject", r)}
+                            >
+                              <i className="bi bi-x-lg" /> Từ chối
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-          )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
-
-const th = {
-  padding: "10px 12px",
-  textAlign: "left",
-  fontWeight: "bold",
-  borderBottom: "2px solid #ddd",
-};
-const td = { padding: "10px 12px", borderBottom: "1px solid #eee" };
