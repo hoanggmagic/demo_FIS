@@ -33,7 +33,13 @@ public class AuthInterceptor implements HandlerInterceptor {
 
         if (path.startsWith("/api/auth/login") || path.startsWith("/api/auth/register")
                 || path.startsWith("/api/payments/webhook") // ← thêm dòng này
-                || path.startsWith("/api/orders/status")) { // ← thêm dòng này (cho polling)
+                || path.startsWith("/api/orders/status") || path.startsWith("/api/user/books") // ←
+                                                                                               // thêm
+                                                                                               // —
+                                                                                               // guest
+                                                                                               // xem
+                                                                                               // sách
+                || path.startsWith("/api/categories")) { // ← thêm dòng này (cho polling)
             return true;
         }
 

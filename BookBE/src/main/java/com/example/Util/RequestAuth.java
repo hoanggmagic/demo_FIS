@@ -16,6 +16,12 @@ public final class RequestAuth {
         return ctx;
     }
 
+    // ← thêm method này
+    public static AuthContext optional(HttpServletRequest request) {
+        return (AuthContext) request.getAttribute(AuthInterceptor.ATTR_AUTH);
+        // có token → trả về AuthContext, không có token → trả về null, không throw
+    }
+
     public static void requireAdmin(AuthContext ctx) {
         if (!ctx.isAdmin()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ ADMIN được phép");

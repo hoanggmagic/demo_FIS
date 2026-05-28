@@ -223,13 +223,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount }) {
               >
                 Đăng nhập
               </button>
-              <button
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: 20 }}
-                onClick={onShowLogin}
-              >
-                Đăng ký
-              </button>
             </div>
           )}
         </div>

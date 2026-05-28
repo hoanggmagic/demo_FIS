@@ -129,7 +129,7 @@ function HeroBanner() {
 // ── Tab nav ───────────────────────────────────────────────────────────────────
 function TabNav({ tab, setTab, cartCount, user }) {
   const tabs = [
-    { key: "books", icon: "bi-grid", label: "Danh sách sácddh" },
+    { key: "books", icon: "bi-grid", label: "Danh sách sácd" },
     {
       key: "cart",
       icon: "bi-cart3",

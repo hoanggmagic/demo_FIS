@@ -33,23 +33,24 @@ public class UserBookController {
     @GetMapping
     public ResponseEntity<List<Book>> getAllBooks(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
-            AuthContext ctx = RequestAuth.require(request);
+            AuthContext ctx = RequestAuth.optional(request); // ← đổi require → optional
             BookService service = new BookService(conn, passwordUtil);
             return ResponseEntity.ok(service.getBooksForContext(ctx));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(null);
         }
     }
 
-    // GET: /api/user/books/{id} - Xem chi tiết sách
     @GetMapping("/{id}")
     public ResponseEntity<Book> getBookById(@PathVariable int id, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
-            AuthContext ctx = RequestAuth.require(request);
+            AuthContext ctx = RequestAuth.optional(request); // ← đổi require → optional
             BookService service = new BookService(conn, passwordUtil);
             Book book = service.getBookById(id, ctx);
             return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
     }

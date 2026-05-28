@@ -208,13 +208,13 @@ public class BookService {
     // =========================================================
 
     public List<Book> getBooksForContext(AuthContext ctx) throws SQLException {
-
+        if (ctx == null || ctx.isAdmin()) {
+            return bookDAO.getAllBooks();
+        }
         if (ctx.isAuthor()) {
-
             return bookDAO.getBooksByAuthorId(ctx.getUserId());
         }
-
-        return bookDAO.getAllBooks();
+        return bookDAO.getAllBooks(); // user thường → xem tất cả
     }
 
     public Book getBookById(int id, AuthContext ctx) throws SQLException {

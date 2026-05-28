@@ -1,6 +1,3 @@
-// ── Thay block USER/GUEST trong RoleRoutes của App.jsx ────────────────────────
-// Copy đoạn này vào App.jsx, thay thế toàn bộ hàm RoleRoutes + root App
-
 import { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Login from "./Components/Auth/Login";
@@ -119,7 +116,6 @@ function HeroBanner({ onShowLogin }) {
             color: "rgba(255,255,255,.85)",
             fontSize: 15,
             maxWidth: 480,
-            marginBottom: 24,
             margin: "0 0 24px",
           }}
         >
@@ -167,6 +163,51 @@ function HeroBanner({ onShowLogin }) {
   );
 }
 
+// ── login modal overlay ───────────────────────────────────────────────────────
+function LoginModal({ onLogin, onClose }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onClick={onClose} // bấm nền ngoài để đóng
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: 32,
+          minWidth: 360,
+          position: "relative",
+        }}
+        onClick={(e) => e.stopPropagation()} // không đóng khi bấm vào form
+      >
+        <button
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 16,
+            background: "none",
+            border: "none",
+            fontSize: 20,
+            cursor: "pointer",
+          }}
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <AuthGate onLogin={onLogin} onGuest={onClose} />
+      </div>
+    </div>
+  );
+}
+
 // ── role routes ───────────────────────────────────────────────────────────────
 function RoleRoutes({ user, onLogout, onShowLogin }) {
   // ADMIN
@@ -182,11 +223,7 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
           />
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/wallet" element={<AdminWalletPage />} />
-          <Route
-            path="/admin/categories"
-            element={<AdminCategoriesPage />}
-          />{" "}
-          {/* ← thêm */}
+          <Route path="/admin/categories" element={<AdminCategoriesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>
@@ -218,7 +255,7 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
     );
   }
 
-  // USER + GUEST — route-based
+  // USER + GUEST — ai cũng vào được, chỉ chặn ở cart/profile
   return (
     <UserLayout
       user={user ?? null}
@@ -226,7 +263,7 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
       onShowLogin={onShowLogin}
     >
       <Routes>
-        {/* Danh sách sách — ai cũng xem được */}
+        {/* Trang chủ — ai cũng xem được */}
         <Route
           path="/"
           element={
@@ -271,7 +308,7 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
 // ── root ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(undefined);
-  const [isGuest, setIsGuest] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -280,20 +317,20 @@ export default function App() {
 
   const handleLogin = (u) => {
     setUser(u);
-    setIsGuest(false);
-    navigate("/");
+    setShowLogin(false);
+    const role = u.role?.toUpperCase();
+    if (role === "ADMIN") navigate("/");
+    else if (role === "AUTHOR") navigate("/author/books");
+    // USER → ở lại trang hiện tại, không navigate
   };
+
   const handleLogout = () => {
     clearSession();
     setUser(null);
-    setIsGuest(false);
-    navigate("/");
+    navigate("/"); // về trang chủ, vẫn xem được sách bình thường
   };
-  const handleGuest = () => {
-    setIsGuest(true);
-  };
-  const handleShowLogin = () => setIsGuest("login");
 
+  // Đang load session
   if (user === undefined) {
     return (
       <div
@@ -311,22 +348,18 @@ export default function App() {
     );
   }
 
-  if (!user && isGuest === "login") {
-    return (
-      <UserLayout
-        user={null}
-        onLogout={null}
-        onShowLogin={() => setIsGuest("login")}
-      >
-        <AuthGate onLogin={handleLogin} onGuest={() => setIsGuest(false)} />
-      </UserLayout>
-    );
-  }
   return (
-    <RoleRoutes
-      user={user}
-      onLogout={handleLogout}
-      onShowLogin={() => setIsGuest("login")}
-    />
+    <>
+      {/* Modal login — hiện khi guest bấm thêm giỏ hàng */}
+      {showLogin && !user && (
+        <LoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />
+      )}
+
+      <RoleRoutes
+        user={user}
+        onLogout={handleLogout}
+        onShowLogin={() => setShowLogin(true)}
+      />
+    </>
   );
 }
