@@ -1,11 +1,9 @@
-import api from "../axiosClient";
+import api from "../api";
 
-export const getBooks = () => api.get("/admin/books");
+const API = "/admin/books";
 
-export const getBook = (id) => api.get(`/admin/books/${id}`);
-
-export const createBook = (book) => api.post("/admin/books", book);
-
-export const updateBook = (id, book) => api.put(`/admin/books/${id}`, book);
-
-export const deleteBook = (id) => api.delete(`/admin/books/${id}`);
+export const getBooks = () => api.get(API);
+export const getBookById = (id) => api.get(`${API}/${id}`);
+export const createBook = (data) => api.post(API, data);
+export const updateBook = (id, data) => api.put(`${API}/${id}`, data);
+export const deleteBook = (id) => api.delete(`${API}/${id}`);

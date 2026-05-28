@@ -2,6 +2,7 @@ package com.example.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import com.example.DAO.BookDAO;
@@ -13,6 +14,7 @@ import com.example.Entities.User;
 import com.example.Util.AuthContext;
 import com.example.Util.PasswordUtil;
 import com.example.dto.AuthorRequest;
+import com.example.dto.BookDTO;
 
 public class BookService {
 
@@ -20,6 +22,30 @@ public class BookService {
     private final BookDAO bookDAO;
     private final BookPriceDAO priceDAO;
     private final PasswordUtil passwordUtil;
+
+    private BookDTO toDTO(Book book) {
+
+        BookDTO dto = new BookDTO();
+
+        dto.setId(book.getId());
+        dto.setTitle(book.getTitle());
+        dto.setDescription(book.getDescription());
+        dto.setPublishedYear(book.getPublishedYear());
+        dto.setQuantity(book.getQuantity());
+        dto.setPrice(book.getPrice());
+        dto.setStatus(book.getStatus());
+
+        dto.setAuthorId(book.getAuthorId());
+        dto.setAuthorName(book.getAuthorName());
+
+        // CATEGORY
+        if (book.getCategory() != null) {
+            dto.setCategoryId(book.getCategory().getId());
+            dto.setCategoryName(book.getCategory().getName());
+        }
+
+        return dto;
+    }
 
     public BookService(Connection connection, PasswordUtil passwordUtil) {
 
@@ -413,4 +439,35 @@ public class BookService {
 
         return List.of("Chức năng đang phát triển");
     }
+
+    public List<BookDTO> getBooksForContextDTO(AuthContext ctx) {
+        try {
+            List<Book> books = getBooksForContext(ctx);
+
+            List<BookDTO> result = new ArrayList<>();
+
+            for (Book b : books) {
+                result.add(toDTO(b));
+            }
+
+            return result;
+
+        } catch (SQLException e) {
+            throw new RuntimeException("DB error: " + e.getMessage(), e);
+        }
+    }
+
+    public BookDTO getBookByIdDTO(int id, AuthContext ctx) throws SQLException {
+
+        Book book = bookDAO.getBookById(id);
+
+        if (book == null) {
+            return null;
+        }
+
+        assertCanAccessBook(book, ctx);
+
+        return toDTO(book);
+    }
+
 }

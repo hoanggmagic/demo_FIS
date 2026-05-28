@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from "/aip";
 
 const BASE = "/api/books";
 

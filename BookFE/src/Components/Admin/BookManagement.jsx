@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   getBooks,
-  deleteBook,
   createBook,
   updateBook,
+  deleteBook,
 } from "../../Api/Admin/BookApi";
 import { getAuthors } from "../../Api/Admin/authorApi";
 
@@ -14,8 +14,10 @@ const empty = {
   year: "",
   quantity: "0",
   authorId: "",
+  categoryId: "",
   status: "ACTIVE",
 };
+import { categoryApi } from "../../Api/Admin/CategoryApi";
 
 export default function BookManagement({ user }) {
   const [books, setBooks] = useState([]);
@@ -30,6 +32,7 @@ export default function BookManagement({ user }) {
   const isAdmin = user?.role === "ADMIN";
   const isAuthor = user?.role === "AUTHOR";
   const currentYear = new Date().getFullYear();
+  const [categories, setCategories] = useState([]);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -39,18 +42,33 @@ export default function BookManagement({ user }) {
   const load = async () => {
     try {
       const res = await getBooks();
-      setBooks(res.data || []);
+
+      console.log("BOOKS:", res);
+
+      setBooks(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error(err);
+      setBooks([]);
     }
   };
 
   useEffect(() => {
     load();
-    if (isAdmin)
-      getAuthors()
-        .then((r) => setAuthors(r.data))
-        .catch(() => {});
+
+    categoryApi
+      .getAll()
+      .then((res) => {
+        console.log("CATEGORY RESPONSE:", res);
+        setCategories(res || []);
+      })
+      .catch((err) => {
+        console.log("CATEGORY ERROR:", err);
+        setCategories([]);
+      });
+
+    getAuthors()
+      .then((res) => setAuthors(res.data || []))
+      .catch(() => setAuthors([]));
   }, []);
 
   useEffect(() => {
@@ -62,8 +80,10 @@ export default function BookManagement({ user }) {
         year: editing.publishedYear ?? "",
         quantity: editing.quantity ?? 0,
         authorId: editing.authorId ?? "",
+        categoryId: String(editing.categoryId || ""),
         status: editing.status || "ACTIVE",
       });
+
       setShowForm(true);
     } else {
       setBook(empty);
@@ -97,6 +117,7 @@ export default function BookManagement({ user }) {
       publishedYear: Number(book.year),
       quantity: Number(book.quantity) || 0,
       status: book.status,
+      categoryId: Number(book.categoryId) || null,
       authorId: isAuthor ? user.id : Number(book.authorId),
     };
     try {
@@ -222,6 +243,24 @@ export default function BookManagement({ user }) {
                     required
                   />
                 </div>
+                {/* ĐOẠN MỚI THAY THẾ VÀO: */}
+                <div className="col-md-6">
+                  <label className="form-label">Danh mục</label>
+                  <select
+                    name="categoryId"
+                    className="form-select"
+                    value={book.categoryId}
+                    onChange={handleChange}
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="col-12">
                   <label className="form-label">Mô tả</label>
                   <textarea
@@ -284,7 +323,7 @@ export default function BookManagement({ user }) {
                       onChange={handleChange}
                     >
                       <option value="">-- Chọn tác giả --</option>
-                      {authors
+                      {(authors || [])
                         .filter((a) => a.active !== false)
                         .map((a) => (
                           <option key={a.id} value={a.id}>
@@ -349,6 +388,7 @@ export default function BookManagement({ user }) {
                   <th>Giá</th>
                   <th>Năm</th>
                   <th>Tác giả</th>
+                  <th>Danh mục</th>
                   <th className="text-center">Tồn kho</th>
                   <th className="text-center">Trạng thái</th>
                   <th className="text-center">Hành động</th>
@@ -357,7 +397,7 @@ export default function BookManagement({ user }) {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center text-muted py-4">
+                    <td colSpan={9} className="text-center text-muted py-4">
                       <i className="bi bi-inbox fs-4 d-block mb-1" />
                       Chưa có sách nào
                     </td>
@@ -382,6 +422,8 @@ export default function BookManagement({ user }) {
                       </td>
                       <td>{b.publishedYear}</td>
                       <td>{b.authorName || "—"}</td>
+
+                      <td>{b.categoryName || b.category?.name || "—"}</td>
                       <td className="text-center">
                         <span className="badge bg-secondary">
                           {b.quantity ?? 0}

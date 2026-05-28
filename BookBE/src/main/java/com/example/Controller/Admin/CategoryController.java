@@ -27,11 +27,18 @@ public class CategoryController {
 
     // GET /api/categories
     @GetMapping
-    public List<Category> getAll() {
-        return categoryService.getAll();
+    public List<CategoryDTO> getAll() {
+        return categoryService.getAll().stream().map(c -> {
+            CategoryDTO dto = new CategoryDTO();
+            dto.setId(c.getId());
+            dto.setName(c.getName());
+            dto.setDescription(c.getDescription());
+            return dto;
+        }).toList();
     }
 
     // GET /api/categories/tree
+
     @GetMapping("/tree")
     public List<CategoryTreeDTO> getTree() {
         return categoryService.getTree();
@@ -61,4 +68,7 @@ public class CategoryController {
         categoryService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+
+
 }
