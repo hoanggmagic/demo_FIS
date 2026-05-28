@@ -5,7 +5,7 @@ import { clearCart } from "../../Api/User/CartApi";
 
 const BANK_ID = "970422";
 const ACCOUNT_NO = "0001057138272";
-const ACCOUNT_NAME = "BOOK STORE KDH";
+const ACCOUNT_NAME = "KHUONG DINH HOANG";
 const API_BASE = "http://localhost:8080/api";
 
 export default function Payment() {
@@ -139,9 +139,6 @@ export default function Payment() {
           marginBottom: 20,
         }}
       >
-        <p>
-          Order ID: <strong>{orderId}</strong>
-        </p>
         <p>
           Số tiền:{" "}
           <strong style={{ color: "#e53935", fontSize: 18 }}>

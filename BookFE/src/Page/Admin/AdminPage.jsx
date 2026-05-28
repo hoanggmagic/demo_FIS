@@ -2,6 +2,7 @@ import BookManagement from "../../Components/Admin/BookManagement";
 import AuthorManagement from "../../Components/Admin/AuthorManagement";
 import AdminWallet from "../../Components/Admin/AdminWallet";
 import UserManagement from "../../Components/Admin/UserManagement";
+import CategoryManagement from "../../Components/Admin/CategoryManagement";
 
 // ── Dashboard overview (route "/") ───────────────────────────────────────────
 
@@ -12,6 +13,12 @@ function DashboardHome({ user }) {
       icon: "bi bi-book",
       color: "#3b7ddd",
       to: "/admin/books",
+    },
+    {
+      label: "Quản lý danh mục",
+      icon: "bi bi-tags",
+      color: "#17a2b8",
+      to: "/admin/categories",
     },
     {
       label: "Quản lý tác giả",
@@ -169,6 +176,13 @@ export function AdminWalletPage() {
   return (
     <PageShell title="Yêu cầu rút tiền" icon="bi bi-wallet2">
       <AdminWallet />
+    </PageShell>
+  );
+}
+export function AdminCategoriesPage() {
+  return (
+    <PageShell title="Quản lý danh mục" icon="bi bi-tags">
+      <CategoryManagement />
     </PageShell>
   );
 }

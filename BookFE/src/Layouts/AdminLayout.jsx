@@ -14,6 +14,7 @@ const NAV_ITEMS = [
     header: "Quản lý",
     items: [
       { label: "Sách", icon: "bi bi-book", to: "/admin/books" },
+      { label: "Danh mục", icon: "bi bi-tags", to: "/admin/categories" }, // ← thêm
       { label: "Tác giả", icon: "bi bi-person-badge", to: "/admin/authors" },
       { label: "Người dùng", icon: "bi bi-people", to: "/admin/users" },
       { label: "Đơn hàng", icon: "bi bi-cart3", to: "/admin/orders" },
