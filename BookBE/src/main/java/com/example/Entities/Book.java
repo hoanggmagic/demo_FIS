@@ -10,7 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
-import com.example.Entities.Category;
 
 @Entity
 @Table(name = "books")
@@ -27,6 +26,10 @@ public class Book {
     @Column(name = "published_year")
     private int publishedYear;
 
+    // ĐÃ SỬA: Thêm @Transient vì số lượng thực tế đã được chuyển sang bảng 'inventories' theo từng
+    // chi nhánh.
+    // Trường này giữ lại mục đích làm biến tạm gom tổng số lượng hiển thị lên giao diện nếu cần.
+    @Transient
     private int quantity;
 
     @Column(name = "author_id")
@@ -44,6 +47,7 @@ public class Book {
 
     @Column(name = "updated_at")
     private Timestamp updatedAt;
+
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

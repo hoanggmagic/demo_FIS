@@ -1,9 +1,174 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { getCart } from "../Api/User/CartApi";
+import { categoryApi } from "../Api/Admin/CategoryApi";
+
+// ── Category Mega Menu ────────────────────────────────────────────────────────
+function CategoryMenu({ onSelect }) {
+  const [tree, setTree] = useState([]);
+  const [activeParent, setActiveParent] = useState(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    categoryApi
+      .getTree()
+      .then(setTree)
+      .catch(() => setTree([]));
+  }, []);
+
+  // Đóng khi click ngoài
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setActiveParent(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!tree.length) return null;
+
+  return (
+    <li className="nav-item position-relative" ref={ref}>
+      <button
+        className="nav-link fw-medium text-dark d-flex align-items-center gap-1"
+        style={{ background: "none", border: "none", cursor: "pointer" }}
+        onClick={() => {
+          setOpen((v) => !v);
+          setActiveParent(null);
+        }}
+      >
+        <i className="bi bi-tags me-1" /> Danh mục
+        <i
+          className={`bi bi-chevron-${open ? "up" : "down"}`}
+          style={{ fontSize: 10 }}
+        />
+      </button>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: 0,
+            zIndex: 2000,
+            background: "#fff",
+            border: "1px solid #e9ecef",
+            borderRadius: 12,
+            boxShadow: "0 12px 40px rgba(0,0,0,.12)",
+            display: "flex",
+            minWidth: 220,
+          }}
+        >
+          {/* Cột danh mục cha */}
+          <div
+            style={{
+              minWidth: 200,
+              padding: "8px 0",
+              borderRight: activeParent ? "1px solid #f0f0f0" : "none",
+            }}
+          >
+            {tree.map((cat) => (
+              <div
+                key={cat.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "9px 16px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: activeParent?.id === cat.id ? 600 : 400,
+                  color: activeParent?.id === cat.id ? "#2563eb" : "#1e293b",
+                  background:
+                    activeParent?.id === cat.id ? "#eff6ff" : "transparent",
+                  borderRadius: 6,
+                  margin: "0 6px",
+                  transition: "all .15s",
+                }}
+                onMouseEnter={() => setActiveParent(cat)}
+                onClick={() => {
+                  onSelect(cat);
+                  setOpen(false);
+                  setActiveParent(null);
+                }}
+              >
+                <span>
+                  <i
+                    className="bi bi-tag me-2"
+                    style={{ fontSize: 11, color: "#94a3b8" }}
+                  />
+                  {cat.name}
+                </span>
+                {cat.children?.length > 0 && (
+                  <i
+                    className="bi bi-chevron-right"
+                    style={{ fontSize: 10, color: "#94a3b8" }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Cột danh mục con */}
+          {activeParent?.children?.length > 0 && (
+            <div style={{ minWidth: 200, padding: "8px 0" }}>
+              <div
+                style={{
+                  padding: "6px 16px 8px",
+                  fontSize: 11,
+                  color: "#94a3b8",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {activeParent.name}
+              </div>
+              {activeParent.children.map((child) => (
+                <div
+                  key={child.id}
+                  style={{
+                    padding: "9px 16px",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    color: "#1e293b",
+                    borderRadius: 6,
+                    margin: "0 6px",
+                    transition: "all .15s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "#eff6ff")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                  onClick={() => {
+                    onSelect(child);
+                    setOpen(false);
+                    setActiveParent(null);
+                  }}
+                >
+                  <i
+                    className="bi bi-arrow-return-right me-2"
+                    style={{ fontSize: 11, color: "#94a3b8" }}
+                  />
+                  {child.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
-function Navbar({ user, onLogout, onShowLogin, cartCount }) {
+function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
   const navigate = useNavigate();
   const [ddOpen, setDdOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,7 +207,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount }) {
         </button>
 
         <div className={`collapse navbar-collapse ${menuOpen ? "show" : ""}`}>
-          {/* Nav links */}
           <ul className="navbar-nav me-auto mb-2 mb-lg-0 ms-3">
             <li className="nav-item">
               <NavLink
@@ -54,6 +218,10 @@ function Navbar({ user, onLogout, onShowLogin, cartCount }) {
                 <i className="bi bi-grid me-1" /> Danh sách sách
               </NavLink>
             </li>
+
+            {/* ← Category menu */}
+            <CategoryMenu onSelect={onSelectCategory} />
+
             <li className="nav-item">
               <NavLink
                 to="/cart"
@@ -86,7 +254,7 @@ function Navbar({ user, onLogout, onShowLogin, cartCount }) {
             )}
           </ul>
 
-          {/* User area */}
+          {/* User area — giữ nguyên */}
           {user ? (
             <div className="position-relative">
               <button
@@ -231,8 +399,17 @@ function Navbar({ user, onLogout, onShowLogin, cartCount }) {
   );
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
 function Footer() {
+  const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    categoryApi
+      .getTree()
+      .then(setCategories)
+      .catch(() => setCategories([]));
+  }, []);
+
   return (
     <footer
       style={{
@@ -257,6 +434,8 @@ function Footer() {
               Nền tảng sách số hàng đầu Việt Nam — kết nối tác giả và độc giả.
             </p>
           </div>
+
+          {/* ── Danh mục động từ API ── */}
           <div className="col-md-4">
             <h6 style={{ color: "#fff", fontWeight: 600, marginBottom: 12 }}>
               Danh mục
@@ -264,22 +443,39 @@ function Footer() {
             <ul
               style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 13 }}
             >
-              {[
-                "Văn học",
-                "Khoa học",
-                "Kinh tế",
-                "Lịch sử",
-                "Kỹ năng sống",
-              ].map((c) => (
-                <li key={c} style={{ marginBottom: 6 }}>
-                  <a
-                    href="#"
-                    style={{ color: "#adb5bd", textDecoration: "none" }}
-                    onMouseEnter={(e) => (e.target.style.color = "#fff")}
-                    onMouseLeave={(e) => (e.target.style.color = "#adb5bd")}
+              {categories.map((cat) => (
+                <li key={cat.id} style={{ marginBottom: 6 }}>
+                  <button
+                    onClick={() => {
+                      // Collect ids của cat + children
+                      const collectIds = (node) => {
+                        const ids = [node.id];
+                        node.children?.forEach((c) =>
+                          ids.push(...collectIds(c)),
+                        );
+                        return ids;
+                      };
+                      const ids = collectIds(cat);
+                      navigate(
+                        `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,
+                      );
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      color: "#adb5bd",
+                      fontSize: 13,
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = "#adb5bd")
+                    }
                   >
-                    {c}
-                  </a>
+                    {cat.name}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -348,6 +544,8 @@ function Footer() {
 // ── Layout wrapper ────────────────────────────────────────────────────────────
 export default function UserLayout({ user, onLogout, onShowLogin, children }) {
   const [cartCount, setCartCount] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -358,6 +556,25 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
       .then((res) => setCartCount(res.data.length))
       .catch(() => setCartCount(0));
   }, [user]);
+
+  const handleSelectCategory = (cat) => {
+    setSelectedCategory(cat);
+
+    // Thu thập id của cat + toàn bộ children (đệ quy)
+    const collectIds = (node) => {
+      const ids = [node.id];
+      if (node.children?.length) {
+        node.children.forEach((child) => ids.push(...collectIds(child)));
+      }
+      return ids;
+    };
+
+    const ids = collectIds(cat);
+
+    navigate(
+      `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,
+    );
+  };
 
   return (
     <div
@@ -373,6 +590,7 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
         onLogout={onLogout}
         onShowLogin={onShowLogin}
         cartCount={cartCount}
+        onSelectCategory={handleSelectCategory}
       />
       <main style={{ flex: 1 }}>{children}</main>
       <Footer />

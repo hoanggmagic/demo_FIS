@@ -31,13 +31,32 @@ public class UserBookController {
 
     // GET: /api/user/books - Lấy tất cả sách (user chỉ xem)
     @GetMapping
-    public ResponseEntity<List<Book>> getAllBooks(HttpServletRequest request) {
+    public ResponseEntity<List<Book>> getAllBooks(
+            @RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+
         try (Connection conn = dataSource.getConnection()) {
-            AuthContext ctx = RequestAuth.optional(request); // ← đổi require → optional
+
+            AuthContext ctx = RequestAuth.optional(request);
+
             BookService service = new BookService(conn, passwordUtil);
-            return ResponseEntity.ok(service.getBooksForContext(ctx));
+
+            List<Book> books;
+
+            if (categoryId != null) {
+
+                books = service.getBooksByCategory(categoryId, ctx);
+
+            } else {
+
+                books = service.getBooksForContext(ctx);
+            }
+
+            return ResponseEntity.ok(books);
+
         } catch (Exception e) {
+
             e.printStackTrace();
+
             return ResponseEntity.status(500).body(null);
         }
     }
@@ -58,12 +77,28 @@ public class UserBookController {
     // GET: /api/user/books/search?keyword=abc - Tìm kiếm sách
     @GetMapping("/search")
     public ResponseEntity<List<Book>> searchBooks(@RequestParam String keyword,
-            HttpServletRequest request) {
+            @RequestParam(required = false) Integer categoryId, HttpServletRequest request) {
+
         try (Connection conn = dataSource.getConnection()) {
+
+            AuthContext ctx = RequestAuth.optional(request);
+
             BookService service = new BookService(conn, passwordUtil);
-            List<Book> results = service.searchBooks(keyword);
+
+            List<Book> results;
+
+            if (categoryId != null) {
+                results = service.searchBooksByCategory(keyword, categoryId, ctx);
+            } else {
+                results = service.searchBooks(keyword);
+            }
+
             return ResponseEntity.ok(results);
+
         } catch (Exception e) {
+
+            e.printStackTrace();
+
             return ResponseEntity.status(500).body(null);
         }
     }

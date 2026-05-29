@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import com.example.Entities.Book;
 import com.example.Entities.Category;
+import com.example.Util.AuthContext;
 
 public class BookDAO {
     private final Connection connection;
@@ -17,23 +18,46 @@ public class BookDAO {
         this.connection = connection;
     }
 
-    public List<Book> getBooksByAuthorId(int authorId) throws SQLException {
+    // Thêm method getBooksByCategory sau getAllBooks()
+    public List<Book> searchBooksByCategory(String keyword, Integer categoryId, AuthContext ctx)
+            throws SQLException {
+
         List<Book> books = new ArrayList<>();
-        String query = "SELECT b.id, b.title, b.description, b.published_year, b.quantity, "
-                + "b.author_id, b.status, u.full_name AS author_name, bp.price, "
-                + "c.id AS category_id, c.name AS category_name " // ← thêm
+
+        String query = "SELECT b.id, b.title, b.description, b.published_year, "
+                + "b.quantity, b.author_id, b.status, " + "u.full_name AS author_name, "
+                + "bp.price, " + "c.id AS category_id, " + "c.name AS category_name "
                 + "FROM books b " + "LEFT JOIN users u ON b.author_id = u.id "
                 + "LEFT JOIN book_prices bp ON b.id = bp.book_id "
-                + "LEFT JOIN categories c ON b.category_id = c.id " // ← thêm
-                + "WHERE b.author_id = ? ORDER BY b.id";
+                + "LEFT JOIN categories c ON b.category_id = c.id " + "WHERE (b.category_id = ? "
+                + "OR b.category_id IN ( " + "    SELECT id FROM categories WHERE parent_id = ? "
+                + ")) " + "AND b.title ILIKE ? ";
+
+        // Author chỉ xem sách mình
+        if (ctx != null && ctx.isAuthor()) {
+            query += "AND b.author_id = ? ";
+        }
+
+        query += "ORDER BY b.id";
+
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, authorId);
+
+            pstmt.setInt(1, categoryId);
+            pstmt.setInt(2, categoryId);
+            pstmt.setString(3, "%" + keyword + "%");
+
+            if (ctx != null && ctx.isAuthor()) {
+                pstmt.setInt(4, ctx.getUserId());
+            }
+
             try (ResultSet rs = pstmt.executeQuery()) {
+
                 while (rs.next()) {
                     books.add(mapBookRow(rs, true));
                 }
             }
         }
+
         return books;
     }
 
@@ -69,6 +93,46 @@ public class BookDAO {
         return books;
     }
 
+    public List<Book> getBooksByCategory(int categoryId, AuthContext ctx) throws SQLException {
+
+        List<Book> books = new ArrayList<>();
+
+        String query = "SELECT b.id, b.title, b.description, b.published_year, "
+                + "b.quantity, b.author_id, b.status, " + "u.full_name AS author_name, "
+                + "bp.price, " + "c.id AS category_id, " + "c.name AS category_name "
+                + "FROM books b " + "LEFT JOIN users u ON b.author_id = u.id "
+                + "LEFT JOIN book_prices bp ON b.id = bp.book_id "
+                + "LEFT JOIN categories c ON b.category_id = c.id " + "WHERE (b.category_id = ? "
+                + "OR b.category_id IN ( " + "    SELECT id FROM categories WHERE parent_id = ? "
+                + ")) ";
+
+        // Author chỉ xem sách của mình
+        if (ctx != null && ctx.isAuthor()) {
+            query += "AND b.author_id = ? ";
+        }
+
+        query += "ORDER BY b.id";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+
+            pstmt.setInt(1, categoryId);
+            pstmt.setInt(2, categoryId);
+
+            if (ctx != null && ctx.isAuthor()) {
+                pstmt.setInt(3, ctx.getUserId());
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+
+                while (rs.next()) {
+                    books.add(mapBookRow(rs, true));
+                }
+            }
+        }
+
+        return books;
+    }
+
     public Book getBookById(int id) throws SQLException {
         String query = "SELECT b.id, b.title, b.description, b.published_year, b.quantity, "
                 + "b.author_id, b.status, u.full_name AS author_name, bp.price, "
@@ -90,21 +154,29 @@ public class BookDAO {
     }
 
     public List<Book> searchBookByTitle(String title) throws SQLException {
+
         List<Book> books = new ArrayList<>();
+
         String query = "SELECT b.id, b.title, b.description, b.published_year, b.quantity, "
-                + "b.author_id, b.status, u.full_name AS author_name, bp.price " + "FROM books b "
+                + "b.author_id, b.status, " + "u.full_name AS author_name, " + "bp.price, "
+                + "c.id AS category_id, " + "c.name AS category_name " + "FROM books b "
                 + "LEFT JOIN users u ON b.author_id = u.id "
                 + "LEFT JOIN book_prices bp ON b.id = bp.book_id "
-                + "WHERE b.title ILIKE ? ORDER BY b.id";
+                + "LEFT JOIN categories c ON b.category_id = c.id " + "WHERE b.title ILIKE ? "
+                + "ORDER BY b.id";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+
             pstmt.setString(1, "%" + title + "%");
+
             try (ResultSet rs = pstmt.executeQuery()) {
+
                 while (rs.next()) {
                     books.add(mapBookRow(rs, true));
                 }
             }
         }
+
         return books;
     }
 

@@ -208,14 +208,15 @@ public class BookService {
     // =========================================================
 
     public List<Book> getBooksForContext(AuthContext ctx) throws SQLException {
-        if (ctx == null || ctx.isAdmin()) {
-            return bookDAO.getAllBooks();
-        }
-        if (ctx.isAuthor()) {
-            return bookDAO.getBooksByAuthorId(ctx.getUserId());
-        }
-        return bookDAO.getAllBooks(); // user thường → xem tất cả
+        return bookDAO.getAllBooks();
     }
+   public List<Book> searchBooksByCategory(
+        String keyword,
+        Integer categoryId,
+        AuthContext ctx) throws SQLException {
+
+    return bookDAO.searchBooksByCategory(keyword, categoryId, ctx);
+}
 
     public Book getBookById(int id, AuthContext ctx) throws SQLException {
 
@@ -362,6 +363,9 @@ public class BookService {
         return bookDAO.searchBookByTitle(title);
     }
 
+    public List<Book> getBooksByCategory(int categoryId, AuthContext ctx) throws SQLException {
+        return bookDAO.getBooksByCategory(categoryId, ctx);
+    }
     // =========================================================
     // PRICE
     // =========================================================
