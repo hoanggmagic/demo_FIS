@@ -7,6 +7,7 @@ import { categoryApi } from "../Api/Admin/CategoryApi";
 function CategoryMenu({ onSelect }) {
   const [tree, setTree] = useState([]);
   const [activeParent, setActiveParent] = useState(null);
+  const [activeChild, setActiveChild] = useState(null);
   const [open, setOpen] = useState(false);
   const ref = useRef();
 
@@ -23,6 +24,7 @@ function CategoryMenu({ onSelect }) {
       if (ref.current && !ref.current.contains(e.target)) {
         setOpen(false);
         setActiveParent(null);
+        setActiveChild(null);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -30,6 +32,27 @@ function CategoryMenu({ onSelect }) {
   }, []);
 
   if (!tree.length) return null;
+
+  const colStyle = (active) => ({
+    minWidth: 200,
+    padding: "8px 0",
+    borderRight: active ? "1px solid #f0f0f0" : "none",
+  });
+
+  const itemStyle = (isActive) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "9px 16px",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: isActive ? 600 : 400,
+    color: isActive ? "#2563eb" : "#1e293b",
+    background: isActive ? "#eff6ff" : "transparent",
+    borderRadius: 6,
+    margin: "0 6px",
+    transition: "all .15s",
+  });
 
   return (
     <li className="nav-item position-relative" ref={ref}>
@@ -39,6 +62,7 @@ function CategoryMenu({ onSelect }) {
         onClick={() => {
           setOpen((v) => !v);
           setActiveParent(null);
+          setActiveChild(null);
         }}
       >
         <i className="bi bi-tags me-1" /> Danh mục
@@ -63,37 +87,21 @@ function CategoryMenu({ onSelect }) {
             minWidth: 220,
           }}
         >
-          {/* Cột danh mục cha */}
-          <div
-            style={{
-              minWidth: 200,
-              padding: "8px 0",
-              borderRight: activeParent ? "1px solid #f0f0f0" : "none",
-            }}
-          >
+          {/* ── Cột cấp 1 (cha) ── */}
+          <div style={colStyle(!!activeParent)}>
             {tree.map((cat) => (
               <div
                 key={cat.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "9px 16px",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: activeParent?.id === cat.id ? 600 : 400,
-                  color: activeParent?.id === cat.id ? "#2563eb" : "#1e293b",
-                  background:
-                    activeParent?.id === cat.id ? "#eff6ff" : "transparent",
-                  borderRadius: 6,
-                  margin: "0 6px",
-                  transition: "all .15s",
+                style={itemStyle(activeParent?.id === cat.id)}
+                onMouseEnter={() => {
+                  setActiveParent(cat);
+                  setActiveChild(null); // reset cấp 3 khi hover sang cha khác
                 }}
-                onMouseEnter={() => setActiveParent(cat)}
                 onClick={() => {
                   onSelect(cat);
                   setOpen(false);
                   setActiveParent(null);
+                  setActiveChild(null);
                 }}
               >
                 <span>
@@ -113,9 +121,10 @@ function CategoryMenu({ onSelect }) {
             ))}
           </div>
 
-          {/* Cột danh mục con */}
+          {/* ── Cột cấp 2 (con) ── */}
           {activeParent?.children?.length > 0 && (
-            <div style={{ minWidth: 200, padding: "8px 0" }}>
+            <div style={colStyle(!!activeChild)}>
+              {/* Label cha */}
               <div
                 style={{
                   padding: "6px 16px 8px",
@@ -128,9 +137,57 @@ function CategoryMenu({ onSelect }) {
               >
                 {activeParent.name}
               </div>
+
               {activeParent.children.map((child) => (
                 <div
                   key={child.id}
+                  style={itemStyle(activeChild?.id === child.id)}
+                  onMouseEnter={() => setActiveChild(child)}
+                  onClick={() => {
+                    onSelect(child);
+                    setOpen(false);
+                    setActiveParent(null);
+                    setActiveChild(null);
+                  }}
+                >
+                  <span>
+                    <i
+                      className="bi bi-arrow-return-right me-2"
+                      style={{ fontSize: 11, color: "#94a3b8" }}
+                    />
+                    {child.name}
+                  </span>
+                  {child.children?.length > 0 && (
+                    <i
+                      className="bi bi-chevron-right"
+                      style={{ fontSize: 10, color: "#94a3b8" }}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Cột cấp 3 (cháu) ── */}
+          {activeChild?.children?.length > 0 && (
+            <div style={colStyle(false)}>
+              {/* Label con */}
+              <div
+                style={{
+                  padding: "6px 16px 8px",
+                  fontSize: 11,
+                  color: "#94a3b8",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {activeChild.name}
+              </div>
+
+              {activeChild.children.map((grandchild) => (
+                <div
+                  key={grandchild.id}
                   style={{
                     padding: "9px 16px",
                     cursor: "pointer",
@@ -147,16 +204,17 @@ function CategoryMenu({ onSelect }) {
                     (e.currentTarget.style.background = "transparent")
                   }
                   onClick={() => {
-                    onSelect(child);
+                    onSelect(grandchild);
                     setOpen(false);
                     setActiveParent(null);
+                    setActiveChild(null);
                   }}
                 >
                   <i
-                    className="bi bi-arrow-return-right me-2"
-                    style={{ fontSize: 11, color: "#94a3b8" }}
+                    className="bi bi-dot me-1"
+                    style={{ fontSize: 16, color: "#94a3b8" }}
                   />
-                  {child.name}
+                  {grandchild.name}
                 </div>
               ))}
             </div>

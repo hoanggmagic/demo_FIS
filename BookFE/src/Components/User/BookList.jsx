@@ -3,12 +3,14 @@ import { useSearchParams } from "react-router-dom";
 import { getBooks, searchBooks } from "../../Api/User/BookApi";
 import { addToCart } from "../../Api/User/CartApi";
 
+const PAGE_SIZE = 12; // 4 cột × 3 hàng
+
 export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
-  // ❌ ĐÃ XÓA: const [books, setBooks] = useState([]);  ← đây là nguyên nhân lỗi
   const [allBooks, setAllBooks] = useState([]);
   const [keyword, setKeyword] = useState("");
   const [adding, setAdding] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const categoryIdsParam = searchParams.get("categoryIds");
@@ -18,11 +20,14 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     : [];
 
   // Filter client-side theo categoryIds
-  // Backend trả b.categoryIds (mảng số) — nếu không có thì xem ghi chú cuối file
-  const books =
+  const filtered =
     categoryIds.length > 0
       ? allBooks.filter((b) => categoryIds.includes(b.category?.id))
       : allBooks;
+
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const books = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,24 +39,24 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         res = await getBooks();
       }
       const data = Array.isArray(res.data) ? res.data : [];
-      console.log("Sample book:", JSON.stringify(data[0], null, 2));
       setAllBooks(data);
+      setPage(1);
     } catch {
       setAllBooks([]);
     } finally {
       setLoading(false);
     }
   }, [keyword]);
-  // Reset keyword khi đổi category
+
   useEffect(() => {
     setKeyword("");
+    setPage(1);
   }, [categoryIdsParam]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  // ✅ handleSearch được khôi phục
   const handleSearch = () => load();
 
   const handleAddToCart = async (bookId) => {
@@ -70,7 +75,10 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     }
   };
 
-  const clearCategory = () => setSearchParams({});
+  const clearCategory = () => {
+    setSearchParams({});
+    setPage(1);
+  };
 
   return (
     <section style={{ padding: "0 0 40px" }}>
@@ -138,7 +146,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         <div
           style={{
             display: "flex",
-            gap: 0,
             background: "#fff",
             border: "1.5px solid #e2e8f0",
             borderRadius: 10,
@@ -188,7 +195,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
       )}
 
       {/* Empty */}
-      {!loading && books.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div
           style={{
             textAlign: "center",
@@ -223,12 +230,12 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         </div>
       )}
 
-      {/* Grid sách */}
+      {/* Grid sách — 4 cột × 3 hàng */}
       {!loading && books.length > 0 && (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gridTemplateColumns: "repeat(4, 1fr)",
             gap: 16,
           }}
         >
@@ -244,14 +251,13 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 flexDirection: "column",
                 gap: 8,
                 transition: "box-shadow .2s",
-                cursor: "default",
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)")
               }
               onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
             >
-              {/* Cover placeholder */}
+              {/* Cover */}
               <div
                 style={{
                   background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
@@ -289,25 +295,20 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 ✍️ {b.authorName || "—"}
               </span>
 
-              {/* Category badges */}
-              {b.categoryNames && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                  {b.categoryNames.split(", ").map((name, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        fontSize: 10,
-                        background: "#eff6ff",
-                        color: "#2563eb",
-                        border: "1px solid #bfdbfe",
-                        borderRadius: 20,
-                        padding: "2px 8px",
-                      }}
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
+              {b.category && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    background: "#eff6ff",
+                    color: "#2563eb",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: 20,
+                    padding: "2px 8px",
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  {b.category.name}
+                </span>
               )}
 
               <div
@@ -328,22 +329,14 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 </span>
               </div>
 
-              <div
+              <span
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
+                  fontSize: 11,
+                  color: b.quantity === 0 ? "#ef4444" : "#64748b",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: b.quantity === 0 ? "#ef4444" : "#64748b",
-                  }}
-                >
-                  📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
-                </span>
-              </div>
+                📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
+              </span>
 
               <button
                 disabled={adding === b.id || b.quantity === 0}
@@ -360,8 +353,8 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: b.quantity === 0 ? "not-allowed" : "pointer",
-                  transition: "opacity .15s",
                   opacity: adding === b.id ? 0.7 : 1,
+                  transition: "opacity .15s",
                 }}
               >
                 {adding === b.id
@@ -372,6 +365,123 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 32,
+          }}
+        >
+          {/* Prev */}
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              border: "1px solid #e2e8f0",
+              background: page === 1 ? "#f8fafc" : "#fff",
+              color: page === 1 ? "#cbd5e1" : "#1e293b",
+              cursor: page === 1 ? "not-allowed" : "pointer",
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <i className="bi bi-chevron-left" />
+          </button>
+
+          {/* Page numbers với dấu ... */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(
+              (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
+            )
+            .reduce((acc, p, idx, arr) => {
+              if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, idx) =>
+              p === "..." ? (
+                <span
+                  key={`dots-${idx}`}
+                  style={{ color: "#94a3b8", fontSize: 13, padding: "0 4px" }}
+                >
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    border: p === page ? "none" : "1px solid #e2e8f0",
+                    background:
+                      p === page
+                        ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                        : "#fff",
+                    color: p === page ? "#fff" : "#1e293b",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: p === page ? 700 : 400,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow:
+                      p === page ? "0 2px 8px rgba(37,99,235,.3)" : "none",
+                  }}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+
+          {/* Next */}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              border: "1px solid #e2e8f0",
+              background: page === totalPages ? "#f8fafc" : "#fff",
+              color: page === totalPages ? "#cbd5e1" : "#1e293b",
+              cursor: page === totalPages ? "not-allowed" : "pointer",
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <i className="bi bi-chevron-right" />
+          </button>
+        </div>
+      )}
+
+      {/* Tổng số kết quả */}
+      {!loading && filtered.length > 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 12,
+            fontSize: 12,
+            color: "#94a3b8",
+          }}
+        >
+          Hiển thị {(page - 1) * PAGE_SIZE + 1}–
+          {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} sách
         </div>
       )}
     </section>
