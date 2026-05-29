@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,72 +34,87 @@ public class PaymentController {
     public ResponseEntity<?> webhook(@RequestBody Map<String, Object> body,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        // 1. Verify API key từ Sepay
+        // =========================
+        // 1. VERIFY API KEY
+        // =========================
         if (authHeader == null || !authHeader.equals("Apikey " + sepayApiKey)) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
         try {
-            // 2. Lấy nội dung chuyển khoản
-            String content = (String) body.get("content");
-            if (content == null) {
-                content = (String) body.get("description");
-            }
 
-            System.out.println("SEPAY WEBHOOK: " + body);
-            System.out.println("CONTENT: " + content);
+            // =========================
+            // 2. GET CONTENT
+            // =========================
+            String content = (String) body.get("content");
+            if (content == null)
+                content = (String) body.get("description");
+
+            System.out.println("🔥 WEBHOOK HIT: " + content);
 
             if (content == null || !content.contains("don hang")) {
                 return ResponseEntity.ok(Map.of("success", true));
             }
 
-            // 3. Parse orderId từ nội dung
-            int orderId = -1;
-            String[] parts = content.trim().split("\\s+");
-            for (int i = 0; i < parts.length; i++) {
-                if (parts[i].equalsIgnoreCase("hang") && i + 1 < parts.length) {
-                    try {
-                        orderId = Integer.parseInt(parts[i + 1]);
-                        break;
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-            }
-            if (orderId == -1) {
+            // =========================
+            // 3. PARSE ORDER ID
+            // =========================
+            Pattern pattern = Pattern.compile("don hang\\s*(\\d+)");
+            Matcher matcher = pattern.matcher(content);
+            if (!matcher.find()) {
+                System.out.println("❌ Cannot parse orderId");
                 return ResponseEntity.ok(Map.of("success", true));
             }
 
-            // Mở kết nối Database
-            try (Connection conn = dataSource.getConnection()) {
+            int orderId = Integer.parseInt(matcher.group(1));
+            System.out.println("✅ Parsed orderId: " + orderId);
 
-                // Bật chế độ quản lý Transaction bằng tay để đảm bảo tính toàn vẹn dữ liệu
+            try (Connection conn = dataSource.getConnection()) {
                 conn.setAutoCommit(false);
 
                 try {
-                    // 4. Lấy dữ liệu chuẩn từ bảng orders (Đổi total_amount thành total_price theo
-                    // Entity)
-                    String getOrderSql =
-                            "SELECT user_id, total_price FROM orders WHERE id = ? AND status = 'PENDING' FOR UPDATE";
+
+                    // =========================
+                    // 4. GET ORDER INFO (thêm branch_id)
+                    // =========================
+                    String getOrderSql = """
+                                SELECT user_id, branch_id, total_price, status
+                                FROM orders
+                                WHERE id = ?
+                                FOR UPDATE
+                            """;
 
                     int userId = -1;
+                    int branchId = -1;
                     BigDecimal totalPrice = BigDecimal.ZERO;
+                    String status = "";
 
-                    try (PreparedStatement getOrder = conn.prepareStatement(getOrderSql)) {
-                        getOrder.setInt(1, orderId);
-                        try (ResultSet rs = getOrder.executeQuery()) {
+                    try (PreparedStatement ps = conn.prepareStatement(getOrderSql)) {
+                        ps.setInt(1, orderId);
+                        try (ResultSet rs = ps.executeQuery()) {
                             if (!rs.next()) {
                                 conn.rollback();
                                 return ResponseEntity.ok(Map.of("success", true));
                             }
                             userId = rs.getInt("user_id");
-                            totalPrice = rs.getBigDecimal("total_price"); // Lấy tổng tiền đơn hàng
-                                                                          // kiểu BigDecimal
+                            branchId = rs.getInt("branch_id");
+                            totalPrice = rs.getBigDecimal("total_price");
+                            status = rs.getString("status");
                         }
                     }
 
-                    // 5. LOGIC CHIA % HOA HỒNG (Ví dụ: Tác giả hưởng 80%, Nền tảng hưởng 20%)
-                    // Sử dụng RoundingMode.HALF_UP để làm tròn số tiền chuẩn trong tài chính công
-                    // ty
+                    // =========================
+                    // 5. IDEMPOTENT CHECK
+                    // =========================
+                    if (!"PENDING".equals(status)) {
+                        System.out.println("⚠ Order already processed");
+                        conn.rollback();
+                        return ResponseEntity.ok(Map.of("success", true));
+                    }
+
+                    // =========================
+                    // 6. CALCULATE COMMISSION
+                    // =========================
                     BigDecimal authorRate = new BigDecimal("0.68");
                     BigDecimal platformRate = new BigDecimal("0.32");
 
@@ -106,97 +123,121 @@ public class PaymentController {
                     BigDecimal platformIncome =
                             totalPrice.multiply(platformRate).setScale(2, RoundingMode.HALF_UP);
 
-                    // 6. Cập nhật status order → SUCCESS và điền tiền đã chia vào các cột income
-                    // tương ứng
-                    String updateOrder = """
+                    // =========================
+                    // 7. UPDATE ORDER → SUCCESS
+                    // =========================
+                    String updateOrderSql = """
                                 UPDATE orders
-                                SET status = 'SUCCESS', author_income = ?, platform_income = ?
+                                SET status = 'SUCCESS',
+                                    author_income = ?,
+                                    platform_income = ?
                                 WHERE id = ?
                             """;
-                    try (PreparedStatement updateStmt = conn.prepareStatement(updateOrder)) {
-                        updateStmt.setBigDecimal(1, authorIncome);
-                        updateStmt.setBigDecimal(2, platformIncome);
-                        updateStmt.setInt(3, orderId);
-                        updateStmt.executeUpdate();
+
+                    int updated;
+                    try (PreparedStatement ps = conn.prepareStatement(updateOrderSql)) {
+                        ps.setBigDecimal(1, authorIncome);
+                        ps.setBigDecimal(2, platformIncome);
+                        ps.setInt(3, orderId);
+                        updated = ps.executeUpdate();
                     }
 
-                    // 7. Xóa giỏ hàng của user
-                    String clearCart = "DELETE FROM cart WHERE user_id = ?";
-                    try (PreparedStatement clearStmt = conn.prepareStatement(clearCart)) {
-                        clearStmt.setInt(1, userId);
-                        clearStmt.executeUpdate();
+                    if (updated == 0) {
+                        conn.rollback();
+                        return ResponseEntity.ok(Map.of("success", true));
+                    }
+                    System.out.println("✅ Order updated SUCCESS");
+
+                    // =========================
+                    // 8. CLEAR CART
+                    // =========================
+                    try (PreparedStatement ps =
+                            conn.prepareStatement("DELETE FROM cart WHERE user_id = ?")) {
+                        ps.setInt(1, userId);
+                        ps.executeUpdate();
                     }
 
-                    // 8. Trừ số lượng sách trong kho
-                    String updateStock = """
-                                UPDATE books SET quantity = books.quantity - oi.quantity
+                    // =========================
+                    // 9. TRỪ KHO THEO CHI NHÁNH (đã đổi từ books.quantity → inventories)
+                    // ⚠ Kho thực tế nằm ở bảng inventories, không còn ở books.quantity
+                    // =========================
+                    String updateStockSql = """
+                                UPDATE inventories i
+                                SET quantity = i.quantity - oi.quantity
                                 FROM order_items oi
-                                WHERE oi.book_id = books.id AND oi.order_id = ?
+                                WHERE oi.book_id = i.book_id
+                                  AND i.branch_id = ?
+                                  AND oi.order_id = ?
                             """;
-                    try (PreparedStatement updateStockStmt = conn.prepareStatement(updateStock)) {
-                        updateStockStmt.setInt(1, orderId);
-                        updateStockStmt.executeUpdate();
+                    try (PreparedStatement ps = conn.prepareStatement(updateStockSql)) {
+                        ps.setInt(1, branchId);
+                        ps.setInt(2, orderId);
+                        int rows = ps.executeUpdate();
+                        System.out.println("📦 Inventory updated rows: " + rows + " (branch "
+                                + branchId + ")");
                     }
-                    // 9. Cộng tiền vào ví author và admin
-                    String getItemsSql = """
-                                SELECT oi.quantity, p.price, b.author_id
+
+                    // =========================
+                    // 10. UPDATE WALLET (đã đổi từ book_prices → books.price)
+                    // ⚠ book_prices không tồn tại, dùng books.price thay thế
+                    // =========================
+                    String itemSql = """
+                                SELECT oi.quantity, oi.price, b.author_id
                                 FROM order_items oi
                                 JOIN books b ON oi.book_id = b.id
-                                JOIN book_prices p ON p.book_id = b.id
                                 WHERE oi.order_id = ?
                             """;
-                    try (PreparedStatement getItems = conn.prepareStatement(getItemsSql)) {
-                        getItems.setInt(1, orderId);
-                        try (ResultSet itemsRs = getItems.executeQuery()) {
-                            while (itemsRs.next()) {
-                                int authorId = itemsRs.getInt("author_id");
-                                double price = itemsRs.getDouble("price");
-                                int qty = itemsRs.getInt("quantity");
-                                double total = price * qty;
 
-                                BigDecimal authorShare = BigDecimal.valueOf(total * 0.68)
-                                        .setScale(2, RoundingMode.HALF_UP);
-                                BigDecimal adminShare = BigDecimal.valueOf(total * 0.32).setScale(2,
+                    String upsertWallet = """
+                                INSERT INTO wallets (user_id, balance)
+                                VALUES (?, ?)
+                                ON CONFLICT (user_id)
+                                DO UPDATE SET balance = wallets.balance + EXCLUDED.balance
+                            """;
+
+                    try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
+                        ps.setInt(1, orderId);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            while (rs.next()) {
+                                int authorId = rs.getInt("author_id");
+                                int qty = rs.getInt("quantity");
+                                double price = rs.getDouble("price");
+
+                                BigDecimal total = BigDecimal.valueOf(price * qty);
+                                BigDecimal authorShare = total.multiply(authorRate).setScale(2,
+                                        RoundingMode.HALF_UP);
+                                BigDecimal adminShare = total.multiply(platformRate).setScale(2,
                                         RoundingMode.HALF_UP);
 
-                                String upsertWallet =
-                                        """
-                                                    INSERT INTO wallets (user_id, balance)
-                                                    VALUES (?, ?)
-                                                    ON CONFLICT (user_id) DO UPDATE SET balance = wallets.balance + EXCLUDED.balance
-                                                """;
-
-                                // Cộng ví author
-                                try (PreparedStatement authorWallet =
-                                        conn.prepareStatement(upsertWallet)) {
-                                    authorWallet.setInt(1, authorId);
-                                    authorWallet.setBigDecimal(2, authorShare);
-                                    authorWallet.executeUpdate();
+                                // Cộng ví tác giả
+                                try (PreparedStatement ps2 = conn.prepareStatement(upsertWallet)) {
+                                    ps2.setInt(1, authorId);
+                                    ps2.setBigDecimal(2, authorShare);
+                                    ps2.executeUpdate();
                                 }
 
-                                // Cộng ví admin (user_id = 1)
-                                try (PreparedStatement adminWallet =
-                                        conn.prepareStatement(upsertWallet)) {
-                                    adminWallet.setInt(1, 7);
-                                    adminWallet.setBigDecimal(2, adminShare);
-                                    adminWallet.executeUpdate();
+                                // Cộng ví admin (user_id = 7)
+                                try (PreparedStatement ps2 = conn.prepareStatement(upsertWallet)) {
+                                    ps2.setInt(1, 7);
+                                    ps2.setBigDecimal(2, adminShare);
+                                    ps2.executeUpdate();
                                 }
 
-                                System.out.println("Cộng ví author " + authorId + ": +"
-                                        + authorShare + " VND");
-                                System.out.println("Cộng ví admin: +" + adminShare + " VND");
+                                System.out.println("💰 Author " + authorId + " +" + authorShare);
+                                System.out.println("🏦 Admin +" + adminShare);
                             }
                         }
                     }
-                    // Nếu chạy tới đây mượt mà không lỗi -> Xác nhận lưu vĩnh viễn vào DB
+
+                    // =========================
+                    // 11. COMMIT
+                    // =========================
                     conn.commit();
-                    System.out.println("Đơn hàng " + orderId + " xử lý thành công!");
-                    System.out.println("Tổng: " + totalPrice + " | Tác giả (68%): " + authorIncome
-                            + " | Hệ thống (32%): " + platformIncome);
+                    System.out.println("🎉 PAYMENT SUCCESS: orderId=" + orderId + " | Total="
+                            + totalPrice + " | Author(68%)=" + authorIncome + " | Platform(32%)="
+                            + platformIncome);
 
                 } catch (Exception ex) {
-                    // Nếu bất kỳ dòng lệnh nào ở trên lỗi -> Hủy bỏ (Rollback) toàn bộ quá trình,
-                    // tránh sai lệch tiền kho
                     conn.rollback();
                     throw ex;
                 } finally {
@@ -206,11 +247,12 @@ public class PaymentController {
 
             return ResponseEntity.ok(Map.of("success", true));
 
-        } catch (NumberFormatException e) {
-            return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Lỗi hệ thống: " + e.getMessage());
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage(), "cause",
+                            e.getCause() != null ? e.getCause().getMessage() : "null", "class",
+                            e.getClass().getSimpleName()));
         }
     }
 }

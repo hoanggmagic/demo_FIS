@@ -3,7 +3,9 @@ package com.example.dto;
 import java.util.List;
 
 public class OrderRequest {
+
     private int userId;
+    private Integer branchId; // ← thêm mới
     private List<Item> items;
 
     public int getUserId() {
@@ -12,6 +14,14 @@ public class OrderRequest {
 
     public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public Integer getBranchId() {
+        return branchId;
+    }
+
+    public void setBranchId(Integer branchId) {
+        this.branchId = branchId;
     }
 
     public List<Item> getItems() {

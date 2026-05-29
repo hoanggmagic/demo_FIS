@@ -20,9 +20,7 @@ export default function Payment() {
   const pollingRef = useRef(null);
   const timerRef = useRef(null);
 
-  console.log("Token:", localStorage.getItem("token")); // thêm dòng này vào đầu useEffect
   const description = `Thanh toan don hang ${orderId}`;
-
   const qrUrl = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
 
   useEffect(() => {
@@ -35,20 +33,26 @@ export default function Payment() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log("Polling response:", res.data); // debug tạm
+        console.log("Polling response:", res.data);
 
         if (res.data.status === "SUCCESS") {
           setStatus("SUCCESS");
           clearInterval(pollingRef.current);
           clearInterval(timerRef.current);
+
+          // Xóa giỏ hàng sau khi thanh toán thành công
           try {
-            await clearCart();
+            await clearCart(); // Hãy chắc chắn đã sửa CartApi.js thành Interceptor
           } catch (e) {
-            console.error("clearCart failed", e);
+            console.error("Không thể tự động xóa giỏ hàng:", e);
           }
-        } // ← đóng if
+        }
       } catch (err) {
-        console.error("Polling error:", err);
+        console.error("Lỗi kiểm tra trạng thái đơn hàng:", err);
+        // Nếu lỗi 401 xảy ra ngay trong lúc đang đợi thanh toán
+        if (err.response && err.response.status === 401) {
+          console.error("Token hết hạn ngay trong phiên thanh toán.");
+        }
       }
     }, 5000);
 
@@ -71,15 +75,14 @@ export default function Payment() {
 
   if (!orderId) {
     return (
-      <div style={{ padding: 20 }}>
-        <p>Không có thông tin đơn hàng.</p>
-        <button onClick={() => navigate("/")}>← Quay lại</button>
+      <div style={{ padding: 20, textAlign: "center" }}>
+        <p>⚠️ Không tìm thấy thông tin đơn hàng hợp lệ.</p>
+        <button onClick={() => navigate("/")}>← Quay lại trang chủ</button>
       </div>
     );
   }
 
   if (status === "SUCCESS") {
-    // ← đổi PAID → SUCCESS
     return (
       <div
         style={{
@@ -97,7 +100,7 @@ export default function Payment() {
           Thanh toán thành công!
         </h2>
         <p style={{ color: "#666", marginBottom: 8 }}>
-          Cảm ơn bạn đã mua hàng.
+          Cảm ơn bạn đã mua hàng tại hệ thống.
         </p>
         <p style={{ color: "#666", marginBottom: 24 }}>
           Mã đơn hàng: <strong>{orderId}</strong>
@@ -120,12 +123,18 @@ export default function Payment() {
     );
   }
 
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+  // Định dạng hiển thị thời gian dạng 05:00 thay vì 5:00
+  const minutes = Math.floor(timeLeft / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (timeLeft % 60).toString().padStart(2, "0");
 
   return (
     <div style={{ padding: 20, maxWidth: 480, margin: "0 auto" }}>
-      <button onClick={() => navigate("/")} style={{ marginBottom: 16 }}>
+      <button
+        onClick={() => navigate("/")}
+        style={{ marginBottom: 16, cursor: "pointer" }}
+      >
         ← Quay lại
       </button>
 
@@ -185,24 +194,27 @@ export default function Payment() {
                 fontWeight: "bold",
               }}
             >
-              {minutes}:{seconds.toString().padStart(2, "0")}
+              {minutes}:{seconds}
             </span>
           </p>
           <p style={{ color: "#888", fontSize: 12 }}>
-            Đang chờ xác nhận từ ngân hàng...
+            Đang chờ xác nhận từ hệ thống ngân hàng...
           </p>
         </div>
       ) : (
         <div
           style={{ textAlign: "center", color: "#e53935", marginBottom: 16 }}
         >
-          <p>⏰ Hết thời gian thanh toán.</p>
-          <button onClick={() => navigate("/")}>Quay lại</button>
+          <p>⏰ Đã hết thời gian thực hiện giao dịch thanh toán này.</p>
+          <button onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
+            Quay lại
+          </button>
         </div>
       )}
 
       <p style={{ color: "#888", fontSize: 12, textAlign: "center" }}>
-        ⚠️ Giữ nguyên nội dung chuyển khoản để đơn hàng được xác nhận tự động.
+        ⚠️ Giữ nguyên nội dung chuyển khoản để đơn hàng được tự động ghi nhận
+        nhanh nhất.
       </p>
     </div>
   );
