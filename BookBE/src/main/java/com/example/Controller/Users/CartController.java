@@ -28,7 +28,6 @@ public class CartController {
     @Autowired
     private DataSource dataSource;
 
-    // GET: /api/user/cart - Xem giỏ hàng
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getCart(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
@@ -40,8 +39,8 @@ public class CartController {
         }
     }
 
-    // POST: /api/user/cart - Thêm sách vào giỏ
-    // Body: { "bookId": 1, "quantity": 2 }
+    // POST /api/user/cart
+    // Body: { "bookId": 1, "quantity": 1, "branchId": 2 }
     @PostMapping
     public ResponseEntity<String> addToCart(@RequestBody Map<String, Integer> body,
             HttpServletRequest request) {
@@ -49,25 +48,23 @@ public class CartController {
             AuthContext ctx = RequestAuth.require(request);
             int bookId = body.get("bookId");
             int quantity = body.getOrDefault("quantity", 1);
+            int branchId = body.getOrDefault("branchId", 1); // mặc định chi nhánh 1
             CartDAO dao = new CartDAO(conn);
-            dao.addToCart(ctx.getUserId(), bookId, quantity);
+            dao.addToCart(ctx.getUserId(), bookId, quantity, branchId);
             return ResponseEntity.ok("Thêm vào giỏ hàng thành công!");
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
 
-    // PUT: /api/user/cart/{cartItemId} - Cập nhật số lượng
-    // Body: { "quantity": 3 }
     @PutMapping("/{cartItemId}")
     public ResponseEntity<String> updateQuantity(@PathVariable int cartItemId,
             @RequestBody Map<String, Integer> body, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             int quantity = body.get("quantity");
-            if (quantity <= 0) {
+            if (quantity <= 0)
                 return ResponseEntity.badRequest().body("Số lượng phải lớn hơn 0");
-            }
             CartDAO dao = new CartDAO(conn);
             dao.updateQuantity(cartItemId, ctx.getUserId(), quantity);
             return ResponseEntity.ok("Cập nhật thành công!");
@@ -76,7 +73,6 @@ public class CartController {
         }
     }
 
-    // DELETE: /api/user/cart/{cartItemId} - Xóa 1 item
     @DeleteMapping("/{cartItemId}")
     public ResponseEntity<String> removeItem(@PathVariable int cartItemId,
             HttpServletRequest request) {
@@ -90,7 +86,6 @@ public class CartController {
         }
     }
 
-    // DELETE: /api/user/cart - Xóa toàn bộ giỏ
     @DeleteMapping
     public ResponseEntity<String> clearCart(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {

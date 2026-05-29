@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { getBooks, searchBooks } from "../../Api/User/BookApi";
 import { addToCart } from "../../Api/User/CartApi";
+import BranchPickerModal from "./BranchPickerModal";
 
 const PAGE_SIZE = 12; // 4 cột × 3 hàng
 
@@ -12,6 +13,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [pickingBook, setPickingBook] = useState(null); //chon chi nhanh de lay sach
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const categoryName = searchParams.get("categoryName");
@@ -59,14 +61,21 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
   const handleSearch = () => load();
 
-  const handleAddToCart = async (bookId) => {
+  // Thay toàn bộ handleAddToCart cũ:
+  const handleAddToCart = (book) => {
     if (!user) {
       onShowLogin?.();
       return;
     }
-    setAdding(bookId);
+    setPickingBook(book); // mở modal chọn chi nhánh
+  };
+
+  const handleBranchConfirm = async (branchId) => {
+    const book = pickingBook;
+    setPickingBook(null);
+    setAdding(book.id);
     try {
-      await addToCart(bookId, 1);
+      await addToCart(book.id, 1);
       onCartUpdate?.();
     } catch {
       alert("❌ Không thể thêm vào giỏ hàng!");
@@ -74,7 +83,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
       setAdding(null);
     }
   };
-
   const clearCategory = () => {
     setSearchParams({});
     setPage(1);
@@ -340,7 +348,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
               <button
                 disabled={adding === b.id || b.quantity === 0}
-                onClick={() => handleAddToCart(b.id)}
+                onClick={() => handleAddToCart(b)}
                 style={{
                   background:
                     b.quantity === 0
@@ -484,6 +492,11 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
           {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} sách
         </div>
       )}
+      <BranchPickerModal
+        book={pickingBook}
+        onConfirm={handleBranchConfirm}
+        onClose={() => setPickingBook(null)}
+      />
     </section>
   );
 }

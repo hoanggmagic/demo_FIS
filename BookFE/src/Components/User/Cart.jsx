@@ -11,10 +11,9 @@ import { createOrder } from "../../Api/User/OrderApi";
 
 export default function Cart({ reload }) {
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false); // Thêm trạng thái loading để UX mượt hơn
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // 1. Sửa hàm load: Bọc try/catch để bắt lỗi 401
   const load = async () => {
     setLoading(true);
     try {
@@ -22,9 +21,9 @@ export default function Cart({ reload }) {
       setItems(res.data || []);
     } catch (err) {
       console.error("Lỗi khi lấy giỏ hàng:", err);
-      if (err.response && err.response.status === 401) {
+      if (err.response?.status === 401) {
         alert("🔒 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
-        navigate("/login"); // Chuyển hướng nếu bị 401
+        navigate("/login");
       }
     } finally {
       setLoading(false);
@@ -43,47 +42,56 @@ export default function Cart({ reload }) {
         navigate("/login");
         return;
       }
-
       const user = JSON.parse(userStr);
+
+      // Kiểm tra tất cả items có cùng chi nhánh không
+      const branchIds = [...new Set(items.map((i) => i.branchId))];
+      if (branchIds.length > 1) {
+        alert(
+          "❌ Giỏ hàng có sách từ nhiều chi nhánh khác nhau.\nVui lòng chỉ đặt hàng từ 1 chi nhánh mỗi lần.",
+        );
+        return;
+      }
+
+      const branchId = branchIds[0] || 1;
 
       const orderPayload = {
         userId: user.id,
-        branchId: 1,
+        branchId,
         items: items.map((i) => ({
-          bookId: Number(i.bookId || i.id || i.book?.id),
-          qty: Number(i.quantity || i.qty || 1),
+          bookId: Number(i.bookId),
+          qty: Number(i.quantity || 1),
         })),
       };
 
       const orderRes = await createOrder(orderPayload);
-      console.log("ORDER RESULT:", orderRes.data);
       const orderId = orderRes.data.orderId;
 
-      navigate("/payment", {
-        state: {
-          orderId,
-          amount: total,
-        },
-      });
+      navigate("/payment", { state: { orderId, amount: total } });
     } catch (err) {
       console.error("Lỗi khi đặt hàng:", err);
-      console.error("Response data:", err.response?.data);
-      alert("❌ Đặt hàng thất bại. Vui lòng thử lại!");
+      const data = err.response?.data;
+      if (data?.alternatives?.length > 0) {
+        const list = data.alternatives
+          .map((a) => `• ${a.branchName} (còn ${a.quantity} cuốn)`)
+          .join("\n");
+        alert(`❌ ${data.error}\n\nChi nhánh còn hàng:\n${list}`);
+      } else {
+        alert("❌ " + (data?.error || data || "Đặt hàng thất bại"));
+      }
     }
   };
 
   const handleQty = async (cartItemId, newQty) => {
     if (newQty < 1) return;
-
     const item = items.find((i) => i.cartItemId === cartItemId);
     if (item && newQty > item.stock) {
       alert(`❌ Chỉ còn ${item.stock} sản phẩm trong kho!`);
       return;
     }
-
     try {
       await updateCartItem(cartItemId, newQty);
-      load(); // Load lại để cập nhật subtotal và total chuẩn từ Backend
+      load();
     } catch (err) {
       console.error("Lỗi khi cập nhật số lượng:", err);
     }
@@ -95,7 +103,7 @@ export default function Cart({ reload }) {
       await removeCartItem(cartItemId);
       load();
     } catch (err) {
-      console.error("Lỗi khi xóa sản phẩm:", err);
+      console.error(err);
     }
   };
 
@@ -105,11 +113,10 @@ export default function Cart({ reload }) {
       await clearCart();
       setItems([]);
     } catch (err) {
-      console.error("Lỗi khi xóa giỏ hàng:", err);
+      console.error(err);
     }
   };
 
-  // Tính tổng tiền dựa trên trường subtotal của từng item
   const total = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
   if (loading && items.length === 0) {
@@ -120,6 +127,18 @@ export default function Cart({ reload }) {
     );
   }
 
+  // Nhóm items theo chi nhánh để hiển thị rõ ràng
+  const byBranch = items.reduce((acc, item) => {
+    const key = item.branchId || 0;
+    if (!acc[key])
+      acc[key] = {
+        branchName: item.branchName || "Chưa rõ chi nhánh",
+        items: [],
+      };
+    acc[key].items.push(item);
+    return acc;
+  }, {});
+
   return (
     <div className="cart-container">
       <h3>🛒 Giỏ hàng</h3>
@@ -128,60 +147,85 @@ export default function Cart({ reload }) {
         <p>Giỏ hàng trống.</p>
       ) : (
         <>
-          <table className="cart-table">
-            <thead>
-              <tr>
-                <th>Sách</th>
-                <th>Giá</th>
-                <th>Số lượng</th>
-                <th>Thành tiền</th>
-                <th>Xóa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                // Đồng bộ hóa trường số lượng (đề phòng API trả về lúc quantity lúc qty)
-                const currentQty = item.quantity ?? item.qty ?? 1;
+          {/* Hiển thị theo nhóm chi nhánh */}
+          {Object.entries(byBranch).map(([branchId, group]) => (
+            <div key={branchId} style={{ marginBottom: 24 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 10,
+                  padding: "6px 12px",
+                  background: "#eff6ff",
+                  borderRadius: 8,
+                  border: "1px solid #bfdbfe",
+                }}
+              >
+                <i className="bi bi-shop" style={{ color: "#2563eb" }} />
+                <span
+                  style={{ fontWeight: 600, fontSize: 14, color: "#2563eb" }}
+                >
+                  {group.branchName}
+                </span>
+              </div>
 
-                return (
-                  <tr key={item.cartItemId}>
-                    <td>{item.title}</td>
-                    <td>{Number(item.price || 0).toLocaleString()} VND</td>
-                    <td>
-                      <div className="qty-control">
-                        <button
-                          onClick={() =>
-                            handleQty(item.cartItemId, currentQty - 1)
-                          }
-                          disabled={currentQty <= 1}
-                        >
-                          −
-                        </button>
-                        <span>{currentQty}</span>
-                        <button
-                          onClick={() =>
-                            handleQty(item.cartItemId, currentQty + 1)
-                          }
-                          disabled={currentQty >= item.stock}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td>{Number(item.subtotal || 0).toLocaleString()} VND</td>
-                    <td>
-                      <button
-                        className="btn-remove"
-                        onClick={() => handleRemove(item.cartItemId)}
-                      >
-                        Xóa
-                      </button>
-                    </td>
+              <table className="cart-table">
+                <thead>
+                  <tr>
+                    <th>Sách</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
+                    <th>Xóa</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {group.items.map((item) => {
+                    const currentQty = item.quantity ?? 1;
+                    return (
+                      <tr key={item.cartItemId}>
+                        <td>{item.title}</td>
+                        <td>{Number(item.price || 0).toLocaleString()} VND</td>
+                        <td>
+                          <div className="qty-control">
+                            <button
+                              onClick={() =>
+                                handleQty(item.cartItemId, currentQty - 1)
+                              }
+                              disabled={currentQty <= 1}
+                            >
+                              −
+                            </button>
+                            <span>{currentQty}</span>
+                            <button
+                              onClick={() =>
+                                handleQty(item.cartItemId, currentQty + 1)
+                              }
+                              disabled={currentQty >= item.stock}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          {Number(item.subtotal || 0).toLocaleString()} VND
+                        </td>
+                        <td>
+                          <button
+                            className="btn-remove"
+                            onClick={() => handleRemove(item.cartItemId)}
+                          >
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
 
           <div className="cart-footer">
             <button className="btn-clear" onClick={handleClear}>

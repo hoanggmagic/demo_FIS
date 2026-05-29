@@ -10,14 +10,22 @@ const NAV_ITEMS = [
     header: "Tổng quan",
     items: [{ label: "Dashboard", icon: "bi bi-speedometer2", to: "/" }],
   },
+  // Tìm phần "Quản lý" và thêm 3 mục mới:
   {
     header: "Quản lý",
     items: [
       { label: "Sách", icon: "bi bi-book", to: "/admin/books" },
-      { label: "Danh mục", icon: "bi bi-tags", to: "/admin/categories" }, // ← thêm
+      { label: "Danh mục", icon: "bi bi-tags", to: "/admin/categories" },
       { label: "Tác giả", icon: "bi bi-person-badge", to: "/admin/authors" },
       { label: "Người dùng", icon: "bi bi-people", to: "/admin/users" },
       { label: "Đơn hàng", icon: "bi bi-cart3", to: "/admin/orders" },
+      { label: "Chi nhánh", icon: "bi bi-shop", to: "/admin/branches" },
+      { label: "Tồn kho", icon: "bi bi-boxes", to: "/admin/inventory" },
+      {
+        label: "Điều chuyển",
+        icon: "bi bi-arrow-left-right",
+        to: "/admin/transfers",
+      },
     ],
   },
   {
