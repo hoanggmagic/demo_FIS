@@ -5,6 +5,7 @@ import UserManagement from "../../Components/Admin/UserManagement";
 import CategoryManagement from "../../Components/Admin/CategoryManagement";
 import InventoryManagement from "../../Components/Admin/InventoryManagement";
 import TransferManagement from "../../Components/Admin/TransferManagement";
+import BranchManagement from "../../Components/Admin/BranchManagement";
 
 // ── Dashboard overview (route "/") ───────────────────────────────────────────
 
@@ -217,6 +218,13 @@ export function AdminTransfersPage() {
   return (
     <PageShell title="Điều chuyển hàng" icon="bi bi-arrow-left-right">
       <TransferManagement />
+    </PageShell>
+  );
+}
+export function AdminBranchesPage() {
+  return (
+    <PageShell title="Quản lý chi nhánh" icon="bi bi-geo-alt">
+      <BranchManagement />
     </PageShell>
   );
 }

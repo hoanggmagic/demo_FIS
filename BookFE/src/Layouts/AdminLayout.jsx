@@ -1,16 +1,11 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import "admin-lte/dist/css/adminlte.min.css";
-
-// ── nav config ────────────────────────────────────────────────────────────────
-// Thêm / bớt menu items tại đây, không cần sửa JSX bên dưới
 
 const NAV_ITEMS = [
   {
     header: "Tổng quan",
     items: [{ label: "Dashboard", icon: "bi bi-speedometer2", to: "/" }],
   },
-  // Tìm phần "Quản lý" và thêm 3 mục mới:
   {
     header: "Quản lý",
     items: [
@@ -49,365 +44,570 @@ const NAV_ITEMS = [
   },
 ];
 
-// ── sidebar ───────────────────────────────────────────────────────────────────
-
 function Sidebar({ collapsed, user }) {
   return (
     <aside
-      className="app-sidebar bg-body-secondary shadow"
-      data-bs-theme="dark"
+      style={{
+        width: collapsed ? 64 : 240,
+        minHeight: "100vh",
+        background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
+        display: "flex",
+        flexDirection: "column",
+        position: "fixed",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 100,
+        transition: "width 0.25s ease",
+        boxShadow: "4px 0 24px rgba(0,0,0,0.3)",
+        overflowY: "auto",
+        overflowX: "hidden",
+      }}
     >
       {/* Brand */}
-      <div className="sidebar-brand">
-        <a href="/" className="brand-link">
+      <div
+        style={{
+          padding: collapsed ? "20px 16px" : "20px 20px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          minHeight: 64,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <i
-            className="bi bi-journal-bookmark-fill brand-image"
-            style={{ fontSize: 24, color: "#3b7ddd" }}
+            className="bi bi-journal-bookmark-fill"
+            style={{ color: "#fff", fontSize: 16 }}
           />
-          {!collapsed && (
-            <span className="brand-text fw-bold ms-2">Digital Books</span>
-          )}
-        </a>
+        </div>
+        {!collapsed && (
+          <div>
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 16,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              Bookfly
+            </div>
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 10,
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+              }}
+            >
+              Admin Panel
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* User panel */}
-      <div className="sidebar-wrapper">
-        <nav className="mt-2">
-          {/* User info */}
-          <div
-            className="user-panel mt-2 pb-2 mb-2 d-flex align-items-center"
-            style={{
-              borderBottom: "1px solid rgba(255,255,255,.1)",
-              padding: "0 12px 8px",
-            }}
-          >
+      {/* User */}
+      <div
+        style={{
+          padding: collapsed ? "12px 16px" : "12px 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 14,
+          }}
+        >
+          {user.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+        </div>
+        {!collapsed && (
+          <div style={{ overflow: "hidden" }}>
             <div
-              className="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white flex-shrink-0"
-              style={{ width: 36, height: 36, fontSize: 14, fontWeight: 500 }}
+              style={{
+                color: "#f1f5f9",
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
             >
-              {user.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+              {user.fullName}
             </div>
+            <div
+              style={{
+                color: "#6366f1",
+                fontSize: 10,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Quản trị viên
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "8px 0" }}>
+        {NAV_ITEMS.map((group) => (
+          <React.Fragment key={group.header}>
             {!collapsed && (
-              <div className="ms-2 overflow-hidden">
-                <p
-                  className="mb-0 text-white"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {user.fullName}
-                </p>
-                <span className="badge bg-primary" style={{ fontSize: 10 }}>
-                  Quản trị viên
-                </span>
+              <div
+                style={{
+                  padding: "12px 20px 4px",
+                  color: "#475569",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "1px",
+                  textTransform: "uppercase",
+                }}
+              >
+                {group.header}
               </div>
             )}
-          </div>
-
-          {/* Nav items */}
-          <ul
-            className="nav sidebar-menu flex-column"
-            data-lte-toggle="treeview"
-            role="menu"
-          >
-            {NAV_ITEMS.map((group) => (
-              <React.Fragment key={group.header}>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                style={({ isActive }) => ({
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: collapsed ? "10px 16px" : "9px 16px 9px 20px",
+                  margin: "1px 8px",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                  background: isActive
+                    ? "rgba(99,102,241,0.15)"
+                    : "transparent",
+                  borderLeft: isActive
+                    ? "3px solid #6366f1"
+                    : "3px solid transparent",
+                  transition: "all 0.15s",
+                  color: isActive ? "#a5b4fc" : "#94a3b8",
+                })}
+                onMouseEnter={(e) => {
+                  if (
+                    !e.currentTarget.style.borderLeftColor.includes(
+                      "99,102,241,1",
+                    )
+                  ) {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                    e.currentTarget.style.color = "#e2e8f0";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  const isActive = e.currentTarget.getAttribute("aria-current");
+                  if (!isActive) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "#94a3b8";
+                  }
+                }}
+              >
+                <i
+                  className={item.icon}
+                  style={{ fontSize: 16, flexShrink: 0 }}
+                />
                 {!collapsed && (
-                  <li
-                    className="nav-header"
+                  <span
                     style={{
-                      fontSize: 10,
-                      letterSpacing: "0.7px",
-                      textTransform: "uppercase",
-                      padding: "12px 16px 4px",
-                      color: "#8898aa",
-                      listStyle: "none",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {group.header}
-                  </li>
+                    {item.label}
+                  </span>
                 )}
-                {group.items.map((item) => (
-                  <li key={item.to} className="nav-item">
-                    <NavLink
-                      to={item.to}
-                      end={item.to === "/"}
-                      className={({ isActive }) =>
-                        `nav-link${isActive ? " active" : ""}`
-                      }
-                    >
-                      <i
-                        className={`${item.icon} nav-icon`}
-                        aria-hidden="true"
-                      />
-                      {!collapsed && <p>{item.label}</p>}
-                    </NavLink>
-                  </li>
-                ))}
-              </React.Fragment>
+              </NavLink>
             ))}
-          </ul>
-        </nav>
-      </div>
+          </React.Fragment>
+        ))}
+      </nav>
     </aside>
   );
 }
-
-// ── topbar ────────────────────────────────────────────────────────────────────
 
 function Topbar({ user, onToggle, onLogout }) {
   const navigate = useNavigate();
   const [ddOpen, setDdOpen] = useState(false);
 
   return (
-    <nav
-      className="app-header navbar navbar-expand bg-body px-3"
-      data-bs-theme="light"
+    <header
       style={{
-        height: "50px",
-        paddingTop: 0,
-        paddingBottom: 0,
+        height: 56,
+        background: "#fff",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 24px",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       }}
     >
-      <div
-        className="container-fluid d-flex align-items-center justify-content-between"
-        style={{ height: "50px" }}
+      <button
+        onClick={onToggle}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#64748b",
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
       >
-        {/* Toggle sidebar */}
-        <ul className="navbar-nav align-items-center">
-          <li className="nav-item">
-            <button
-              type="button"
-              className="nav-link py-0 d-flex align-items-center"
-              onClick={onToggle}
-              aria-label="Toggle sidebar"
-            >
-              <i
-                className="bi bi-list"
-                style={{ fontSize: 20 }}
-                aria-hidden="true"
-              />
-            </button>
-          </li>
-        </ul>
+        <i className="bi bi-list" style={{ fontSize: 20 }} />
+      </button>
 
-        {/* Right side */}
-        <ul className="navbar-nav ms-auto align-items-center">
-          {/* Notifications */}
-          <li className="nav-item">
-            <button
-              type="button"
-              className="nav-link position-relative"
-              aria-label="Thông báo"
-            >
-              <i
-                className="bi bi-bell"
-                style={{ fontSize: 18 }}
-                aria-hidden="true"
-              />
-              <span
-                className="position-absolute bg-danger rounded-circle"
-                style={{ width: 8, height: 8, top: 8, right: 8 }}
-              />
-            </button>
-          </li>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Notification */}
+        <button
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#64748b",
+          }}
+        >
+          <i className="bi bi-bell" style={{ fontSize: 18 }} />
+          <span
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#ef4444",
+              border: "2px solid #fff",
+            }}
+          />
+        </button>
 
-          {/* User dropdown */}
-          <li className="nav-item dropdown">
-            <button
-              type="button"
-              className="nav-link py-0 d-flex align-items-center gap-2"
-              onClick={() => setDdOpen((v) => !v)}
-              aria-expanded={ddOpen}
+        {/* User dropdown */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setDdOpen((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "none",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 12,
+              }}
+            >
+              {user.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>
+              {user.fullName}
+            </span>
+            <i
+              className="bi bi-chevron-down"
+              style={{ fontSize: 11, color: "#94a3b8" }}
+            />
+          </button>
+
+          {ddOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                minWidth: 180,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                overflow: "hidden",
+                zIndex: 999,
+              }}
             >
               <div
-                className="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white"
                 style={{
-                  width: 30,
-                  height: 30,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  flexShrink: 0,
+                  padding: "12px 16px",
+                  borderBottom: "1px solid #f1f5f9",
                 }}
               >
-                {user.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+                <div
+                  style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}
+                >
+                  {user.fullName}
+                </div>
+                <div
+                  style={{ fontSize: 11, color: "#6366f1", fontWeight: 600 }}
+                >
+                  Quản trị viên
+                </div>
               </div>
-              <span style={{ fontSize: 13 }}>{user.fullName}</span>
-              <i
-                className="bi bi-chevron-down"
-                style={{ fontSize: 11 }}
-                aria-hidden="true"
-              />
-            </button>
-
-            {ddOpen && (
-              <ul
-                className="dropdown-menu dropdown-menu-end show"
-                style={{ minWidth: 180 }}
+              <button
+                onClick={() => {
+                  setDdOpen(false);
+                  navigate("/admin/settings");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#f8fafc")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "none")
+                }
               >
-                <li>
-                  <button
-                    type="button"
-                    className="dropdown-item d-flex align-items-center gap-2"
-                    onClick={() => {
-                      setDdOpen(false);
-                      navigate("/admin/settings");
-                    }}
-                  >
-                    <i className="bi bi-gear" aria-hidden="true" /> Cài đặt
-                  </button>
-                </li>
-                <li>
-                  <hr className="dropdown-divider" />
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    className="dropdown-item d-flex align-items-center gap-2 text-danger"
-                    onClick={onLogout}
-                  >
-                    <i className="bi bi-box-arrow-right" aria-hidden="true" />{" "}
-                    Đăng xuất
-                  </button>
-                </li>
-              </ul>
-            )}
-          </li>
-        </ul>
+                <i className="bi bi-gear" /> Cài đặt
+              </button>
+              <div style={{ borderTop: "1px solid #f1f5f9" }} />
+              <button
+                onClick={onLogout}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  color: "#ef4444",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#fef2f2")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "none")
+                }
+              >
+                <i className="bi bi-box-arrow-right" /> Đăng xuất
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </nav>
+    </header>
   );
 }
-
-// ── footer ────────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="app-footer">
-      <div className="float-end d-none d-sm-inline">Digital Book Platform</div>
-      <strong>
-        &copy; {new Date().getFullYear()}{" "}
-        <a href="/" className="text-decoration-none">
-          Admin Panel
-        </a>
-        .
-      </strong>{" "}
-      <span className="text-muted" style={{ fontSize: 12 }}>
-        All rights reserved.
-      </span>
-    </footer>
-  );
-}
-
-// ── layout wrapper ────────────────────────────────────────────────────────────
 
 export default function AdminLayout({ user, onLogout, children }) {
   const [collapsed, setCollapsed] = useState(false);
+  const sidebarWidth = collapsed ? 64 : 240;
 
   return (
-    <div
-      className={`layout-fixed sidebar-expand-lg${collapsed ? " sidebar-collapse" : ""}`}
-    >
-      {/* Sidebar */}
+    <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex" }}>
       <Sidebar collapsed={collapsed} user={user} />
 
-      {/* Wrapper */}
-      <div className="app-wrapper">
-        {/* Topbar */}
+      {/* Main */}
+      <div
+        style={{
+          marginLeft: sidebarWidth,
+          flex: 1,
+          transition: "margin-left 0.25s ease",
+          minWidth: 0,
+        }}
+      >
         <Topbar
           user={user}
           onToggle={() => setCollapsed((v) => !v)}
           onLogout={onLogout}
         />
 
-        {/* Content */}
-        <main className="app-main">
-          <div className="app-content-header">
+        {/* Banner */}
+        <div style={{ padding: "24px 24px 0" }}>
+          <div
+            style={{
+              borderRadius: 16,
+              overflow: "hidden",
+              position: "relative",
+              background:
+                "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)",
+              padding: "32px 40px",
+              marginBottom: 24,
+            }}
+          >
+            {/* Decorations */}
             <div
-              className="rounded-4 shadow-sm overflow-hidden position-relative"
               style={{
-                height: "220px",
-                background:
-                  "linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%)",
+                position: "absolute",
+                top: -30,
+                right: -30,
+                width: 180,
+                height: 180,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.07)",
               }}
-            >
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: -20,
+                right: 140,
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.05)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: 20,
+                right: 200,
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.06)",
+              }}
+            />
+
+            <div style={{ position: "relative", zIndex: 2 }}>
               <div
-                className="h-100 d-flex flex-column justify-content-center"
                 style={{
-                  padding: "40px",
-                  color: "white",
-                  position: "relative",
-                  zIndex: 2,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,0.15)",
+                  borderRadius: 20,
+                  padding: "4px 12px",
+                  marginBottom: 12,
                 }}
               >
-                <h1
+                <i
+                  className="bi bi-journal-bookmark-fill"
+                  style={{ color: "#fff", fontSize: 12 }}
+                />
+                <span
                   style={{
-                    fontSize: "32px",
-                    fontWeight: "700",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Welcome back 👋
-                </h1>
-
-                <p
-                  style={{
-                    fontSize: "15px",
-                    opacity: 0.9,
-                    maxWidth: "600px",
-                  }}
-                >
-                  Manage books, users, orders and revenue from your dashboard.
-                </p>
-
-                <button
-                  className="btn btn-light mt-3"
-                  style={{
-                    width: "fit-content",
+                    color: "#fff",
+                    fontSize: 11,
                     fontWeight: 600,
+                    letterSpacing: "0.5px",
                   }}
                 >
-                  View Analytics
-                </button>
+                  BOOKFLY ADMIN
+                </span>
               </div>
-
-              {/* Decorations */}
-              <div
+              <h2
                 style={{
-                  position: "absolute",
-                  top: "-60px",
-                  right: "-60px",
-                  width: "220px",
-                  height: "220px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.08)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 26,
+                  margin: "0 0 6px",
+                  letterSpacing: "-0.5px",
                 }}
-              />
-
-              <div
+              >
+                Xin chào, {user.fullName} 👋
+              </h2>
+              <p
                 style={{
-                  position: "absolute",
-                  bottom: "-40px",
-                  right: "120px",
-                  width: "140px",
-                  height: "140px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.8)",
+                  fontSize: 14,
+                  margin: 0,
                 }}
-              />
+              >
+                Quản lý sách, người dùng, đơn hàng và doanh thu từ bảng điều
+                khiển.
+              </p>
             </div>
           </div>
-          <div className="app-content">
-            <div className="container-fluid">{children}</div>
-          </div>
-        </main>
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: "0 24px 24px" }}>{children}</div>
 
         {/* Footer */}
-        <Footer />
+        <footer
+          style={{
+            borderTop: "1px solid #e2e8f0",
+            padding: "16px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#94a3b8" }}>
+            © {new Date().getFullYear()}{" "}
+            <strong style={{ color: "#6366f1" }}>Bookfly</strong> — Digital Book
+            Platform
+          </span>
+          <span style={{ fontSize: 12, color: "#cbd5e1" }}>
+            All rights reserved.
+          </span>
+        </footer>
       </div>
     </div>
   );
