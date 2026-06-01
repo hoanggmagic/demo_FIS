@@ -31,7 +31,6 @@ public class BookService {
         dto.setTitle(book.getTitle());
         dto.setDescription(book.getDescription());
         dto.setPublishedYear(book.getPublishedYear());
-        dto.setQuantity(book.getQuantity());
         dto.setPrice(book.getPrice());
         dto.setStatus(book.getStatus());
 
@@ -210,13 +209,12 @@ public class BookService {
     public List<Book> getBooksForContext(AuthContext ctx) throws SQLException {
         return bookDAO.getAllBooks();
     }
-   public List<Book> searchBooksByCategory(
-        String keyword,
-        Integer categoryId,
-        AuthContext ctx) throws SQLException {
 
-    return bookDAO.searchBooksByCategory(keyword, categoryId, ctx);
-}
+    public List<Book> searchBooksByCategory(String keyword, Integer categoryId, AuthContext ctx)
+            throws SQLException {
+
+        return bookDAO.searchBooksByCategory(keyword, categoryId, ctx);
+    }
 
     public Book getBookById(int id, AuthContext ctx) throws SQLException {
 
@@ -263,7 +261,6 @@ public class BookService {
             book.setStatus("ACTIVE");
         }
 
-        book.setQuantity(Math.max(book.getQuantity(), 0));
 
         int bookId = bookDAO.insertBook(book);
 

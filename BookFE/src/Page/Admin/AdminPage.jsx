@@ -3,6 +3,7 @@ import AuthorManagement from "../../Components/Admin/AuthorManagement";
 import AdminWallet from "../../Components/Admin/AdminWallet";
 import UserManagement from "../../Components/Admin/UserManagement";
 import CategoryManagement from "../../Components/Admin/CategoryManagement";
+import InventoryManagement from "../../Components/Admin/InventoryManagement";
 
 // ── Dashboard overview (route "/") ───────────────────────────────────────────
 
@@ -32,6 +33,25 @@ function DashboardHome({ user }) {
       color: "#fd7e14",
       to: "/admin/users",
     },
+
+    {
+      label: "Quản lý chi nhánh",
+      icon: "bi bi-geo-alt", // Icon định vị/bản đồ cho chi nhánh
+      color: "#e83e8c", // Màu hồng cánh sen
+      to: "/admin/branches",
+    },
+    {
+      label: "Quản lý tồn kho",
+      icon: "bi bi-boxes", // Icon nhiều thùng hàng cho tồn kho
+      color: "#20c997", // Màu xanh ngọc (teal)
+      to: "/admin/inventory",
+    },
+    {
+      label: "Điều chuyển",
+      icon: "bi bi-arrow-left-right", // Icon mũi tên hai chiều cho điều chuyển
+      color: "#6c757d", // Màu xám lịch lãm
+      to: "/admin/transfers",
+    },
     {
       label: "Yêu cầu rút tiền",
       icon: "bi bi-wallet2",
@@ -39,7 +59,6 @@ function DashboardHome({ user }) {
       to: "/admin/wallet",
     },
   ];
-
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -50,13 +69,13 @@ function DashboardHome({ user }) {
           Đây là tổng quan hệ thống Digital Book Platform.
         </p>
       </div>
-
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gridTemplateColumns: "repeat(4, 1fr)",
           gap: 16,
         }}
+        className="admin-cards-grid"
       >
         {cards.map((c) => (
           <a
@@ -183,6 +202,13 @@ export function AdminCategoriesPage() {
   return (
     <PageShell title="Quản lý danh mục" icon="bi bi-tags">
       <CategoryManagement />
+    </PageShell>
+  );
+}
+export function AdminInventoryPage() {
+  return (
+    <PageShell title="Quản lý tồn kho" icon="bi bi-boxes">
+      <InventoryManagement />
     </PageShell>
   );
 }

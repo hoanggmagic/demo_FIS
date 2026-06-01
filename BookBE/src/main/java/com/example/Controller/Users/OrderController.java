@@ -127,15 +127,7 @@ public class OrderController {
                 itemStmt.executeUpdate();
 
                 // Trừ kho tại chi nhánh
-                PreparedStatement deductStmt = conn.prepareStatement("""
-                            UPDATE inventories
-                            SET quantity = quantity - ?
-                            WHERE book_id = ? AND branch_id = ?
-                        """);
-                deductStmt.setInt(1, item.getQty());
-                deductStmt.setInt(2, item.getBookId());
-                deductStmt.setInt(3, finalBranchId);
-                deductStmt.executeUpdate();
+
             }
 
             Map<String, Object> res = new HashMap<>();

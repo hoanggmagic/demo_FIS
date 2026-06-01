@@ -75,7 +75,8 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     setPickingBook(null);
     setAdding(book.id);
     try {
-      await addToCart(book.id, 1);
+      // Truyền branchId làm tham số thứ 3 (hoặc tùy thuộc cấu trúc hàm của bạn)
+      await addToCart(book.id, 1, branchId);
       onCartUpdate?.();
     } catch {
       alert("❌ Không thể thêm vào giỏ hàng!");

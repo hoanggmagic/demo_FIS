@@ -25,12 +25,10 @@ public class Book {
 
     @Column(name = "published_year")
     private int publishedYear;
-
-    // ĐÃ SỬA: Thêm @Transient vì số lượng thực tế đã được chuyển sang bảng 'inventories' theo từng
-    // chi nhánh.
-    // Trường này giữ lại mục đích làm biến tạm gom tổng số lượng hiển thị lên giao diện nếu cần.
     @Transient
     private int quantity;
+
+
 
     @Column(name = "author_id")
     private int authorId;
@@ -41,6 +39,8 @@ public class Book {
     private String status;
 
     private double price;
+
+
 
     @Column(name = "created_at")
     private Timestamp createdAt;
@@ -94,13 +94,6 @@ public class Book {
         this.publishedYear = publishedYear;
     }
 
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
 
     public int getAuthorId() {
         return authorId;
@@ -156,5 +149,13 @@ public class Book {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 }

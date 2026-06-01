@@ -141,7 +141,6 @@ public class ConsoleUI {
 
             book.setAuthorId(authorId);
 
-            book.setQuantity(1);
 
             book.setStatus("ACTIVE");
 

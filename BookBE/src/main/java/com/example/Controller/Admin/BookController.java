@@ -83,7 +83,6 @@ public class BookController {
             book.setTitle(dto.getTitle());
             book.setDescription(dto.getDescription());
             book.setPublishedYear(dto.getPublishedYear());
-            book.setQuantity(dto.getQuantity());
             book.setAuthorId(dto.getAuthorId());
             book.setStatus(dto.getStatus());
 
@@ -117,7 +116,6 @@ public class BookController {
             book.setTitle(dto.getTitle());
             book.setDescription(dto.getDescription());
             book.setPublishedYear(dto.getPublishedYear());
-            book.setQuantity(dto.getQuantity());
             book.setAuthorId(dto.getAuthorId());
             book.setStatus(dto.getStatus());
 

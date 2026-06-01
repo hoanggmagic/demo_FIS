@@ -1,0 +1,268 @@
+import { useEffect, useState } from "react";
+import {
+  getInventory,
+  getBranches,
+  upsertInventory,
+} from "../../Api/Admin/InventoryApi";
+import { getBooks } from "../../Api/Admin/BookApi";
+
+export default function InventoryManagement() {
+  const [inventory, setInventory] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [books, setBooks] = useState([]);
+  const [toast, setToast] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filterBranch, setFilterBranch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ bookId: "", branchId: "", quantity: "" });
+  const [error, setError] = useState("");
+
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const load = async () => {
+    try {
+      const [invRes, branchRes, bookRes] = await Promise.all([
+        getInventory(),
+        getBranches(),
+        getBooks(),
+      ]);
+      setInventory(invRes.data || []);
+      setBranches(branchRes.data || []);
+      setBooks(Array.isArray(bookRes) ? bookRes : bookRes.data || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.bookId || !form.branchId || form.quantity === "") {
+      setError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+    try {
+      await upsertInventory(
+        Number(form.bookId),
+        Number(form.branchId),
+        Number(form.quantity),
+      );
+      showToast("success", "Cập nhật tồn kho thành công!");
+      setForm({ bookId: "", branchId: "", quantity: "" });
+      setShowForm(false);
+      setError("");
+      load();
+    } catch (err) {
+      setError(err.response?.data || "Cập nhật thất bại");
+    }
+  };
+
+  const filtered = inventory.filter((i) => {
+    const matchSearch = (i.bookTitle || "")
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    const matchBranch = filterBranch
+      ? String(i.branchId) === filterBranch
+      : true;
+    return matchSearch && matchBranch;
+  });
+
+  return (
+    <div>
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`alert alert-${toast.type} d-flex align-items-center gap-2`}
+          style={{ marginBottom: 20 }}
+        >
+          <i
+            className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill"}`}
+          />
+          {toast.msg}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <div className="d-flex gap-2 flex-wrap">
+          <div className="input-group" style={{ maxWidth: 280 }}>
+            <span className="input-group-text bg-white">
+              <i className="bi bi-search text-muted" />
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Tìm theo tên sách..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="form-select"
+            style={{ maxWidth: 180 }}
+            value={filterBranch}
+            onChange={(e) => setFilterBranch(e.target.value)}
+          >
+            <option value="">Tất cả chi nhánh</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          className={`btn ${showForm ? "btn-secondary" : "btn-primary"} d-flex align-items-center gap-2`}
+          onClick={() => {
+            setShowForm((v) => !v);
+            setError("");
+          }}
+        >
+          <i className={`bi ${showForm ? "bi-x-lg" : "bi-plus-lg"}`} />
+          {showForm ? "Đóng" : "Cập nhật tồn kho"}
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card mb-4">
+          <div className="card-header d-flex align-items-center gap-2">
+            <i className="bi bi-boxes text-primary" />
+            <strong>Thêm / Cập nhật số lượng theo chi nhánh</strong>
+          </div>
+          <div className="card-body">
+            <form onSubmit={handleSubmit}>
+              <div className="row g-3">
+                <div className="col-md-4">
+                  <label className="form-label">
+                    Sách <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    className="form-select"
+                    value={form.bookId}
+                    onChange={(e) =>
+                      setForm({ ...form, bookId: e.target.value })
+                    }
+                  >
+                    <option value="">-- Chọn sách --</option>
+                    {books.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">
+                    Chi nhánh <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    className="form-select"
+                    value={form.branchId}
+                    onChange={(e) =>
+                      setForm({ ...form, branchId: e.target.value })
+                    }
+                  >
+                    <option value="">-- Chọn chi nhánh --</option>
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">
+                    Số lượng <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    min={0}
+                    value={form.quantity}
+                    onChange={(e) =>
+                      setForm({ ...form, quantity: e.target.value })
+                    }
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              {error && (
+                <div className="alert alert-danger d-flex align-items-center gap-2 mt-3 mb-0 py-2">
+                  <i className="bi bi-exclamation-triangle-fill" /> {error}
+                </div>
+              )}
+              <button
+                type="submit"
+                className="btn btn-success d-flex align-items-center gap-2 mt-3"
+              >
+                <i className="bi bi-check-lg" /> Lưu
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="card">
+        <div className="card-header d-flex align-items-center justify-content-between">
+          <span className="d-flex align-items-center gap-2">
+            <i className="bi bi-boxes text-primary" />
+            <strong>Tồn kho theo chi nhánh</strong>
+          </span>
+          <span className="badge bg-primary">{filtered.length} bản ghi</span>
+        </div>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-hover table-striped align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Tên sách</th>
+                  <th>Chi nhánh</th>
+                  <th className="text-center">Số lượng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="text-center text-muted py-4">
+                      <i className="bi bi-inbox fs-4 d-block mb-1" />
+                      Chưa có dữ liệu tồn kho
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((i, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <strong>{i.bookTitle}</strong>
+                      </td>
+                      <td>
+                        <span className="badge bg-info text-dark">
+                          <i className="bi bi-shop me-1" />
+                          {i.branchName}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span
+                          className={`badge ${i.quantity > 0 ? "bg-success" : "bg-danger"}`}
+                        >
+                          {i.quantity}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

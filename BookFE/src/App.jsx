@@ -12,6 +12,7 @@ import AdminPage, {
   AdminUsersPage,
   AdminWalletPage,
   AdminCategoriesPage,
+  AdminInventoryPage,
 } from "./Page/Admin/AdminPage";
 import AuthorsPage from "./Page/Authors/AuthorsPage";
 import UserBookList from "./Components/User/BookList";
@@ -224,6 +225,7 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
           <Route path="/admin/users" element={<AdminUsersPage />} />
           <Route path="/admin/wallet" element={<AdminWalletPage />} />
           <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+          <Route path="/admin/inventory" element={<AdminInventoryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AdminLayout>

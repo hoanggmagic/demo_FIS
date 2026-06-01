@@ -78,7 +78,6 @@ export default function BookManagement({ user }) {
         description: editing.description || "",
         price: editing.price ?? "",
         year: editing.publishedYear ?? "",
-        quantity: editing.quantity ?? 0,
         authorId: editing.authorId ?? "",
         categoryId: String(editing.categoryId || ""),
         status: editing.status || "ACTIVE",
@@ -115,7 +114,6 @@ export default function BookManagement({ user }) {
       description: book.description || null,
       price: Number(book.price),
       publishedYear: Number(book.year),
-      quantity: Number(book.quantity) || 0,
       status: book.status,
       categoryId: Number(book.categoryId) || null,
       authorId: isAuthor ? user.id : Number(book.authorId),
@@ -287,17 +285,7 @@ export default function BookManagement({ user }) {
                     required
                   />
                 </div>
-                <div className="col-md-4">
-                  <label className="form-label">Số lượng</label>
-                  <input
-                    name="quantity"
-                    type="number"
-                    className="form-control"
-                    min={0}
-                    value={book.quantity}
-                    onChange={handleChange}
-                  />
-                </div>
+
                 <div className="col-md-4">
                   <label className="form-label">Trạng thái</label>
                   <select
@@ -389,7 +377,6 @@ export default function BookManagement({ user }) {
                   <th>Năm</th>
                   <th>Tác giả</th>
                   <th>Danh mục</th>
-                  <th className="text-center">Tồn kho</th>
                   <th className="text-center">Trạng thái</th>
                   <th className="text-center">Hành động</th>
                 </tr>
@@ -424,11 +411,6 @@ export default function BookManagement({ user }) {
                       <td>{b.authorName || "—"}</td>
 
                       <td>{b.categoryName || b.category?.name || "—"}</td>
-                      <td className="text-center">
-                        <span className="badge bg-secondary">
-                          {b.quantity ?? 0}
-                        </span>
-                      </td>
                       <td className="text-center">
                         <span
                           className={`badge ${b.status === "ACTIVE" ? "bg-success" : "bg-danger"}`}
