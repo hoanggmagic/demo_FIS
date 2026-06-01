@@ -72,6 +72,12 @@ export default function InventoryManagement() {
       : true;
     return matchSearch && matchBranch;
   });
+  const [bookSearch, setBookSearch] = useState("");
+  const [showBookDropdown, setShowBookDropdown] = useState(false);
+
+  const filteredBooks = books.filter((b) =>
+    (b.title || "").toLowerCase().includes(bookSearch.toLowerCase()),
+  );
 
   return (
     <div>
@@ -139,24 +145,91 @@ export default function InventoryManagement() {
           <div className="card-body">
             <form onSubmit={handleSubmit}>
               <div className="row g-3">
-                <div className="col-md-4">
+                <div className="col-md-4" style={{ position: "relative" }}>
                   <label className="form-label">
                     Sách <span className="text-danger">*</span>
                   </label>
-                  <select
-                    className="form-select"
-                    value={form.bookId}
-                    onChange={(e) =>
-                      setForm({ ...form, bookId: e.target.value })
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Tìm tên sách..."
+                    value={bookSearch}
+                    onChange={(e) => {
+                      setBookSearch(e.target.value);
+                      setForm({ ...form, bookId: "" });
+                      setShowBookDropdown(true);
+                    }}
+                    onFocus={() => setShowBookDropdown(true)}
+                    onBlur={() =>
+                      setTimeout(() => setShowBookDropdown(false), 200)
                     }
-                  >
-                    <option value="">-- Chọn sách --</option>
-                    {books.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.title}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {/* Hiển thị sách đã chọn */}
+                  {form.bookId && (
+                    <small className="text-success">
+                      ✓{" "}
+                      {
+                        books.find((b) => String(b.id) === String(form.bookId))
+                          ?.title
+                      }
+                    </small>
+                  )}
+                  {/* Dropdown */}
+                  {showBookDropdown && bookSearch && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        zIndex: 999,
+                        background: "#fff",
+                        border: "1px solid #dee2e6",
+                        borderRadius: 6,
+                        width: "100%",
+                        maxHeight: 220,
+                        overflowY: "auto",
+                        boxShadow: "0 4px 12px rgba(0,0,0,.1)",
+                      }}
+                    >
+                      {filteredBooks.length === 0 ? (
+                        <div
+                          className="px-3 py-2 text-muted"
+                          style={{ fontSize: 13 }}
+                        >
+                          Không tìm thấy sách
+                        </div>
+                      ) : (
+                        filteredBooks.map((b) => (
+                          <div
+                            key={b.id}
+                            className="px-3 py-2"
+                            style={{
+                              cursor: "pointer",
+                              fontSize: 13,
+                              background:
+                                String(form.bookId) === String(b.id)
+                                  ? "#eff6ff"
+                                  : "transparent",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background = "#f8f9fa")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background =
+                                String(form.bookId) === String(b.id)
+                                  ? "#eff6ff"
+                                  : "transparent")
+                            }
+                            onMouseDown={() => {
+                              setForm({ ...form, bookId: b.id });
+                              setBookSearch(b.title);
+                              setShowBookDropdown(false);
+                            }}
+                          >
+                            {b.title}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">
