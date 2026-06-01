@@ -2,6 +2,7 @@ package com.example.Controller.Authors;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.DAO.UserDAO;
-import com.example.Entities.Author;
 import com.example.Entities.User;
 import com.example.Service.MailService;
 import com.example.Util.AuthContext;
@@ -52,17 +52,34 @@ public class AuthorProfileController {
 
             AuthContext ctx = RequestAuth.require(request);
 
-            UserDAO dao = new UserDAO(conn);
-            Author author = dao.getAuthorById(ctx.getUserId());
+            String sql = """
+                    SELECT id, username, email, full_name, nationality, biography, role
+                    FROM users
+                    WHERE id = ? AND role = 'AUTHOR'
+                    """;
 
-            if (author == null) {
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setInt(1, ctx.getUserId());
+
+            ResultSet rs = ps.executeQuery();
+
+            if (!rs.next()) {
                 return ResponseEntity.badRequest().body("Không tìm thấy author");
             }
 
-            return ResponseEntity.ok(author);
+            User user = new User();
+            user.setId(rs.getInt("id"));
+            user.setUsername(rs.getString("username"));
+            user.setEmail(rs.getString("email"));
+            user.setFullName(rs.getString("full_name"));
+            user.setNationality(rs.getString("nationality"));
+            user.setBiography(rs.getString("biography"));
+            user.setRole(rs.getString("role"));
+
+            return ResponseEntity.ok(user);
 
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("Token invalid: " + e.getMessage());
+            return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 
@@ -70,20 +87,37 @@ public class AuthorProfileController {
     // UPDATE PROFILE
     // =================================================
     @PutMapping
-    public ResponseEntity<?> updateProfile(@RequestBody Author author, HttpServletRequest request) {
+    public ResponseEntity<?> updateProfile(@RequestBody User body, HttpServletRequest request) {
 
         try (Connection conn = dataSource.getConnection()) {
 
             AuthContext ctx = RequestAuth.require(request);
 
-            author.setId(ctx.getUserId());
+            String sql = """
+                    UPDATE users
+                    SET full_name = ?,
+                        nationality = ?,
+                        biography = ?
+                    WHERE id = ? AND role = 'AUTHOR'
+                    """;
 
-            UserDAO dao = new UserDAO(conn);
-            dao.updateAuthor(author);
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, body.getFullName());
+            ps.setString(2, body.getNationality());
+            ps.setString(3, body.getBiography());
+            ps.setInt(4, ctx.getUserId());
+
+            int rows = ps.executeUpdate();
+
+            if (rows == 0) {
+                return ResponseEntity.badRequest().body("Không tìm thấy author");
+            }
 
             return ResponseEntity.ok("Cập nhật profile thành công");
 
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }

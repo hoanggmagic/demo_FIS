@@ -198,122 +198,384 @@ function UserProfile() {
     );
 
   return (
-    <div className="profile-page">
-      {/* HEADER */}
-      <div className="profile-header">
-        <div className="profile-avatar">
-          {profile.fullName ? profile.fullName[0].toUpperCase() : "U"}
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg,#eef2ff 0%,#f5f3ff 40%,#ecfeff 100%)",
+        padding: "40px 24px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+        }}
+      >
+        {/* TOP PROFILE */}
+        <div
+          style={{
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: 32,
+            padding: "42px",
+            marginBottom: 28,
+            background: "rgba(255,255,255,0.65)",
+            backdropFilter: "blur(18px)",
+            border: "1px solid rgba(255,255,255,0.5)",
+            boxShadow: "0 20px 50px rgba(79,70,229,.12)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: 240,
+              height: 240,
+              borderRadius: "50%",
+              background: "#818cf820",
+              top: -80,
+              right: -60,
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 28,
+              position: "relative",
+              zIndex: 2,
+            }}
+          >
+            <div
+              style={{
+                width: 110,
+                height: 110,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 42,
+                fontWeight: 700,
+                boxShadow: "0 10px 30px rgba(99,102,241,.35)",
+              }}
+            >
+              {profile.fullName?.[0]?.toUpperCase() || "U"}
+            </div>
+
+            <div>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: 36,
+                  fontWeight: 800,
+                  color: "#111827",
+                }}
+              >
+                {profile.fullName || "Người dùng"}
+              </h1>
+
+              <p
+                style={{
+                  marginTop: 10,
+                  color: "#6b7280",
+                  fontSize: 15,
+                }}
+              >
+                Quản lý thông tin tài khoản & bảo mật cá nhân
+              </p>
+
+              <div
+                style={{
+                  marginTop: 16,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 16px",
+                  borderRadius: 999,
+                  background: "#eef2ff",
+                  color: "#4f46e5",
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                👤 USER ACCOUNT
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="profile-header-info">
-          <h2 className="profile-header-name">
-            {profile.fullName || "Người dùng"}
-          </h2>
+        {/* CONTENT */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 26,
+          }}
+        >
+          {/* PROFILE CARD */}
+          <div
+            style={{
+              background: "rgba(255,255,255,.7)",
+              backdropFilter: "blur(18px)",
+              borderRadius: 30,
+              padding: 32,
+              border: "1px solid rgba(255,255,255,.5)",
+              boxShadow: "0 10px 35px rgba(0,0,0,.06)",
+            }}
+          >
+            <h3
+              style={{
+                marginBottom: 28,
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#111827",
+              }}
+            >
+              👤 Thông tin cá nhân
+            </h3>
 
-          <span className="profile-badge">👤 USER</span>
-        </div>
-      </div>
+            <div style={{ marginBottom: 22 }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: 10,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Họ và tên
+              </label>
 
-      <div className="profile-grid">
-        {/* LEFT - PROFILE */}
-        <div className="profile-card">
-          <h3>👤 Thông tin cá nhân</h3>
+              <input
+                value={profile.fullName}
+                onChange={(e) =>
+                  setProfile({
+                    ...profile,
+                    fullName: e.target.value,
+                  })
+                }
+                placeholder="Nhập họ tên"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  padding: "16px 18px",
+                  borderRadius: 18,
+                  background: "#f8fafc",
+                  fontSize: 15,
+                  boxShadow: "inset 0 0 0 1px #e5e7eb",
+                }}
+              />
+            </div>
 
-          <input
-            value={profile.fullName}
-            onChange={(e) =>
-              setProfile({
-                ...profile,
-                fullName: e.target.value,
-              })
-            }
-            placeholder="Tên người dùng"
-          />
+            <div style={{ marginBottom: 24 }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: 10,
+                  fontWeight: 600,
+                  color: "#374151",
+                }}
+              >
+                Quốc tịch
+              </label>
 
-          <input
-            value={profile.nationality}
-            onChange={(e) =>
-              setProfile({
-                ...profile,
-                nationality: e.target.value,
-              })
-            }
-            placeholder="Quốc tịch"
-          />
+              <input
+                value={profile.nationality}
+                onChange={(e) =>
+                  setProfile({
+                    ...profile,
+                    nationality: e.target.value,
+                  })
+                }
+                placeholder="Nhập quốc tịch"
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  padding: "16px 18px",
+                  borderRadius: 18,
+                  background: "#f8fafc",
+                  fontSize: 15,
+                  boxShadow: "inset 0 0 0 1px #e5e7eb",
+                }}
+              />
+            </div>
 
-          {profileMsg.text && (
-            <p className={profileMsg.ok ? "success" : "error"}>
-              {profileMsg.text}
-            </p>
-          )}
+            {profileMsg.text && (
+              <div
+                style={{
+                  marginBottom: 20,
+                  padding: "14px 18px",
+                  borderRadius: 16,
+                  background: profileMsg.ok ? "#ecfdf5" : "#fef2f2",
+                  color: profileMsg.ok ? "#047857" : "#dc2626",
+                  fontWeight: 600,
+                }}
+              >
+                {profileMsg.text}
+              </div>
+            )}
 
-          <button onClick={updateProfile}>💾 Lưu</button>
-        </div>
+            <button
+              onClick={updateProfile}
+              style={{
+                width: "100%",
+                border: "none",
+                padding: "16px",
+                borderRadius: 18,
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+                boxShadow: "0 12px 25px rgba(99,102,241,.3)",
+              }}
+            >
+              💾 Lưu thay đổi
+            </button>
+          </div>
 
-        {/* RIGHT - PASSWORD + OTP */}
-        <div className="profile-card">
-          <h3>🔒 Đổi mật khẩu (OTP)</h3>
+          {/* PASSWORD CARD */}
+          <div
+            style={{
+              background: "rgba(255,255,255,.7)",
+              backdropFilter: "blur(18px)",
+              borderRadius: 30,
+              padding: 32,
+              border: "1px solid rgba(255,255,255,.5)",
+              boxShadow: "0 10px 35px rgba(0,0,0,.06)",
+            }}
+          >
+            <h3
+              style={{
+                marginBottom: 28,
+                fontSize: 24,
+                fontWeight: 700,
+                color: "#111827",
+              }}
+            >
+              🔒 Bảo mật tài khoản
+            </h3>
 
-          <input
-            type="password"
-            placeholder="Mật khẩu hiện tại"
-            value={passwordData.currentPassword}
-            onChange={(e) =>
-              setPasswordData({
-                ...passwordData,
-                currentPassword: e.target.value,
-              })
-            }
-          />
+            {[
+              {
+                key: "currentPassword",
+                placeholder: "Mật khẩu hiện tại",
+              },
+              {
+                key: "newPassword",
+                placeholder: "Mật khẩu mới",
+              },
+              {
+                key: "confirmPassword",
+                placeholder: "Xác nhận mật khẩu",
+              },
+            ].map((item) => (
+              <input
+                key={item.key}
+                type="password"
+                placeholder={item.placeholder}
+                value={passwordData[item.key]}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    [item.key]: e.target.value,
+                  })
+                }
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  padding: "16px 18px",
+                  borderRadius: 18,
+                  background: "#f8fafc",
+                  fontSize: 15,
+                  marginBottom: 16,
+                  boxShadow: "inset 0 0 0 1px #e5e7eb",
+                }}
+              />
+            ))}
 
-          <input
-            type="password"
-            placeholder="Mật khẩu mới"
-            value={passwordData.newPassword}
-            onChange={(e) =>
-              setPasswordData({
-                ...passwordData,
-                newPassword: e.target.value,
-              })
-            }
-          />
+            <button
+              onClick={sendOtp}
+              disabled={sendingOtp}
+              style={{
+                width: "100%",
+                border: "none",
+                padding: "15px",
+                borderRadius: 18,
+                background: "linear-gradient(135deg,#f59e0b,#fb7185)",
+                color: "#fff",
+                fontWeight: 700,
+                marginBottom: 18,
+                cursor: "pointer",
+                boxShadow: "0 10px 24px rgba(245,158,11,.28)",
+              }}
+            >
+              {sendingOtp ? "Đang gửi OTP..." : "📩 Gửi mã OTP"}
+            </button>
 
-          <input
-            type="password"
-            placeholder="Xác nhận mật khẩu"
-            value={passwordData.confirmPassword}
-            onChange={(e) =>
-              setPasswordData({
-                ...passwordData,
-                confirmPassword: e.target.value,
-              })
-            }
-          />
+            {otpSent && (
+              <input
+                placeholder="Nhập OTP"
+                value={passwordData.otp}
+                onChange={(e) =>
+                  setPasswordData({
+                    ...passwordData,
+                    otp: e.target.value,
+                  })
+                }
+                style={{
+                  width: "100%",
+                  border: "none",
+                  outline: "none",
+                  padding: "16px 18px",
+                  borderRadius: 18,
+                  background: "#f8fafc",
+                  fontSize: 15,
+                  marginBottom: 18,
+                  boxShadow: "inset 0 0 0 1px #e5e7eb",
+                }}
+              />
+            )}
 
-          {/* SEND OTP */}
-          <button onClick={sendOtp} disabled={sendingOtp}>
-            {sendingOtp ? "Đang gửi OTP..." : "📩 Gửi OTP"}
-          </button>
+            {passMsg.text && (
+              <div
+                style={{
+                  marginBottom: 20,
+                  padding: "14px 18px",
+                  borderRadius: 16,
+                  background: passMsg.ok ? "#ecfdf5" : "#fef2f2",
+                  color: passMsg.ok ? "#047857" : "#dc2626",
+                  fontWeight: 600,
+                }}
+              >
+                {passMsg.text}
+              </div>
+            )}
 
-          {/* OTP INPUT */}
-          {otpSent && (
-            <input
-              placeholder="Nhập OTP"
-              value={passwordData.otp}
-              onChange={(e) =>
-                setPasswordData({
-                  ...passwordData,
-                  otp: e.target.value,
-                })
-              }
-            />
-          )}
-
-          {passMsg.text && (
-            <p className={passMsg.ok ? "success" : "error"}>{passMsg.text}</p>
-          )}
-
-          <button onClick={changePassword}>🔑 Đổi mật khẩu</button>
+            <button
+              onClick={changePassword}
+              style={{
+                width: "100%",
+                border: "none",
+                padding: "16px",
+                borderRadius: 18,
+                background: "linear-gradient(135deg,#10b981,#06b6d4)",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 15,
+                cursor: "pointer",
+                boxShadow: "0 12px 25px rgba(16,185,129,.28)",
+              }}
+            >
+              🔑 Đổi mật khẩu
+            </button>
+          </div>
         </div>
       </div>
     </div>

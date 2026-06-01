@@ -21,16 +21,31 @@ public class CartDAO {
     public List<Map<String, Object>> getCartByUserId(int userId) throws SQLException {
         List<Map<String, Object>> cart = new ArrayList<>();
         String sql = """
-                    SELECT c.id, c.book_id, b.title, b.author_id,
-                           c.quantity, p.price,
+                    SELECT c.id,
+                           c.book_id,
+                           b.title,
+                           b.author_id,
+                           c.quantity,
+                           p.price,
                            (c.quantity * p.price) AS subtotal,
-                           b.quantity AS stock,
+                           COALESCE(i.quantity, 0) AS stock,
                            c.branch_id,
                            br.name AS branch_name
                     FROM cart c
-                    JOIN books b ON c.book_id = b.id
-                    JOIN book_prices p ON b.id = p.book_id
-                    LEFT JOIN branches br ON br.id = c.branch_id
+
+                    JOIN books b
+                        ON c.book_id = b.id
+
+                    JOIN book_prices p
+                        ON b.id = p.book_id
+
+                    LEFT JOIN branches br
+                        ON br.id = c.branch_id
+
+                    LEFT JOIN inventories i
+                        ON i.book_id = c.book_id
+                       AND i.branch_id = c.branch_id
+
                     WHERE c.user_id = ?
                 """;
         PreparedStatement stmt = conn.prepareStatement(sql);

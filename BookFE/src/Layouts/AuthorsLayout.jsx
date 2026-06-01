@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import "admin-lte/dist/css/adminlte.min.css";
 
 const AUTHOR_NAV = [
   {
@@ -11,410 +10,635 @@ const AUTHOR_NAV = [
     header: "Tài khoản",
     items: [
       { label: "Hồ sơ", icon: "bi bi-person", to: "/author/profile" },
-      { label: "Ví", icon: "bi bi-wallet2", to: "/author/wallet" },
+      { label: "Ví tiền", icon: "bi bi-wallet2", to: "/author/wallet" },
     ],
   },
 ];
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
 function Sidebar({ collapsed, user }) {
   return (
     <aside
-      className="app-sidebar shadow"
       style={{
-        // Đồng bộ màu background gradient sâu từ layout Admin
-        background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
-        transition: "width 0.25s ease, transform 0.25s ease",
-        borderRight: "1px solid rgba(255,255,255,0.05)",
+        width: collapsed ? 64 : 240,
+        minHeight: "100vh",
+        background:
+          "linear-gradient(180deg, #1a0533 0%, #2d1054 50%, #1e1042 100%)",
+        display: "flex",
+        flexDirection: "column",
+        position: "fixed",
+        left: 0,
+        top: 0,
+        bottom: 0,
+        zIndex: 100,
+        transition: "width 0.25s ease",
+        boxShadow: "4px 0 24px rgba(0,0,0,0.4)",
+        overflowY: "auto",
+        overflowX: "hidden",
       }}
     >
-      {/* Brand Header */}
+      {/* Brand */}
       <div
-        className="sidebar-brand"
         style={{
+          padding: "20px",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          minHeight: 56,
           display: "flex",
           alignItems: "center",
-          padding: "0 20px",
+          gap: 10,
+          minHeight: 64,
+          flexShrink: 0,
         }}
       >
-        <NavLink
-          to="/author/books"
-          className="brand-link p-0 d-flex align-items-center text-decoration-none"
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #a855f7, #7c3aed)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(168,85,247,0.4)",
+          }}
         >
-          <div
-            className="d-flex align-items-center justify-content-center rounded-3 shadow-sm flex-shrink-0"
-            style={{
-              width: 32,
-              height: 32,
-              background: "linear-gradient(135deg, #7c3aed, #5b21b6)",
-            }}
-          >
-            <i
-              className="bi bi-pencil-square text-white"
-              style={{ fontSize: 16 }}
-            />
+          <i
+            className="bi bi-pencil-square"
+            style={{ color: "#fff", fontSize: 15 }}
+          />
+        </div>
+        {!collapsed && (
+          <div>
+            <div
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 16,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              Bookfly
+            </div>
+            <div
+              style={{
+                color: "#a78bfa",
+                fontSize: 9,
+                letterSpacing: "1.5px",
+                textTransform: "uppercase",
+                fontWeight: 600,
+              }}
+            >
+              Author Panel
+            </div>
           </div>
-          {!collapsed && (
-            <div className="ms-3 d-flex flex-column">
-              <span
-                className="brand-text fw-bold text-white lh-sm"
-                style={{ fontSize: 15, letterSpacing: "-0.3px" }}
-              >
-                Bookfly
-              </span>
-              <span
+        )}
+      </div>
+
+      {/* User */}
+      <div
+        style={{
+          padding: "14px 16px",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #a855f7, #7c3aed)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: 14,
+            boxShadow: "0 4px 12px rgba(168,85,247,0.3)",
+          }}
+        >
+          {user?.fullName?.charAt(0)?.toUpperCase() ?? "A"}
+        </div>
+        {!collapsed && (
+          <div style={{ overflow: "hidden" }}>
+            <div
+              style={{
+                color: "#f1f5f9",
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {user?.fullName}
+            </div>
+            <div
+              style={{
+                display: "inline-block",
+                background: "rgba(168,85,247,0.2)",
+                border: "1px solid rgba(168,85,247,0.3)",
+                color: "#c084fc",
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                padding: "1px 6px",
+                borderRadius: 4,
+                marginTop: 2,
+              }}
+            >
+              Tác giả
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "8px 0" }}>
+        {AUTHOR_NAV.map((group) => (
+          <React.Fragment key={group.header}>
+            {!collapsed && (
+              <div
                 style={{
-                  fontSize: 9,
-                  color: "#94a3b8",
-                  letterSpacing: "0.5px",
+                  padding: "12px 20px 4px",
+                  color: "#6b21a8",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "1px",
                   textTransform: "uppercase",
                 }}
               >
-                Author Panel
-              </span>
-            </div>
-          )}
-        </NavLink>
-      </div>
-
-      {/* User Info Container */}
-      <div className="sidebar-wrapper">
-        <nav className="mt-3">
-          <div
-            className="user-panel mx-2 pb-3 mb-3 d-flex align-items-center"
-            style={{
-              borderBottom: "1px solid rgba(255,255,255,0.08)",
-              padding: "0 12px",
-            }}
-          >
-            <div
-              className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 shadow-sm text-white fw-bold"
-              style={{
-                width: 36,
-                height: 36,
-                fontSize: 14,
-                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
-              }}
-            >
-              {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
-            </div>
-            {!collapsed && (
-              <div className="ms-3 overflow-hidden">
-                <p
-                  className="mb-0 text-white"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {user?.fullName}
-                </p>
-                <span
-                  className="badge mt-1"
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    background: "rgba(124, 58, 237, 0.2)",
-                    color: "#a78bfa",
-                    border: "1px solid rgba(124, 58, 237, 0.3)",
-                  }}
-                >
-                  TÁC GIẢ
-                </span>
+                {group.header}
               </div>
             )}
-          </div>
-
-          {/* Navigation Items */}
-          <ul className="nav sidebar-menu flex-column px-2">
-            {AUTHOR_NAV.map((group) => (
-              <React.Fragment key={group.header}>
+            {group.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                style={({ isActive }) => ({
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: collapsed ? "10px 16px" : "9px 16px 9px 20px",
+                  margin: "1px 8px",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                  background: isActive
+                    ? "rgba(168,85,247,0.15)"
+                    : "transparent",
+                  borderLeft: isActive
+                    ? "3px solid #a855f7"
+                    : "3px solid transparent",
+                  transition: "all 0.15s",
+                  color: isActive ? "#c084fc" : "#94a3b8",
+                })}
+              >
+                <i
+                  className={item.icon}
+                  style={{ fontSize: 16, flexShrink: 0 }}
+                />
                 {!collapsed && (
-                  <li
-                    className="nav-header px-3 pt-3 pb-2"
+                  <span
                     style={{
-                      fontSize: 10,
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
-                      color: "#475569",
-                      fontWeight: 700,
-                      listStyle: "none",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {group.header}
-                  </li>
+                    {item.label}
+                  </span>
                 )}
-                {group.items.map((item) => (
-                  <li
-                    className="nav-item mb-1"
-                    key={item.to}
-                    style={{ listStyle: "none" }}
-                  >
-                    <NavLink
-                      to={item.to}
-                      className={({ isActive }) =>
-                        `nav-link d-flex align-items-center gap-2 rounded-3 ${isActive ? "active" : ""}`
-                      }
-                      style={({ isActive }) => ({
-                        padding: collapsed ? "10px 14px" : "9px 16px",
-                        color: isActive ? "#c084fc" : "#94a3b8",
-                        background: isActive
-                          ? "rgba(124, 58, 237, 0.15)"
-                          : "transparent",
-                        borderLeft: isActive
-                          ? "3px solid #7c3aed"
-                          : "3px solid transparent",
-                        transition: "all 0.15s ease",
-                      })}
-                    >
-                      <i className={`${item.icon}`} style={{ fontSize: 16 }} />
-                      {!collapsed && (
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 500,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      )}
-                    </NavLink>
-                  </li>
-                ))}
-              </React.Fragment>
+              </NavLink>
             ))}
-          </ul>
-        </nav>
-      </div>
+          </React.Fragment>
+        ))}
+      </nav>
+
+      {/* Bottom stats */}
+      {!collapsed && (
+        <div
+          style={{
+            margin: "0 12px 16px",
+            background: "rgba(168,85,247,0.1)",
+            border: "1px solid rgba(168,85,247,0.2)",
+            borderRadius: 10,
+            padding: "12px 14px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              color: "#a78bfa",
+              fontWeight: 700,
+              letterSpacing: "0.5px",
+              marginBottom: 8,
+            }}
+          >
+            THỐNG KÊ NHANH
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
+                –
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 10 }}>Sách</div>
+            </div>
+            <div style={{ width: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>
+                –
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 10 }}>Đơn hàng</div>
+            </div>
+            <div style={{ width: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ color: "#c084fc", fontWeight: 700, fontSize: 16 }}>
+                –
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 10 }}>Doanh thu</div>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
 
-// ── Topbar ────────────────────────────────────────────────────────────────────
-function Topbar({ onToggle, user, onLogout }) {
+function Topbar({ user, onToggle, onLogout }) {
+  const navigate = useNavigate();
+  const [ddOpen, setDdOpen] = useState(false);
+
   return (
-    <nav
-      className="app-header navbar navbar-expand bg-white"
+    <header
       style={{
         height: 56,
+        background: "#fff",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 24px",
+        justifyContent: "space-between",
         position: "sticky",
         top: 0,
-        zIndex: 1030,
-        borderBottom: "1px solid #e2e8f0",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        padding: "0 24px",
+        zIndex: 50,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
       }}
     >
-      <div className="container-fluid d-flex justify-content-between align-items-center p-0">
+      <button
+        onClick={onToggle}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#64748b",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+      >
+        <i className="bi bi-list" style={{ fontSize: 20 }} />
+      </button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* Notification */}
         <button
-          className="btn p-0 d-flex align-items-center justify-content-center"
-          onClick={onToggle}
           style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
             width: 36,
             height: 36,
             borderRadius: 8,
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             color: "#64748b",
-            transition: "background 0.15s",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f1f5f9")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
         >
-          <i className="bi bi-list fs-5" />
+          <i className="bi bi-bell" style={{ fontSize: 18 }} />
+          <span
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "#a855f7",
+              border: "2px solid #fff",
+            }}
+          />
         </button>
 
-        <div className="d-flex align-items-center gap-3">
-          <div
-            className="d-flex align-items-center gap-2 border px-3 py-1 rounded-3"
-            style={{ borderColor: "#e2e8f0", background: "#f8fafc" }}
+        {/* User */}
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setDdOpen((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "none",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              padding: "6px 10px",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#faf5ff")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
           >
             <div
-              className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold"
               style={{
                 width: 28,
                 height: 28,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #a855f7, #7c3aed)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 700,
                 fontSize: 12,
-                flexShrink: 0,
-                background: "linear-gradient(135deg, #7c3aed, #9333ea)",
               }}
             >
-              {user?.fullName?.charAt(0)?.toUpperCase() || "A"}
+              {user?.fullName?.charAt(0)?.toUpperCase() ?? "A"}
             </div>
             <span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>
               {user?.fullName}
             </span>
-          </div>
-          <button
-            className="btn btn-sm d-flex align-items-center gap-2 rounded-3"
-            style={{
-              padding: "6px 12px",
-              fontSize: 13,
-              fontWeight: 500,
-              color: "#ef4444",
-              border: "1px solid #fecaca",
-              background: "#fef2f2",
-            }}
-            onClick={onLogout}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#fee2e2";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "#fef2f2";
-            }}
-          >
-            <i className="bi bi-box-arrow-right" /> Đăng xuất
+            <i
+              className="bi bi-chevron-down"
+              style={{ fontSize: 11, color: "#94a3b8" }}
+            />
           </button>
+
+          {ddOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 6px)",
+                right: 0,
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                minWidth: 180,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                overflow: "hidden",
+                zIndex: 999,
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderBottom: "1px solid #f1f5f9",
+                }}
+              >
+                <div
+                  style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}
+                >
+                  {user?.fullName}
+                </div>
+                <div
+                  style={{ fontSize: 11, color: "#a855f7", fontWeight: 600 }}
+                >
+                  Tác giả
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setDdOpen(false);
+                  navigate("/author/profile");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#faf5ff")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "none")
+                }
+              >
+                <i className="bi bi-person" /> Hồ sơ
+              </button>
+              <button
+                onClick={() => {
+                  setDdOpen(false);
+                  navigate("/author/wallet");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  color: "#374151",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#faf5ff")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "none")
+                }
+              >
+                <i className="bi bi-wallet2" /> Ví tiền
+              </button>
+              <div style={{ borderTop: "1px solid #f1f5f9" }} />
+              <button
+                onClick={onLogout}
+                style={{
+                  width: "100%",
+                  padding: "10px 16px",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  color: "#ef4444",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#fef2f2")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "none")
+                }
+              >
+                <i className="bi bi-box-arrow-right" /> Đăng xuất
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
-function Footer() {
-  return (
-    <footer
-      className="app-footer bg-white"
-      style={{
-        borderTop: "1px solid #e2e8f0",
-        padding: "16px 24px",
-        fontSize: 13,
-        color: "#94a3b8",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}
-    >
-      <span>
-        &copy; {new Date().getFullYear()}{" "}
-        <strong style={{ color: "#7c3aed" }}>Bookfly</strong> — Digital Book
-        Platform
-      </span>
-      <span style={{ fontSize: 12, color: "#cbd5e1" }}>Author Dashboard</span>
-    </footer>
-  );
-}
-
-// ── Layout ────────────────────────────────────────────────────────────────────
-export default function AuthorLayout({ children, user, onLogout }) {
+export default function AuthorsLayout({ children, user, onLogout }) {
   const [collapsed, setCollapsed] = useState(false);
-  const navigate = useNavigate();
+  const sidebarWidth = collapsed ? 64 : 240;
 
   return (
-    <div
-      className={`layout-fixed sidebar-expand-lg${collapsed ? " sidebar-collapse" : ""}`}
-      style={{ minHeight: "100vh", background: "#f8fafc" }}
-    >
+    <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex" }}>
       <Sidebar collapsed={collapsed} user={user} />
 
       <div
-        className="content-wrapper"
         style={{
-          paddingTop: 0,
-          background: "#f8fafc",
+          marginLeft: sidebarWidth,
+          flex: 1,
           transition: "margin-left 0.25s ease",
+          minWidth: 0,
         }}
       >
         <Topbar
           user={user}
-          onLogout={onLogout}
           onToggle={() => setCollapsed((v) => !v)}
+          onLogout={onLogout}
         />
 
-        <main className="app-main" style={{ margin: 0 }}>
-          {/* Hero banner */}
+        {/* Banner */}
+        <div style={{ padding: "24px 24px 0" }}>
           <div
-            className="app-content-header"
-            style={{ padding: "24px 24px 0" }}
+            style={{
+              borderRadius: 16,
+              overflow: "hidden",
+              position: "relative",
+              background:
+                "linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #a855f7 100%)",
+              padding: "32px 40px",
+              marginBottom: 24,
+            }}
           >
             <div
-              className="shadow-sm overflow-hidden position-relative"
               style={{
-                borderRadius: 16,
-                background:
-                  "linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #5b21b6 100%)",
-                padding: "32px 40px",
+                position: "absolute",
+                top: -30,
+                right: -30,
+                width: 180,
+                height: 180,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.07)",
               }}
-            >
-              <div style={{ position: "relative", zIndex: 2, color: "white" }}>
-                <div
-                  className="d-inline-flex align-items-center gap-2"
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: -20,
+                right: 140,
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.05)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: 20,
+                right: 200,
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.06)",
+              }}
+            />
+
+            <div style={{ position: "relative", zIndex: 2 }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "rgba(255,255,255,0.15)",
+                  borderRadius: 20,
+                  padding: "4px 12px",
+                  marginBottom: 12,
+                }}
+              >
+                <i
+                  className="bi bi-pencil-fill"
+                  style={{ color: "#fff", fontSize: 11 }}
+                />
+                <span
                   style={{
-                    background: "rgba(255,255,255,0.15)",
-                    borderRadius: 20,
-                    padding: "4px 12px",
-                    marginBottom: 12,
+                    color: "#fff",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.5px",
                   }}
                 >
-                  <i
-                    className="bi bi-pencil-fill"
-                    style={{ color: "#fff", fontSize: 11 }}
-                  />
-                  <span
-                    style={{
-                      color: "#fff",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    BOOKFLY AUTHOR
-                  </span>
-                </div>
-
-                <h1
-                  className="text-white m-0 fw-bold"
-                  style={{ fontSize: 26, letterSpacing: "-0.5px" }}
-                >
-                  Xin chào, {user?.fullName} 👋
-                </h1>
-                <p
-                  className="mt-1 mb-0"
-                  style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}
-                >
-                  Quản lý tác phẩm, cập nhật hồ sơ cá nhân và theo dõi doanh thu
-                  của bạn.
-                </p>
+                  BOOKFLY AUTHOR
+                </span>
               </div>
-
-              {/* Decorative Background Circles */}
-              <div
+              <h2
                 style={{
-                  position: "absolute",
-                  top: -40,
-                  right: -40,
-                  width: 180,
-                  height: 180,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.07)",
+                  color: "#fff",
+                  fontWeight: 700,
+                  fontSize: 26,
+                  margin: "0 0 6px",
+                  letterSpacing: "-0.5px",
                 }}
-              />
-              <div
+              >
+                Xin chào, {user?.fullName} ✍️
+              </h2>
+              <p
                 style={{
-                  position: "absolute",
-                  bottom: -20,
-                  right: 140,
-                  width: 100,
-                  height: 100,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.8)",
+                  fontSize: 14,
+                  margin: 0,
                 }}
-              />
+              >
+                Quản lý tác phẩm, theo dõi doanh thu và cập nhật hồ sơ cá nhân.
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Page content */}
-          <div className="app-content" style={{ padding: 24 }}>
-            <div className="container-fluid p-0">{children}</div>
-          </div>
-        </main>
+        {/* Content */}
+        <div style={{ padding: "0 24px 24px" }}>{children}</div>
 
-        <Footer />
+        {/* Footer */}
+        <footer
+          style={{
+            borderTop: "1px solid #e2e8f0",
+            padding: "16px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "#94a3b8" }}>
+            © {new Date().getFullYear()}{" "}
+            <strong style={{ color: "#a855f7" }}>Bookfly</strong> — Digital Book
+            Platform
+          </span>
+          <span style={{ fontSize: 12, color: "#cbd5e1" }}>
+            Author Dashboard
+          </span>
+        </footer>
       </div>
     </div>
   );

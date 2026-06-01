@@ -35,7 +35,9 @@ public class CartController {
             CartDAO dao = new CartDAO(conn);
             return ResponseEntity.ok(dao.getCartByUserId(ctx.getUserId()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(null);
+            e.printStackTrace();
+
+            return ResponseEntity.status(500).body(List.of(Map.of("error", e.getMessage())));
         }
     }
 

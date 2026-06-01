@@ -11,13 +11,15 @@ export default function Wallet() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-  const [tab, setTab] = useState("overview"); // overview | withdraw | history
+  const [tab, setTab] = useState("overview");
+
   const [form, setForm] = useState({
     amount: "",
     bankName: "",
     accountNumber: "",
     accountHolder: "",
   });
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +30,7 @@ export default function Wallet() {
         axios.get(`${API}/transactions`, getHeaders()),
         axios.get(`${API}/withdraw-history`, getHeaders()),
       ]);
+
       setBalance(balRes.data.balance);
       setTransactions(txRes.data);
       setWithdrawHistory(wdRes.data);
@@ -42,8 +45,10 @@ export default function Wallet() {
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
+
     setLoading(true);
     setMessage("");
+
     try {
       const res = await axios.post(
         `${API}/withdraw`,
@@ -55,13 +60,16 @@ export default function Wallet() {
         },
         getHeaders(),
       );
+
       setMessage("✅ " + res.data.message);
+
       setForm({
         amount: "",
         bankName: "",
         accountNumber: "",
         accountHolder: "",
       });
+
       loadData();
     } catch (err) {
       setMessage("❌ " + (err.response?.data || "Lỗi gửi yêu cầu"));
@@ -71,35 +79,96 @@ export default function Wallet() {
   };
 
   const statusColor = (s) =>
-    ({ PENDING: "#ff9800", APPROVED: "#4caf50", REJECTED: "#e53935" })[s] ||
-    "#999";
+    ({
+      PENDING: "#ff9800",
+      APPROVED: "#22c55e",
+      REJECTED: "#ef4444",
+    })[s] || "#999";
+
   const statusLabel = (s) =>
-    ({ PENDING: "Chờ duyệt", APPROVED: "Đã duyệt", REJECTED: "Từ chối" })[s] ||
-    s;
+    ({
+      PENDING: "Chờ duyệt",
+      APPROVED: "Đã duyệt",
+      REJECTED: "Từ chối",
+    })[s] || s;
 
   return (
-    <div style={{ padding: 20, maxWidth: 700, margin: "0 auto" }}>
-      <h2>💰 Ví tác giả</h2>
-
-      {/* Số dư */}
+    <div
+      style={{
+        padding: 24,
+        background: "#f4f7fb",
+        minHeight: "100vh",
+      }}
+    >
+      {/* HEADER */}
       <div
         style={{
-          padding: 24,
-          background: "#1976d2",
-          borderRadius: 16,
+          background: "linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)",
+          borderRadius: 24,
+          padding: 32,
           color: "#fff",
-          marginBottom: 24,
-          textAlign: "center",
+          marginBottom: 28,
+          boxShadow: "0 10px 30px rgba(37,99,235,.25)",
         }}
       >
-        <p style={{ margin: 0, opacity: 0.8 }}>Số dư hiện tại</p>
-        <h1 style={{ margin: "8px 0", fontSize: 36 }}>
-          {Number(balance).toLocaleString()} VND
-        </h1>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 20,
+          }}
+        >
+          <div>
+            <p
+              style={{
+                margin: 0,
+                opacity: 0.85,
+                fontSize: 15,
+              }}
+            >
+              Ví tác giả
+            </p>
+
+            <h1
+              style={{
+                margin: "10px 0 0",
+                fontSize: 38,
+                fontWeight: 800,
+              }}
+            >
+              {Number(balance).toLocaleString()} ₫
+            </h1>
+          </div>
+
+          <div
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,.15)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 36,
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            💰
+          </div>
+        </div>
       </div>
 
-      {/* Tab */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      {/* TABS */}
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          marginBottom: 24,
+          flexWrap: "wrap",
+        }}
+      >
         {[
           ["overview", "📊 Giao dịch"],
           ["withdraw", "💸 Rút tiền"],
@@ -109,13 +178,22 @@ export default function Wallet() {
             key={key}
             onClick={() => setTab(key)}
             style={{
-              padding: "8px 16px",
-              borderRadius: 8,
               border: "none",
+              padding: "12px 22px",
+              borderRadius: 999,
               cursor: "pointer",
-              background: tab === key ? "#1976d2" : "#eee",
+              fontWeight: 700,
+              fontSize: 14,
+              transition: ".2s",
+              background:
+                tab === key
+                  ? "linear-gradient(135deg,#2563eb,#4f46e5)"
+                  : "#fff",
               color: tab === key ? "#fff" : "#333",
-              fontWeight: "bold",
+              boxShadow:
+                tab === key
+                  ? "0 6px 18px rgba(37,99,235,.25)"
+                  : "0 2px 10px rgba(0,0,0,.05)",
             }}
           >
             {label}
@@ -123,159 +201,304 @@ export default function Wallet() {
         ))}
       </div>
 
-      {/* Tab: Giao dịch */}
+      {/* OVERVIEW */}
       {tab === "overview" && (
-        <div>
-          <h3>Lịch sử giao dịch</h3>
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 22,
+            padding: 24,
+            boxShadow: "0 4px 20px rgba(0,0,0,.05)",
+          }}
+        >
+          <h3
+            style={{
+              marginBottom: 20,
+              fontSize: 22,
+              fontWeight: 700,
+            }}
+          >
+            📈 Lịch sử giao dịch
+          </h3>
+
           {transactions.length === 0 ? (
-            <p>Chưa có giao dịch nào.</p>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 40,
+                color: "#777",
+              }}
+            >
+              Chưa có giao dịch nào.
+            </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <th style={th}>Mô tả</th>
-                  <th style={th}>Số tiền</th>
-                  <th style={th}>Ngày</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((t) => (
-                  <tr key={t.id}>
-                    <td style={td}>{t.description}</td>
-                    <td style={{ ...td, color: "#4caf50", fontWeight: "bold" }}>
-                      +{Number(t.amount).toLocaleString()} VND
-                    </td>
-                    <td style={td}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {transactions.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    padding: 18,
+                    borderRadius: 18,
+                    background: "#f8fafc",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    border: "1px solid #edf2f7",
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        marginBottom: 6,
+                        color: "#1e293b",
+                      }}
+                    >
+                      {t.description}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "#64748b",
+                      }}
+                    >
                       {new Date(t.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#22c55e",
+                    }}
+                  >
+                    +{Number(t.amount).toLocaleString()} ₫
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
 
-      {/* Tab: Rút tiền */}
+      {/* WITHDRAW */}
       {tab === "withdraw" && (
-        <div>
-          <h3>Yêu cầu rút tiền</h3>
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 22,
+            padding: 28,
+            boxShadow: "0 4px 20px rgba(0,0,0,.05)",
+          }}
+        >
+          <h3
+            style={{
+              marginBottom: 22,
+              fontSize: 22,
+              fontWeight: 700,
+            }}
+          >
+            💸 Yêu cầu rút tiền
+          </h3>
+
           <form
             onSubmit={handleWithdraw}
-            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            style={{
+              display: "grid",
+              gap: 18,
+            }}
           >
             <input
               type="number"
-              placeholder="Số tiền muốn rút (VND)"
+              placeholder="Số tiền muốn rút"
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
               required
               min={1000}
               style={input}
             />
+
             <input
               type="text"
-              placeholder="Tên ngân hàng (VD: MBBank, Vietcombank...)"
+              placeholder="Tên ngân hàng"
               value={form.bankName}
               onChange={(e) => setForm({ ...form, bankName: e.target.value })}
               required
               style={input}
             />
+
             <input
               type="text"
               placeholder="Số tài khoản"
               value={form.accountNumber}
               onChange={(e) =>
-                setForm({ ...form, accountNumber: e.target.value })
+                setForm({
+                  ...form,
+                  accountNumber: e.target.value,
+                })
               }
               required
               style={input}
             />
+
             <input
               type="text"
               placeholder="Tên chủ tài khoản"
               value={form.accountHolder}
               onChange={(e) =>
-                setForm({ ...form, accountHolder: e.target.value })
+                setForm({
+                  ...form,
+                  accountHolder: e.target.value,
+                })
               }
               required
               style={input}
             />
+
             <button
               type="submit"
               disabled={loading}
               style={{
-                padding: "12px",
-                background: "#1976d2",
-                color: "#fff",
                 border: "none",
-                borderRadius: 8,
-                fontSize: 15,
+                padding: "14px",
+                borderRadius: 16,
                 cursor: "pointer",
+                fontWeight: 700,
+                fontSize: 15,
+                color: "#fff",
+                background: "linear-gradient(135deg,#2563eb,#4f46e5)",
+                boxShadow: "0 10px 25px rgba(37,99,235,.25)",
               }}
             >
-              {loading ? "Đang gửi..." : "💸 Gửi yêu cầu rút tiền"}
+              {loading ? "Đang gửi..." : "💸 Gửi yêu cầu"}
             </button>
           </form>
+
           {message && (
-            <p
+            <div
               style={{
-                marginTop: 12,
-                color: message.includes("✅") ? "green" : "red",
-                fontWeight: "bold",
+                marginTop: 18,
+                padding: 14,
+                borderRadius: 14,
+                fontWeight: 600,
+                background: message.includes("✅") ? "#ecfdf5" : "#fef2f2",
+                color: message.includes("✅") ? "#16a34a" : "#dc2626",
               }}
             >
               {message}
-            </p>
+            </div>
           )}
         </div>
       )}
 
-      {/* Tab: Lịch sử rút */}
+      {/* HISTORY */}
       {tab === "history" && (
-        <div>
-          <h3>Lịch sử rút tiền</h3>
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 22,
+            padding: 24,
+            boxShadow: "0 4px 20px rgba(0,0,0,.05)",
+          }}
+        >
+          <h3
+            style={{
+              marginBottom: 20,
+              fontSize: 22,
+              fontWeight: 700,
+            }}
+          >
+            📋 Lịch sử rút tiền
+          </h3>
+
           {withdrawHistory.length === 0 ? (
-            <p>Chưa có yêu cầu nào.</p>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 40,
+                color: "#777",
+              }}
+            >
+              Chưa có yêu cầu nào.
+            </div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f5f5f5" }}>
-                  <th style={th}>Số tiền</th>
-                  <th style={th}>Ngân hàng</th>
-                  <th style={th}>STK</th>
-                  <th style={th}>Trạng thái</th>
-                  <th style={th}>Ngày</th>
-                </tr>
-              </thead>
-              <tbody>
-                {withdrawHistory.map((w) => (
-                  <tr key={w.id}>
-                    <td style={{ ...td, fontWeight: "bold" }}>
-                      {Number(w.amount).toLocaleString()} VND
-                    </td>
-                    <td style={td}>{w.bankName}</td>
-                    <td style={td}>{w.accountNumber}</td>
-                    <td style={td}>
-                      <span
-                        style={{
-                          padding: "4px 10px",
-                          borderRadius: 20,
-                          background: statusColor(w.status),
-                          color: "#fff",
-                          fontSize: 12,
-                        }}
-                      >
-                        {statusLabel(w.status)}
-                      </span>
-                    </td>
-                    <td style={td}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {withdrawHistory.map((w) => (
+                <div
+                  key={w.id}
+                  style={{
+                    padding: 18,
+                    borderRadius: 18,
+                    background: "#f8fafc",
+                    border: "1px solid #edf2f7",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 14,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 800,
+                        color: "#111827",
+                      }}
+                    >
+                      {Number(w.amount).toLocaleString()} ₫
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 6,
+                        color: "#64748b",
+                        fontSize: 14,
+                      }}
+                    >
+                      {w.bankName} • {w.accountNumber}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 13,
+                        color: "#94a3b8",
+                      }}
+                    >
                       {new Date(w.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 999,
+                      background: statusColor(w.status),
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}
+                  >
+                    {statusLabel(w.status)}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -283,16 +506,12 @@ export default function Wallet() {
   );
 }
 
-const th = {
-  padding: "10px 12px",
-  textAlign: "left",
-  fontWeight: "bold",
-  borderBottom: "2px solid #ddd",
-};
-const td = { padding: "10px 12px", borderBottom: "1px solid #eee" };
 const input = {
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: "1px solid #ddd",
-  fontSize: 14,
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: 16,
+  border: "1px solid #dbe3ec",
+  outline: "none",
+  fontSize: 15,
+  background: "#f8fafc",
 };
