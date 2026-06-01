@@ -85,25 +85,24 @@ public class InventoryController {
     @PostMapping
     public ResponseEntity<?> upsert(@RequestBody Map<String, Integer> body,
             HttpServletRequest request) {
+        System.out.println(body);
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
             int bookId = body.get("bookId");
             int branchId = body.get("branchId");
             int quantity = body.get("quantity");
 
-            if (quantity < 0)
-                return ResponseEntity.badRequest().body("Số lượng không được âm");
+
 
             PreparedStatement ps = conn.prepareStatement("""
                         INSERT INTO inventories (book_id, branch_id, quantity)
                         VALUES (?, ?, ?)
                         ON CONFLICT (book_id, branch_id)
-                        DO UPDATE SET quantity = ?
+                        DO UPDATE SET quantity = inventories.quantity + EXCLUDED.quantity
                     """);
             ps.setInt(1, bookId);
             ps.setInt(2, branchId);
             ps.setInt(3, quantity);
-            ps.setInt(4, quantity);
             ps.executeUpdate();
 
             return ResponseEntity.ok("Cập nhật tồn kho thành công!");

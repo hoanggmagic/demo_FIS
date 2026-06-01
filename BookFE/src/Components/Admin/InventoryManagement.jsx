@@ -47,6 +47,10 @@ export default function InventoryManagement() {
       setError("Vui lòng điền đầy đủ thông tin");
       return;
     }
+    if (Number(form.quantity) === 0) {
+      setError("Số lượng thay đổi không được là 0");
+      return;
+    }
     try {
       await upsertInventory(
         Number(form.bookId),
@@ -111,7 +115,7 @@ export default function InventoryManagement() {
           </div>
           <select
             className="form-select"
-            style={{ maxWidth: 180 }}
+            style={{ maxWidth: 250 }}
             value={filterBranch}
             onChange={(e) => setFilterBranch(e.target.value)}
           >
@@ -252,17 +256,20 @@ export default function InventoryManagement() {
                 </div>
                 <div className="col-md-4">
                   <label className="form-label">
-                    Số lượng <span className="text-danger">*</span>
+                    Số lượng(+) <span className="text-danger">*</span>
                   </label>
+
                   <input
                     type="number"
                     className="form-control"
-                    min={0}
                     value={form.quantity}
                     onChange={(e) =>
-                      setForm({ ...form, quantity: e.target.value })
+                      setForm({
+                        ...form,
+                        quantity: e.target.value,
+                      })
                     }
-                    placeholder="0"
+                    min={0}
                   />
                 </div>
               </div>

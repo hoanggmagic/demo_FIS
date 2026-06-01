@@ -10,7 +10,12 @@ import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import com.example.Util.RequestAuth;
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -28,17 +33,17 @@ public class TransferController {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
             PreparedStatement ps = conn.prepareStatement("""
-                SELECT t.id, t.book_id, t.from_branch_id, t.to_branch_id,
-                       t.quantity, t.note, t.created_at,
-                       b.title as book_title,
-                       br1.name as from_branch_name,
-                       br2.name as to_branch_name
-                FROM transfers t
-                JOIN books b ON b.id = t.book_id
-                JOIN branches br1 ON br1.id = t.from_branch_id
-                JOIN branches br2 ON br2.id = t.to_branch_id
-                ORDER BY t.created_at DESC
-            """);
+                        SELECT t.id, t.book_id, t.from_branch_id, t.to_branch_id,
+                               t.quantity, t.note, t.created_at,
+                               b.title as book_title,
+                               br1.name as from_branch_name,
+                               br2.name as to_branch_name
+                        FROM transfers t
+                        JOIN books b ON b.id = t.book_id
+                        JOIN branches br1 ON br1.id = t.from_branch_id
+                        JOIN branches br2 ON br2.id = t.to_branch_id
+                        ORDER BY t.created_at DESC
+                    """);
             ResultSet rs = ps.executeQuery();
             List<Map<String, Object>> list = new ArrayList<>();
             while (rs.next()) {
@@ -76,7 +81,8 @@ public class TransferController {
             String note = (String) body.getOrDefault("note", "");
 
             if (fromBranchId == toBranchId)
-                return ResponseEntity.badRequest().body("Chi nhánh nguồn và đích không được giống nhau");
+                return ResponseEntity.badRequest()
+                        .body("Chi nhánh nguồn và đích không được giống nhau");
             if (quantity <= 0)
                 return ResponseEntity.badRequest().body("Số lượng phải lớn hơn 0");
 
@@ -84,21 +90,21 @@ public class TransferController {
             try {
                 // 1. Kiểm tra tồn kho chi nhánh nguồn
                 PreparedStatement checkPs = conn.prepareStatement(
-                    "SELECT quantity FROM inventories WHERE book_id = ? AND branch_id = ?");
+                        "SELECT quantity FROM inventories WHERE book_id = ? AND branch_id = ?");
                 checkPs.setInt(1, bookId);
                 checkPs.setInt(2, fromBranchId);
                 ResultSet checkRs = checkPs.executeQuery();
                 if (!checkRs.next() || checkRs.getInt("quantity") < quantity) {
                     conn.rollback();
                     return ResponseEntity.badRequest()
-                        .body("Chi nhánh nguồn không đủ hàng để điều chuyển");
+                            .body("Chi nhánh nguồn không đủ hàng để điều chuyển");
                 }
 
                 // 2. Trừ kho chi nhánh nguồn
                 PreparedStatement deductPs = conn.prepareStatement("""
-                    UPDATE inventories SET quantity = quantity - ?
-                    WHERE book_id = ? AND branch_id = ?
-                """);
+                            UPDATE inventories SET quantity = quantity - ?
+                            WHERE book_id = ? AND branch_id = ?
+                        """);
                 deductPs.setInt(1, quantity);
                 deductPs.setInt(2, bookId);
                 deductPs.setInt(3, fromBranchId);
@@ -106,11 +112,11 @@ public class TransferController {
 
                 // 3. Cộng kho chi nhánh đích (upsert)
                 PreparedStatement addPs = conn.prepareStatement("""
-                    INSERT INTO inventories (book_id, branch_id, quantity)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT (book_id, branch_id)
-                    DO UPDATE SET quantity = inventories.quantity + ?
-                """);
+                            INSERT INTO inventories (book_id, branch_id, quantity)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT (book_id, branch_id)
+                            DO UPDATE SET quantity = inventories.quantity + ?
+                        """);
                 addPs.setInt(1, bookId);
                 addPs.setInt(2, toBranchId);
                 addPs.setInt(3, quantity);
@@ -118,10 +124,11 @@ public class TransferController {
                 addPs.executeUpdate();
 
                 // 4. Ghi log phiếu điều chuyển
-                PreparedStatement logPs = conn.prepareStatement("""
-                    INSERT INTO transfers (book_id, from_branch_id, to_branch_id, quantity, note)
-                    VALUES (?, ?, ?, ?, ?)
-                """);
+                PreparedStatement logPs = conn.prepareStatement(
+                        """
+                                    INSERT INTO transfers (book_id, from_branch_id, to_branch_id, quantity, note)
+                                    VALUES (?, ?, ?, ?, ?)
+                                """);
                 logPs.setInt(1, bookId);
                 logPs.setInt(2, fromBranchId);
                 logPs.setInt(3, toBranchId);

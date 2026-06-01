@@ -184,6 +184,7 @@ public class AuthController {
             return ResponseEntity.status(500).body("Lỗi gửi OTP: " + e.getMessage());
         }
     }
+    @PostMapping("/google-login")
 
     @GetMapping("/me")
     public ResponseEntity<?> me(HttpServletRequest request) {
