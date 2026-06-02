@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { clearCart } from "../../Api/User/CartApi";
 
 const BANK_ID = "970422";
 const ACCOUNT_NO = "0001057138272";
@@ -39,13 +38,6 @@ export default function Payment() {
           setStatus("SUCCESS");
           clearInterval(pollingRef.current);
           clearInterval(timerRef.current);
-
-          // Xóa giỏ hàng sau khi thanh toán thành công
-          try {
-            await clearCart(); // Hãy chắc chắn đã sửa CartApi.js thành Interceptor
-          } catch (e) {
-            console.error("Không thể tự động xóa giỏ hàng:", e);
-          }
         }
       } catch (err) {
         console.error("Lỗi kiểm tra trạng thái đơn hàng:", err);

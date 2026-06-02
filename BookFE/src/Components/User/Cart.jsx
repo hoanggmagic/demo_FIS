@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getCart,
   updateCartItem,
@@ -6,11 +7,11 @@ import {
   clearCart,
 } from "../../Api/User/CartApi";
 import "../../Style/User/Cart.css";
-import { useNavigate } from "react-router-dom";
 import { createOrder } from "../../Api/User/OrderApi";
 
 export default function Cart({ reload }) {
   const [items, setItems] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -18,7 +19,9 @@ export default function Cart({ reload }) {
     setLoading(true);
     try {
       const res = await getCart();
-      setItems(res.data || []);
+      const data = res.data || [];
+      setItems(data);
+      setSelected(new Set(data.map((i) => i.cartItemId)));
     } catch (err) {
       console.error("Lỗi khi lấy giỏ hàng:", err);
       if (err.response?.status === 401) {
@@ -34,7 +37,31 @@ export default function Cart({ reload }) {
     load();
   }, [reload]);
 
+  const toggleSelect = (cartItemId) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(cartItemId) ? next.delete(cartItemId) : next.add(cartItemId);
+      return next;
+    });
+  };
+
+  const toggleBranch = (branchItems) => {
+    const ids = branchItems.map((i) => i.cartItemId);
+    const allChecked = ids.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (allChecked ? next.delete(id) : next.add(id)));
+      return next;
+    });
+  };
+
+  const selectedItems = items.filter((i) => selected.has(i.cartItemId));
+
   const handleCheckout = async () => {
+    if (selectedItems.length === 0) {
+      alert("❌ Vui lòng chọn ít nhất 1 sản phẩm!");
+      return;
+    }
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) {
@@ -44,11 +71,10 @@ export default function Cart({ reload }) {
       }
       const user = JSON.parse(userStr);
 
-      // Kiểm tra tất cả items có cùng chi nhánh không
-      const branchIds = [...new Set(items.map((i) => i.branchId))];
+      const branchIds = [...new Set(selectedItems.map((i) => i.branchId))];
       if (branchIds.length > 1) {
         alert(
-          "❌ Giỏ hàng có sách từ nhiều chi nhánh khác nhau.\nVui lòng chỉ đặt hàng từ 1 chi nhánh mỗi lần.",
+          "❌ Các sản phẩm đã chọn thuộc nhiều chi nhánh khác nhau.\nVui lòng chỉ chọn sản phẩm từ 1 chi nhánh mỗi lần.",
         );
         return;
       }
@@ -58,7 +84,7 @@ export default function Cart({ reload }) {
       const orderPayload = {
         userId: user.id,
         branchId,
-        items: items.map((i) => ({
+        items: selectedItems.map((i) => ({
           bookId: Number(i.bookId),
           qty: Number(i.quantity || 1),
         })),
@@ -67,7 +93,13 @@ export default function Cart({ reload }) {
       const orderRes = await createOrder(orderPayload);
       const orderId = orderRes.data.orderId;
 
-      navigate("/payment", { state: { orderId, amount: total } });
+      navigate("/payment", {
+        state: {
+          orderId,
+          amount: total,
+          selectedCartItemIds: selectedItems.map((i) => i.cartItemId),
+        },
+      });
     } catch (err) {
       console.error("Lỗi khi đặt hàng:", err);
       const data = err.response?.data;
@@ -112,12 +144,13 @@ export default function Cart({ reload }) {
     try {
       await clearCart();
       setItems([]);
+      setSelected(new Set());
     } catch (err) {
       console.error(err);
     }
   };
 
-  const total = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
+  const total = selectedItems.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
   if (loading && items.length === 0) {
     return (
@@ -127,7 +160,6 @@ export default function Cart({ reload }) {
     );
   }
 
-  // Nhóm items theo chi nhánh để hiển thị rõ ràng
   const byBranch = items.reduce((acc, item) => {
     const key = item.branchId || 0;
     if (!acc[key])
@@ -147,95 +179,125 @@ export default function Cart({ reload }) {
         <p>Giỏ hàng trống.</p>
       ) : (
         <>
-          {/* Hiển thị theo nhóm chi nhánh */}
-          {Object.entries(byBranch).map(([branchId, group]) => (
-            <div key={branchId} style={{ marginBottom: 24 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 10,
-                  padding: "6px 12px",
-                  background: "#eff6ff",
-                  borderRadius: 8,
-                  border: "1px solid #bfdbfe",
-                }}
-              >
-                <i className="bi bi-shop" style={{ color: "#2563eb" }} />
-                <span
-                  style={{ fontWeight: 600, fontSize: 14, color: "#2563eb" }}
+          {Object.entries(byBranch).map(([branchId, group]) => {
+            const allChecked = group.items.every((i) =>
+              selected.has(i.cartItemId),
+            );
+            return (
+              <div key={branchId} style={{ marginBottom: 24 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 10,
+                    padding: "6px 12px",
+                    background: "#eff6ff",
+                    borderRadius: 8,
+                    border: "1px solid #bfdbfe",
+                  }}
                 >
-                  {group.branchName}
-                </span>
-              </div>
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    onChange={() => toggleBranch(group.items)}
+                    style={{ width: 16, height: 16, cursor: "pointer" }}
+                  />
+                  <i className="bi bi-shop" style={{ color: "#2563eb" }} />
+                  <span
+                    style={{ fontWeight: 600, fontSize: 14, color: "#2563eb" }}
+                  >
+                    {group.branchName}
+                  </span>
+                </div>
 
-              <table className="cart-table">
-                <thead>
-                  <tr>
-                    <th>Sách</th>
-                    <th>Giá</th>
-                    <th>Số lượng</th>
-                    <th>Thành tiền</th>
-                    <th>Xóa</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.items.map((item) => {
-                    const currentQty = item.quantity ?? 1;
-                    return (
-                      <tr key={item.cartItemId}>
-                        <td>{item.title}</td>
-                        <td>{Number(item.price || 0).toLocaleString()} VND</td>
-                        <td>
-                          <div className="qty-control">
+                <table className="cart-table">
+                  <thead>
+                    <tr>
+                      <th>✓</th>
+                      <th>Sách</th>
+                      <th>Giá</th>
+                      <th>Số lượng</th>
+                      <th>Thành tiền</th>
+                      <th>Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((item) => {
+                      const currentQty = item.quantity ?? 1;
+                      const isChecked = selected.has(item.cartItemId);
+                      return (
+                        <tr
+                          key={item.cartItemId}
+                          style={{ opacity: isChecked ? 1 : 0.45 }}
+                        >
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleSelect(item.cartItemId)}
+                              style={{
+                                width: 16,
+                                height: 16,
+                                cursor: "pointer",
+                              }}
+                            />
+                          </td>
+                          <td>{item.title}</td>
+                          <td>
+                            {Number(item.price || 0).toLocaleString()} VND
+                          </td>
+                          <td>
+                            <div className="qty-control">
+                              <button
+                                onClick={() =>
+                                  handleQty(item.cartItemId, currentQty - 1)
+                                }
+                                disabled={currentQty <= 1}
+                              >
+                                −
+                              </button>
+                              <span>{currentQty}</span>
+                              <button
+                                onClick={() =>
+                                  handleQty(item.cartItemId, currentQty + 1)
+                                }
+                                disabled={currentQty >= item.stock}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            {Number(item.subtotal || 0).toLocaleString()} VND
+                          </td>
+                          <td>
                             <button
-                              onClick={() =>
-                                handleQty(item.cartItemId, currentQty - 1)
-                              }
-                              disabled={currentQty <= 1}
+                              className="btn-remove"
+                              onClick={() => handleRemove(item.cartItemId)}
                             >
-                              −
+                              Xóa
                             </button>
-                            <span>{currentQty}</span>
-                            <button
-                              onClick={() =>
-                                handleQty(item.cartItemId, currentQty + 1)
-                              }
-                              disabled={currentQty >= item.stock}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          {Number(item.subtotal || 0).toLocaleString()} VND
-                        </td>
-                        <td>
-                          <button
-                            className="btn-remove"
-                            onClick={() => handleRemove(item.cartItemId)}
-                          >
-                            Xóa
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })}
 
           <div className="cart-footer">
             <button className="btn-clear" onClick={handleClear}>
               🗑️ Xóa tất cả
             </button>
             <span className="cart-total">
-              Tổng: {Number(total).toLocaleString()} VND
+              Tổng ({selectedItems.length} sản phẩm):{" "}
+              {Number(total).toLocaleString()} VND
             </span>
             <button type="button" onClick={handleCheckout}>
-              💳 Thanh toán
+              💳 Thanh toán ({selectedItems.length})
             </button>
           </div>
         </>

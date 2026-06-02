@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.example.Service.OrderService;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -29,6 +30,8 @@ public class PaymentController {
 
     @Value("${sepay.apikey}")
     private String sepayApiKey;
+    @Autowired
+    private OrderService orderService;
 
     @PostMapping("/webhook")
     public ResponseEntity<?> webhook(@RequestBody Map<String, Object> body,
@@ -149,14 +152,25 @@ public class PaymentController {
                     System.out.println("✅ Order updated SUCCESS");
 
                     // =========================
-                    // 8. CLEAR CART
-                    // =========================
-                    try (PreparedStatement ps =
-                            conn.prepareStatement("DELETE FROM cart WHERE user_id = ?")) {
+                    // 8. CLEAR CART - chỉ xóa những sách đã thanh toán
+                    System.out.println("🔍 Bắt đầu xóa cart | userId=" + userId + " | orderId="
+                            + orderId + " | branchId=" + branchId);
+                    String clearCartSql = """
+                            DELETE FROM cart
+                            WHERE user_id = ?
+                            AND book_id IN (
+                                SELECT book_id FROM order_items WHERE order_id = ?
+                            )
+                            AND branch_id = ?
+                            """;
+                    try (PreparedStatement ps = conn.prepareStatement(clearCartSql)) {
                         ps.setInt(1, userId);
-                        ps.executeUpdate();
+                        ps.setInt(2, orderId);
+                        ps.setInt(3, branchId);
+                        int deleted = ps.executeUpdate();
+                        System.out.println("🛒 Đã xóa " + deleted + " item | userId=" + userId
+                                + " | branchId=" + branchId);
                     }
-
                     // =========================
                     // 9. TRỪ KHO THEO CHI NHÁNH (đã đổi từ books.quantity → inventories)
                     // ⚠ Kho thực tế nằm ở bảng inventories, không còn ở books.quantity
@@ -178,22 +192,36 @@ public class PaymentController {
                     }
 
                     // =========================
-                    // 10. UPDATE WALLET (đã đổi từ book_prices → books.price)
-                    // ⚠ book_prices không tồn tại, dùng books.price thay thế
+                    // =========================
+                    // 10. UPDATE WALLET
                     // =========================
                     String itemSql = """
-                                SELECT oi.quantity, oi.price, b.author_id
-                                FROM order_items oi
-                                JOIN books b ON oi.book_id = b.id
-                                WHERE oi.order_id = ?
+                            SELECT
+                                oi.quantity,
+                                oi.price,
+                                oi.book_id,
+                                b.title,
+                                b.author_id
+                            FROM order_items oi
+                            JOIN books b ON oi.book_id = b.id
+                            WHERE oi.order_id = ?
                             """;
 
                     String upsertWallet = """
-                                INSERT INTO wallets (user_id, balance)
-                                VALUES (?, ?)
-                                ON CONFLICT (user_id)
-                                DO UPDATE SET balance = wallets.balance + EXCLUDED.balance
+                            INSERT INTO wallets (user_id, balance)
+                            VALUES (?, ?)
+                            ON CONFLICT (user_id)
+                            DO UPDATE SET balance = wallets.balance + EXCLUDED.balance
                             """;
+
+                    String insertTx =
+                            """
+                                    INSERT INTO wallet_transactions
+                                    (wallet_id, user_id, book_id, order_id, amount, transaction_type, description, created_at)
+                                    SELECT w.id, ?, ?, ?, ?, 'INCOME', ?, NOW()
+                                    FROM wallets w
+                                    WHERE w.user_id = ?
+                                    """;
 
                     try (PreparedStatement ps = conn.prepareStatement(itemSql)) {
                         ps.setInt(1, orderId);
@@ -201,6 +229,8 @@ public class PaymentController {
                             while (rs.next()) {
                                 int authorId = rs.getInt("author_id");
                                 int qty = rs.getInt("quantity");
+                                int bookId = rs.getInt("book_id"); // 👈 THÊM
+                                String title = rs.getString("title"); // 👈 THÊM
                                 double price = rs.getDouble("price");
 
                                 BigDecimal total = BigDecimal.valueOf(price * qty);
@@ -208,6 +238,18 @@ public class PaymentController {
                                         RoundingMode.HALF_UP);
                                 BigDecimal adminShare = total.multiply(platformRate).setScale(2,
                                         RoundingMode.HALF_UP);
+
+                                // Insert wallet_transaction cho tác giả (có đủ user_id + book_id)
+                                try (PreparedStatement txPs = conn.prepareStatement(insertTx)) {
+                                    txPs.setInt(1, authorId); // user_id
+                                    txPs.setInt(2, bookId); // book_id 👈 THÊM
+                                    txPs.setInt(3, orderId); // order_id
+                                    txPs.setBigDecimal(4, authorShare); // amount
+                                    txPs.setString(5, "Doanh thu sách: " + title + " (x" + qty
+                                            + ") - order #" + orderId);
+                                    txPs.setInt(6, authorId); // WHERE w.user_id = ?
+                                    txPs.executeUpdate();
+                                }
 
                                 // Cộng ví tác giả
                                 try (PreparedStatement ps2 = conn.prepareStatement(upsertWallet)) {
@@ -223,7 +265,8 @@ public class PaymentController {
                                     ps2.executeUpdate();
                                 }
 
-                                System.out.println("💰 Author " + authorId + " +" + authorShare);
+                                System.out.println("💰 Author " + authorId + " +" + authorShare
+                                        + " | Book: " + title);
                                 System.out.println("🏦 Admin +" + adminShare);
                             }
                         }

@@ -11,11 +11,15 @@ import com.example.Entities.Branch;
 import com.example.Entities.Inventory;
 import com.example.Entities.Order;
 import com.example.Entities.OrderItem;
+import com.example.Entities.Wallet;
+import com.example.Entities.WalletTransaction;
 import com.example.Repository.BookRepository;
 import com.example.Repository.BranchRepository;
 import com.example.Repository.InventoryRepository;
 import com.example.Repository.OrderItemRepository;
 import com.example.Repository.OrderRepository;
+import com.example.Repository.WalletRepository;
+import com.example.Repository.WalletTransactionRepository;
 
 @Service
 public class OrderService {
@@ -30,11 +34,15 @@ public class OrderService {
     private BranchRepository branchRepo;
     @Autowired
     private BookRepository bookRepo;
+    @Autowired
+    private WalletRepository walletRepository; // 👈 THÊM
+    @Autowired
+    private WalletTransactionRepository walletTransactionRepository; // 👈 THÊM
 
-    // ── DTO dùng để nhận request từ frontend ────────────────────────────────
+    // ── DTO ─────────────────────────────────────────────────────────────────
     public static class OrderRequest {
         private int userId;
-        private int branchId; // Chi nhánh khách chọn
+        private int branchId;
         private List<ItemRequest> items;
 
         public int getUserId() {
@@ -83,11 +91,9 @@ public class OrderService {
         }
     }
 
-    // ── Kết quả kiểm tra tồn kho trước khi đặt ──────────────────────────────
     public static class StockCheckResult {
         private boolean available;
         private String message;
-        // Các chi nhánh khác có đủ hàng (nếu chi nhánh khách chọn hết)
         private List<Inventory> alternativeBranches = new ArrayList<>();
 
         public boolean isAvailable() {
@@ -115,19 +121,15 @@ public class OrderService {
         }
     }
 
-    // ── 1. Kiểm tra tồn kho trước khi đặt hàng ──────────────────────────────
-    // Frontend gọi API này trước, nếu hết hàng → hiển thị chi nhánh thay thế
+    // ── 1. Kiểm tra tồn kho ─────────────────────────────────────────────────
     public StockCheckResult checkStock(int branchId, int bookId, int quantity) {
         StockCheckResult result = new StockCheckResult();
-
         Inventory inv = inventoryRepo.findByBookIdAndBranchId(bookId, branchId).orElse(null);
-
         if (inv != null && inv.getQuantity() >= quantity) {
             result.setAvailable(true);
             result.setMessage("Còn hàng");
         } else {
             result.setAvailable(false);
-            // Tìm chi nhánh khác có đủ hàng
             List<Inventory> alternatives = inventoryRepo.findByBookId(bookId).stream()
                     .filter(i -> i.getBranchId() != branchId && i.getQuantity() >= quantity)
                     .collect(java.util.stream.Collectors.toList());
@@ -139,26 +141,23 @@ public class OrderService {
         return result;
     }
 
-    // ── 2. Đặt hàng — trừ kho đúng chi nhánh ───────────────────────────────
+    // ── 2. Đặt hàng ─────────────────────────────────────────────────────────
     @Transactional
     public Order placeOrder(OrderRequest req) {
         Branch branch = branchRepo.findById(req.getBranchId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy chi nhánh"));
 
-        // Kiểm tra tồn kho tất cả items trước khi trừ
         for (ItemRequest item : req.getItems()) {
             Inventory inv =
                     inventoryRepo.findByBookIdAndBranchId(item.getBookId(), req.getBranchId())
                             .orElseThrow(() -> new RuntimeException(
                                     "Sách ID " + item.getBookId() + " không có tại chi nhánh này"));
-
             if (inv.getQuantity() < item.getQuantity()) {
                 throw new RuntimeException("Sách ID " + item.getBookId()
                         + " không đủ số lượng. Còn: " + inv.getQuantity());
             }
         }
 
-        // Tạo Order
         Order order = new Order();
         order.setUserId(req.getUserId());
         order.setBranch(branch);
@@ -171,13 +170,11 @@ public class OrderService {
             Book book = bookRepo.findById(itemReq.getBookId()).orElseThrow(
                     () -> new RuntimeException("Không tìm thấy sách ID " + itemReq.getBookId()));
 
-            // Trừ kho
             Inventory inv = inventoryRepo
                     .findByBookIdAndBranchId(itemReq.getBookId(), req.getBranchId()).orElseThrow();
             inv.setQuantity(inv.getQuantity() - itemReq.getQuantity());
             inventoryRepo.save(inv);
 
-            // Tạo OrderItem
             OrderItem oi = new OrderItem();
             oi.setOrder(order);
             oi.setBook(book);
@@ -190,7 +187,6 @@ public class OrderService {
         }
 
         order.setTotalPrice(total);
-        // Chia doanh thu: tác giả 70%, nền tảng 30%
         order.setAuthorIncome(total.multiply(BigDecimal.valueOf(0.7)));
         order.setPlatformIncome(total.multiply(BigDecimal.valueOf(0.3)));
         order.setItems(orderItems);
@@ -198,23 +194,65 @@ public class OrderService {
         return orderRepo.save(order);
     }
 
-    // ── 3. Lấy đơn hàng theo user ────────────────────────────────────────────
+    // ── 3. Xử lý sau thanh toán thành công — tạo wallet transaction ───────── 👈 THÊM
+    @Transactional
+    public void handlePaymentSuccess(int orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        // Tránh xử lý 2 lần nếu đã PAID
+        if ("PAID".equals(order.getStatus()))
+            return;
+
+        order.setStatus("PAID");
+        orderRepo.save(order);
+
+        for (OrderItem item : order.getItems()) {
+            Book book = item.getBook();
+            int authorId = book.getAuthorId();
+
+            // Tìm ví tác giả
+            Wallet wallet = walletRepository.findByUserId(authorId).orElseThrow(
+                    () -> new RuntimeException("Tác giả ID " + authorId + " chưa có ví"));
+
+            // Tính 70% doanh thu
+            BigDecimal income = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+                    .multiply(BigDecimal.valueOf(0.7));
+
+            // Cộng vào ví
+            wallet.setBalance(wallet.getBalance().add(income));
+            walletRepository.save(wallet);
+
+            // Tạo wallet_transaction
+            WalletTransaction wt = new WalletTransaction();
+            wt.setWalletId(wallet.getId());
+            wt.setUserId(authorId);
+            wt.setOrderId(orderId);
+            wt.setBookId(book.getId());
+            wt.setAmount(income);
+            wt.setTransactionType("INCOME");
+            wt.setDescription(
+                    "Doanh thu từ sách: " + book.getTitle() + " (x" + item.getQuantity() + ")");
+            walletTransactionRepository.save(wt);
+        }
+    }
+
+    // ── 4. Lấy đơn hàng theo user ────────────────────────────────────────────
     public List<Order> getOrdersByUser(int userId) {
         return orderRepo.findByUserId(userId);
     }
 
-    // ── 4. Lấy đơn hàng theo chi nhánh (Admin) ──────────────────────────────
+    // ── 5. Lấy đơn hàng theo chi nhánh ──────────────────────────────────────
     public List<Order> getOrdersByBranch(int branchId) {
         return orderRepo.findByBranchId(branchId);
     }
 
-    // ── 5. Cập nhật trạng thái đơn hàng (Admin) ─────────────────────────────
+    // ── 6. Cập nhật trạng thái đơn hàng ─────────────────────────────────────
     @Transactional
     public Order updateStatus(int orderId, String newStatus) {
         Order order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-        // Nếu huỷ đơn → hoàn lại kho
         if ("CANCELLED".equals(newStatus) && !"CANCELLED".equals(order.getStatus())) {
             for (OrderItem item : order.getItems()) {
                 Inventory inv = inventoryRepo
