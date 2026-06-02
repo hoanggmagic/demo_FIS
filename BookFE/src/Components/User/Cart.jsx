@@ -245,7 +245,44 @@ export default function Cart({ reload }) {
                           </td>
                           <td>{item.title}</td>
                           <td>
-                            {Number(item.price || 0).toLocaleString()} VND
+                            {item.discountPercent > 0 ? (
+                              <div>
+                                <span
+                                  style={{
+                                    textDecoration: "line-through",
+                                    color: "#999",
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  {Number(
+                                    item.originalPrice || 0,
+                                  ).toLocaleString()}{" "}
+                                  VND
+                                </span>
+                                <br />
+                                <span
+                                  style={{ color: "#e53935", fontWeight: 700 }}
+                                >
+                                  {Number(item.price || 0).toLocaleString()} VND
+                                </span>
+                                <span
+                                  style={{
+                                    marginLeft: 6,
+                                    background: "#e53935",
+                                    color: "#fff",
+                                    borderRadius: 4,
+                                    padding: "2px 6px",
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  -{item.discountPercent}%
+                                </span>
+                              </div>
+                            ) : (
+                              <span>
+                                {Number(item.price || 0).toLocaleString()} VND
+                              </span>
+                            )}
                           </td>
                           <td>
                             <div className="qty-control">

@@ -17,36 +17,41 @@ public class CartDAO {
         this.conn = conn;
     }
 
-    // Lấy giỏ hàng theo userId — thêm branch_id, branch_name
+    // Lấy giỏ hàng theo userId
     public List<Map<String, Object>> getCartByUserId(int userId) throws SQLException {
         List<Map<String, Object>> cart = new ArrayList<>();
         String sql = """
-                    SELECT c.id,
-                           c.book_id,
-                           b.title,
-                           b.author_id,
-                           c.quantity,
-                           p.price,
-                           (c.quantity * p.price) AS subtotal,
-                           COALESCE(i.quantity, 0) AS stock,
-                           c.branch_id,
-                           br.name AS branch_name
-                    FROM cart c
-
-                    JOIN books b
-                        ON c.book_id = b.id
-
-                    JOIN book_prices p
-                        ON b.id = p.book_id
-
-                    LEFT JOIN branches br
-                        ON br.id = c.branch_id
-
-                    LEFT JOIN inventories i
-                        ON i.book_id = c.book_id
-                       AND i.branch_id = c.branch_id
-
-                    WHERE c.user_id = ?
+                SELECT c.id,
+                       c.book_id,
+                       b.title,
+                       b.author_id,
+                       c.quantity,
+                       p.price,
+                       CASE
+                           WHEN d.discount_percent IS NOT NULL
+                           THEN p.price * (1 - d.discount_percent / 100)
+                           ELSE p.price
+                       END AS final_price,
+                       d.discount_percent,
+                       (c.quantity *
+                           CASE
+                               WHEN d.discount_percent IS NOT NULL
+                               THEN p.price * (1 - d.discount_percent / 100)
+                               ELSE p.price
+                           END
+                       ) AS subtotal,
+                       COALESCE(i.quantity, 0) AS stock,
+                       c.branch_id,
+                       br.name AS branch_name
+                FROM cart c
+                JOIN books b ON c.book_id = b.id
+                JOIN book_prices p ON b.id = p.book_id
+                LEFT JOIN branches br ON br.id = c.branch_id
+                LEFT JOIN inventories i ON i.book_id = c.book_id AND i.branch_id = c.branch_id
+                LEFT JOIN book_discounts d ON d.book_id = c.book_id
+                    AND d.status = 'ACTIVE'
+                    AND NOW() BETWEEN d.start_date AND d.end_date
+                WHERE c.user_id = ?
                 """;
         PreparedStatement stmt = conn.prepareStatement(sql);
         stmt.setInt(1, userId);
@@ -57,7 +62,9 @@ public class CartDAO {
             item.put("bookId", rs.getInt("book_id"));
             item.put("title", rs.getString("title"));
             item.put("quantity", rs.getInt("quantity"));
-            item.put("price", rs.getDouble("price"));
+            item.put("price", rs.getDouble("final_price"));
+            item.put("originalPrice", rs.getDouble("price"));
+            item.put("discountPercent", rs.getDouble("discount_percent"));
             item.put("subtotal", rs.getDouble("subtotal"));
             item.put("stock", rs.getInt("stock"));
             item.put("branchId", rs.getInt("branch_id"));
@@ -67,11 +74,11 @@ public class CartDAO {
         return cart;
     }
 
-    // Thêm sách vào giỏ (nếu đã có cùng book + branch thì tăng quantity)
+    // Thêm sách vào giỏ
     public void addToCart(int userId, int bookId, int quantity, int branchId) throws SQLException {
         String checkSql = """
-                    SELECT id, quantity FROM cart
-                    WHERE user_id = ? AND book_id = ? AND branch_id = ?
+                SELECT id, quantity FROM cart
+                WHERE user_id = ? AND book_id = ? AND branch_id = ?
                 """;
         PreparedStatement check = conn.prepareStatement(checkSql);
         check.setInt(1, userId);
@@ -80,7 +87,6 @@ public class CartDAO {
         ResultSet rs = check.executeQuery();
 
         if (rs.next()) {
-            // Đã có cùng sách + chi nhánh → tăng quantity
             int newQty = rs.getInt("quantity") + quantity;
             PreparedStatement update =
                     conn.prepareStatement("UPDATE cart SET quantity = ? WHERE id = ?");
@@ -88,7 +94,6 @@ public class CartDAO {
             update.setInt(2, rs.getInt("id"));
             update.executeUpdate();
         } else {
-            // Chưa có → thêm mới
             PreparedStatement insert = conn.prepareStatement(
                     "INSERT INTO cart (user_id, book_id, quantity, branch_id) VALUES (?, ?, ?, ?)");
             insert.setInt(1, userId);

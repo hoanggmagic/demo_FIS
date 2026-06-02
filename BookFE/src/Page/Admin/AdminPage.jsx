@@ -8,6 +8,7 @@ import TransferManagement from "../../Components/Admin/TransferManagement";
 import BranchManagement from "../../Components/Admin/BranchManagement";
 import RevenueDashboard from "../../Components/Admin/RevenueDashboard";
 import OrderManagement from "../../Components/Admin/OrderManagement";
+import DiscountManagement from "../../Components/Admin/DiscountManagement";
 // ── Dashboard overview (route "/") ───────────────────────────────────────────
 
 function DashboardHome({ user }) {
@@ -240,6 +241,13 @@ export function AdminOrdersPage() {
   return (
     <PageShell title="Quản lý đơn hàng" icon="bi bi-cart3">
       <OrderManagement />
+    </PageShell>
+  );
+}
+export function AdminDiscountsPage() {
+  return (
+    <PageShell title="Quản lý giảm giá" icon="bi bi-tag">
+      <DiscountManagement />
     </PageShell>
   );
 }

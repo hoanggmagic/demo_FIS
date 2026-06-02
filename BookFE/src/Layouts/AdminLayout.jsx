@@ -10,6 +10,7 @@ const NAV_ITEMS = [
     header: "Quản lý",
     items: [
       { label: "Sách", icon: "bi bi-book", to: "/admin/books" },
+      { label: "Giảm giá", icon: "bi bi-tag", to: "/admin/discounts" },
       { label: "Danh mục", icon: "bi bi-tags", to: "/admin/categories" },
       { label: "Tác giả", icon: "bi bi-person-badge", to: "/admin/authors" },
       { label: "Người dùng", icon: "bi bi-people", to: "/admin/users" },
