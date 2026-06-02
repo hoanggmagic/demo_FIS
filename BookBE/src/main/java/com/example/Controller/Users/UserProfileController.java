@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -15,9 +16,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.DAO.UserDAO;
 import com.example.Entities.User;
+import com.example.Service.FileStorageService;
 import com.example.Service.MailService;
 import com.example.Service.UserService;
 import com.example.Util.AuthContext;
@@ -42,6 +46,12 @@ public class UserProfileController {
     @Autowired
     private MailService mailService;
     private Map<String, OtpData> otpStorage = new HashMap<>();
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    @Value("${app.upload.user-avatar}")
+    private String uploadDir;
 
     // =========================
     // GET PROFILE
@@ -97,6 +107,76 @@ public class UserProfileController {
             }
 
             return ResponseEntity.ok(Map.of("message", "Cập nhật thành công"));
+
+        } catch (Exception e) {
+
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
+
+    @PostMapping("/avatar")
+    public ResponseEntity<?> updateAvatar(@RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+
+        try (Connection conn = dataSource.getConnection()) {
+
+            AuthContext ctx = RequestAuth.require(request);
+
+            UserDAO dao = new UserDAO(conn);
+
+            User user = dao.getUserById(ctx.getUserId());
+
+            if (user == null) {
+                return ResponseEntity.badRequest().body("User không tồn tại");
+            }
+
+            // Validate file rỗng
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("File trống");
+            }
+
+            // Validate size
+            long maxSize = 2 * 1024 * 1024;
+
+            if (file.getSize() > maxSize) {
+                return ResponseEntity.badRequest().body("Ảnh vượt quá 2MB");
+            }
+
+            // Validate type
+            String contentType = file.getContentType();
+
+            if (contentType == null
+                    || (!contentType.equals("image/jpeg") && !contentType.equals("image/png"))) {
+
+                return ResponseEntity.badRequest().body("Chỉ hỗ trợ JPG hoặc PNG");
+            }
+
+            // Xóa avatar cũ
+            if (user.getAvatarUrl() != null && !user.getAvatarUrl().isEmpty()) {
+
+                fileStorageService.deleteFile(user.getAvatarUrl(), uploadDir);
+            }
+
+            // Upload ảnh mới
+            String fileName = fileStorageService.storeFile(file, uploadDir);
+
+            // Update DB
+            String sql = """
+                    UPDATE users
+                    SET avatar_url = ?
+                    WHERE id = ?
+                    """;
+
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, fileName);
+            ps.setInt(2, ctx.getUserId());
+
+            ps.executeUpdate();
+
+            return ResponseEntity
+                    .ok(Map.of("message", "Upload avatar thành công", "avatarUrl", fileName));
 
         } catch (Exception e) {
 

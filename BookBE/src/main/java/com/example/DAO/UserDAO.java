@@ -19,11 +19,13 @@ public class UserDAO {
     }
 
     public User findByUsername(String username) throws SQLException {
-        String query =
-                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
-                        + "FROM users WHERE username = ?";
+        String query = "SELECT id, username, email, password, full_name, "
+                + "nationality, biography, role, is_active, avatar_url "
+                + "FROM users WHERE username = ?";
+
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapUser(rs);
@@ -34,17 +36,21 @@ public class UserDAO {
     }
 
     public User getUserById(int id) throws SQLException {
+
         String query =
-                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active "
+                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active, avatar_url "
                         + "FROM users WHERE id = ?";
+
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, id);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapUser(rs);
                 }
             }
         }
+
         return null;
     }
 
@@ -212,21 +218,31 @@ public class UserDAO {
 
     private void updatePasswordIfNeeded(String username, String rawPassword,
             PasswordUtil passwordUtil) throws SQLException {
+
         User user = findByUsername(username);
+
         if (user == null) {
             return;
         }
+
         String stored = user.getPassword();
+
         if (stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$"))) {
+
             if (passwordUtil.matches(rawPassword, stored)) {
                 return;
             }
         }
+
         String hashed = passwordUtil.hash(rawPassword);
+
         String query = "UPDATE users SET password = ? WHERE username = ?";
+
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+
             pstmt.setString(1, hashed);
             pstmt.setString(2, username);
+
             pstmt.executeUpdate();
         }
     }
@@ -251,6 +267,7 @@ public class UserDAO {
         user.setBiography(rs.getString("biography"));
         user.setRole(rs.getString("role"));
         user.setActive(rs.getBoolean("is_active"));
+        user.setAvatarUrl(rs.getString("avatar_url"));
         return user;
     }
 
@@ -294,5 +311,5 @@ public class UserDAO {
             ps.executeUpdate();
         }
     }
-    
+
 }

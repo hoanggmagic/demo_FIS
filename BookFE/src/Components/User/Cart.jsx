@@ -6,7 +6,6 @@ import {
   removeCartItem,
   clearCart,
 } from "../../Api/User/CartApi";
-import "../../Style/User/Cart.css";
 import { createOrder } from "../../Api/User/OrderApi";
 
 export default function Cart({ reload }) {
@@ -56,6 +55,7 @@ export default function Cart({ reload }) {
   };
 
   const selectedItems = items.filter((i) => selected.has(i.cartItemId));
+  const total = selectedItems.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
   const handleCheckout = async () => {
     if (selectedItems.length === 0) {
@@ -150,16 +150,22 @@ export default function Cart({ reload }) {
     }
   };
 
-  const total = selectedItems.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
-
   if (loading && items.length === 0) {
     return (
-      <div className="cart-container">
-        <p>⏳ Đang tải giỏ hàng...</p>
+      <div
+        style={{
+          textAlign: "center",
+          padding: "50px",
+          fontSize: "16px",
+          color: "#64748b",
+        }}
+      >
+        ⏳ Đang tải giỏ hàng của bạn...
       </div>
     );
   }
 
+  // Nhóm theo chi nhánh
   const byBranch = items.reduce((acc, item) => {
     const key = item.branchId || 0;
     if (!acc[key])
@@ -172,172 +178,455 @@ export default function Cart({ reload }) {
   }, {});
 
   return (
-    <div className="cart-container">
-      <h3>🛒 Giỏ hàng</h3>
+    <div
+      style={{
+        maxWidth: 1200,
+        margin: "0 auto",
+        padding: "20px 15px",
+        fontFamily: "Segoe UI, sans-serif",
+        backgroundColor: "#f8fafc",
+      }}
+    >
+      <h3
+        style={{
+          fontWeight: 700,
+          marginBottom: 24,
+          color: "#1e293b",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        🛒 Giỏ hàng{" "}
+        <span style={{ fontSize: 14, fontWeight: 400, color: "#64748b" }}>
+          ({items.length} sản phẩm)
+        </span>
+      </h3>
 
       {items.length === 0 ? (
-        <p>Giỏ hàng trống.</p>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+          }}
+        >
+          <p style={{ color: "#64748b", fontSize: 16, marginBottom: 16 }}>
+            Giỏ hàng của bạn đang trống.
+          </p>
+          <button
+            onClick={() => navigate("/")}
+            style={{
+              background: "#3b82f6",
+              color: "#fff",
+              border: "none",
+              padding: "10px 20px",
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Tiếp tục mua sắm
+          </button>
+        </div>
       ) : (
-        <>
-          {Object.entries(byBranch).map(([branchId, group]) => {
-            const allChecked = group.items.every((i) =>
-              selected.has(i.cartItemId),
-            );
-            return (
-              <div key={branchId} style={{ marginBottom: 24 }}>
+        // Bố cục Layout 2 cột chính
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 360px",
+            gap: 24,
+            alignItems: "start",
+          }}
+        >
+          {/* CỘT TRÁI: DANH SÁCH CHI NHÁNH VÀ SẢN PHẨM */}
+          <div>
+            {Object.entries(byBranch).map(([branchId, group]) => {
+              const allChecked = group.items.every((i) =>
+                selected.has(i.cartItemId),
+              );
+              return (
                 <div
+                  key={branchId}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 10,
-                    padding: "6px 12px",
-                    background: "#eff6ff",
-                    borderRadius: 8,
-                    border: "1px solid #bfdbfe",
+                    background: "#fff",
+                    borderRadius: 16,
+                    boxShadow:
+                      "0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.006)",
+                    border: "1px solid #e2e8f0",
+                    padding: 20,
+                    marginBottom: 20,
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={allChecked}
-                    onChange={() => toggleBranch(group.items)}
-                    style={{ width: 16, height: 16, cursor: "pointer" }}
-                  />
-                  <i className="bi bi-shop" style={{ color: "#2563eb" }} />
-                  <span
-                    style={{ fontWeight: 600, fontSize: 14, color: "#2563eb" }}
+                  {/* Header Chi nhánh */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      paddingBottom: 14,
+                      borderBottom: "1px solid #f1f5f9",
+                      marginBottom: 16,
+                    }}
                   >
-                    {group.branchName}
-                  </span>
-                </div>
+                    <input
+                      type="checkbox"
+                      checked={allChecked}
+                      onChange={() => toggleBranch(group.items)}
+                      style={{
+                        width: 18,
+                        height: 18,
+                        cursor: "pointer",
+                        accentColor: "#2563eb",
+                      }}
+                    />
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontWeight: 700,
+                        fontSize: 14,
+                        color: "#1e3a8a",
+                        background: "#eff6ff",
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                      }}
+                    >
+                      🏪 {group.branchName}
+                    </span>
+                  </div>
 
-                <table className="cart-table">
-                  <thead>
-                    <tr>
-                      <th>✓</th>
-                      <th>Sách</th>
-                      <th>Giá</th>
-                      <th>Số lượng</th>
-                      <th>Thành tiền</th>
-                      <th>Xóa</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                  {/* Danh sách các cuốn sách trong chi nhánh này */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 16,
+                    }}
+                  >
                     {group.items.map((item) => {
                       const currentQty = item.quantity ?? 1;
                       const isChecked = selected.has(item.cartItemId);
                       return (
-                        <tr
+                        <div
                           key={item.cartItemId}
-                          style={{ opacity: isChecked ? 1 : 0.45 }}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "auto 1fr auto",
+                            gap: 16,
+                            alignItems: "center",
+                            padding: "12px 0",
+                            borderBottom: "1px solid #f8fafc",
+                            transition: "all 0.2s",
+                            opacity: isChecked ? 1 : 0.6,
+                          }}
                         >
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleSelect(item.cartItemId)}
+                          {/* Checkbox chọn sản phẩm */}
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelect(item.cartItemId)}
+                            style={{
+                              width: 18,
+                              height: 18,
+                              cursor: "pointer",
+                              accentColor: "#2563eb",
+                            }}
+                          />
+
+                          {/* Thông tin tên sách + Giá bán */}
+                          <div>
+                            <h5
                               style={{
-                                width: 16,
-                                height: 16,
-                                cursor: "pointer",
+                                margin: "0 0 6px 0",
+                                fontSize: 15,
+                                fontWeight: 600,
+                                color: "#1e293b",
                               }}
-                            />
-                          </td>
-                          <td>{item.title}</td>
-                          <td>
-                            {item.discountPercent > 0 ? (
-                              <div>
-                                <span
-                                  style={{
-                                    textDecoration: "line-through",
-                                    color: "#999",
-                                    fontSize: 13,
-                                  }}
-                                >
-                                  {Number(
-                                    item.originalPrice || 0,
-                                  ).toLocaleString()}{" "}
-                                  VND
-                                </span>
-                                <br />
-                                <span
-                                  style={{ color: "#e53935", fontWeight: 700 }}
-                                >
-                                  {Number(item.price || 0).toLocaleString()} VND
-                                </span>
-                                <span
-                                  style={{
-                                    marginLeft: 6,
-                                    background: "#e53935",
-                                    color: "#fff",
-                                    borderRadius: 4,
-                                    padding: "2px 6px",
-                                    fontSize: 12,
-                                  }}
-                                >
-                                  -{item.discountPercent}%
-                                </span>
-                              </div>
-                            ) : (
-                              <span>
+                            >
+                              {item.title}
+                            </h5>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: "#ef4444",
+                                  fontWeight: 700,
+                                  fontSize: 14,
+                                }}
+                              >
                                 {Number(item.price || 0).toLocaleString()} VND
                               </span>
-                            )}
-                          </td>
-                          <td>
-                            <div className="qty-control">
+                              {item.discountPercent > 0 && (
+                                <>
+                                  <span
+                                    style={{
+                                      textDecoration: "line-through",
+                                      color: "#94a3b8",
+                                      fontSize: 12,
+                                    }}
+                                  >
+                                    {Number(
+                                      item.originalPrice || 0,
+                                    ).toLocaleString()}{" "}
+                                    VND
+                                  </span>
+                                  <span
+                                    style={{
+                                      background: "#fef2f2",
+                                      color: "#ef4444",
+                                      borderRadius: 4,
+                                      padding: "1px 6px",
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    -{item.discountPercent}%
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Bộ điều khiển số lượng, thành tiền và nút xóa */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 24,
+                            }}
+                          >
+                            {/* Bộ tăng giảm số lượng */}
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                border: "1px solid #cbd5e1",
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                background: "#fff",
+                              }}
+                            >
                               <button
                                 onClick={() =>
                                   handleQty(item.cartItemId, currentQty - 1)
                                 }
                                 disabled={currentQty <= 1}
+                                style={{
+                                  border: "none",
+                                  background: "#f8fafc",
+                                  width: 32,
+                                  height: 32,
+                                  cursor: "pointer",
+                                  fontWeight: "bold",
+                                  color: "#64748b",
+                                }}
                               >
                                 −
                               </button>
-                              <span>{currentQty}</span>
+                              <span
+                                style={{
+                                  width: 40,
+                                  textAlign: "center",
+                                  fontSize: 14,
+                                  fontWeight: 600,
+                                  color: "#334155",
+                                }}
+                              >
+                                {currentQty}
+                              </span>
                               <button
                                 onClick={() =>
                                   handleQty(item.cartItemId, currentQty + 1)
                                 }
                                 disabled={currentQty >= item.stock}
+                                style={{
+                                  border: "none",
+                                  background: "#f8fafc",
+                                  width: 32,
+                                  height: 32,
+                                  cursor: "pointer",
+                                  fontWeight: "bold",
+                                  color: "#64748b",
+                                }}
                               >
                                 +
                               </button>
                             </div>
-                          </td>
-                          <td>
-                            {Number(item.subtotal || 0).toLocaleString()} VND
-                          </td>
-                          <td>
+
+                            {/* Thành tiền riêng của dòng */}
+                            <div style={{ textAlign: "right", minWidth: 110 }}>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#94a3b8",
+                                  marginBottom: 2,
+                                }}
+                              >
+                                Thành tiền
+                              </div>
+                              <span
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: 14,
+                                  color: "#334155",
+                                }}
+                              >
+                                {Number(item.subtotal || 0).toLocaleString()} đ
+                              </span>
+                            </div>
+
+                            {/* Nút xóa item */}
                             <button
-                              className="btn-remove"
                               onClick={() => handleRemove(item.cartItemId)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#94a3b8",
+                                cursor: "pointer",
+                                fontSize: 13,
+                                padding: 4,
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.target.style.color = "#ef4444")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.target.style.color = "#94a3b8")
+                              }
                             >
-                              Xóa
+                              🗑️
                             </button>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })}
+                  </div>
+                </div>
+              );
+            })}
 
-          <div className="cart-footer">
-            <button className="btn-clear" onClick={handleClear}>
-              🗑️ Xóa tất cả
-            </button>
-            <span className="cart-total">
-              Tổng ({selectedItems.length} sản phẩm):{" "}
-              {Number(total).toLocaleString()} VND
-            </span>
-            <button type="button" onClick={handleCheckout}>
-              💳 Thanh toán ({selectedItems.length})
+            {/* Nút dọn dẹp giỏ ở dưới cùng cột trái */}
+            <button
+              onClick={handleClear}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#64748b",
+                cursor: "pointer",
+                fontSize: 13,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "8px 4px",
+              }}
+            >
+              🗑️ Xóa toàn bộ giỏ hàng
             </button>
           </div>
-        </>
+
+          {/* CỘT PHẢI: THÔNG TIN THANH TOÁN (STIKY SUMMARY BINDING) */}
+          <div
+            style={{
+              position: "sticky",
+              top: 20,
+              background: "#fff",
+              borderRadius: 16,
+              border: "1px solid #e2e8f0",
+              padding: 24,
+              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)",
+            }}
+          >
+            <h4
+              style={{
+                margin: "0 0 16px 0",
+                fontSize: 16,
+                fontWeight: 700,
+                color: "#1e293b",
+                borderBottom: "1px solid #f1f5f9",
+                paddingBottom: 12,
+              }}
+            >
+              Tóm tắt đơn hàng
+            </h4>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 12,
+                fontSize: 14,
+                color: "#64748b",
+              }}
+            >
+              <span>Sản phẩm đã chọn:</span>
+              <span style={{ fontWeight: 600, color: "#1e293b" }}>
+                {selectedItems.length} mục
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                marginBottom: 24,
+                paddingTop: 12,
+                borderTop: "1px dashed #e2e8f0",
+              }}
+            >
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>
+                Tổng tiền thanh toán:
+              </span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#ef4444" }}>
+                {Number(total).toLocaleString()} VND
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCheckout}
+              style={{
+                width: "100%",
+                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                color: "#fff",
+                border: "none",
+                padding: "14px",
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(37,99,235,0.2)",
+                transition: "opacity 0.2s",
+              }}
+              onMouseEnter={(e) => (e.target.style.opacity = 0.9)}
+              onMouseLeave={(e) => (e.target.style.opacity = 1)}
+            >
+              Mua hàng ({selectedItems.length})
+            </button>
+
+            <p
+              style={{
+                textAlign: "center",
+                color: "#94a3b8",
+                fontSize: 11,
+                marginTop: 12,
+                marginBox: 0,
+              }}
+            >
+              💡 Lưu ý: Hệ thống chỉ hỗ trợ thanh toán sản phẩm của cùng 1 chi
+              nhánh trong một đơn hàng.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

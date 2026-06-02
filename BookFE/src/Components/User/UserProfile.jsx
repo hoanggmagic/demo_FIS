@@ -15,9 +15,10 @@ function UserProfile() {
 
   const [profile, setProfile] = useState({
     id: "",
-    name: "",
+    fullName: "",
+    email: "",
     nationality: "",
-    avatar: "",
+    avatarUrl: "",
   });
 
   const [otpSent, setOtpSent] = useState(false);
@@ -26,6 +27,7 @@ function UserProfile() {
   const [loading, setLoading] = useState(true);
   const [profileMsg, setProfileMsg] = useState({ text: "", ok: true });
   const [passMsg, setPassMsg] = useState({ text: "", ok: true });
+  const [previewAvatar, setPreviewAvatar] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -43,7 +45,6 @@ function UserProfile() {
 
     loadProfile();
   }, []);
-
   const loadProfile = async () => {
     try {
       const res = await axios.get("http://localhost:8080/api/user/profile", {
@@ -52,8 +53,26 @@ function UserProfile() {
         },
       });
 
+      console.log("FULL DATA:", res.data);
+
       setProfile(res.data);
+      console.log("avatarUrl:", profile.avatarUrl);
+      console.log(
+        "full url:",
+        `http://localhost:8080/uploads/users/${profile.avatarUrl}`,
+      );
+
+      if (res.data.avatarUrl) {
+        console.log(
+          "IMAGE URL:",
+          `http://localhost:8080/uploads/users/${res.data.avatarUrl}`,
+        );
+      } else {
+        console.log("KHÔNG CÓ AVATAR URL");
+      }
     } catch (error) {
+      console.log(error);
+
       if (error.response?.status === 401) logout();
     } finally {
       setLoading(false);
@@ -124,6 +143,44 @@ function UserProfile() {
     }
   };
 
+  const handleAvatarUpload = async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setPreviewAvatar(URL.createObjectURL(file));
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post(
+        "http://localhost:8080/api/user/profile/avatar",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      // KHI UPLOAD THÀNH CÔNG:
+      // Hãy chắc chắn res.data trả về đúng chuỗi tên file mới (chuỗi UUID kèm .jpg)
+      console.log("Dữ liệu trả về sau khi up avatar:", res.data);
+
+      setProfile((prev) => ({
+        ...prev,
+        avatarUrl: res.data.avatarUrl, // Đảm bảo ăn chặt vào biến avatarUrl của Object res.data
+      }));
+      setPreviewAvatar(
+        `http://localhost:8080/uploads/users/${res.data.avatarUrl}`,
+      );
+
+      setProfileMsg({ text: "✅ Cập nhật avatar thành công!", ok: true });
+    } catch (err) {
+      setProfileMsg({ text: "❌ Upload avatar thất bại!", ok: false });
+    }
+  };
   // =========================
   // CHANGE PASSWORD + OTP
   // =========================
@@ -226,6 +283,7 @@ function UserProfile() {
             boxShadow: "0 20px 50px rgba(79,70,229,.12)",
           }}
         >
+          {/* Khối tròn trang trí */}
           <div
             style={{
               position: "absolute",
@@ -238,6 +296,7 @@ function UserProfile() {
             }}
           />
 
+          {/* Khối hiển thị Avatar + Tên (Bây giờ đã nằm TRONG khối lớn) */}
           <div
             style={{
               display: "flex",
@@ -247,22 +306,41 @@ function UserProfile() {
               zIndex: 2,
             }}
           >
-            <div
-              style={{
-                width: 110,
-                height: 110,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontSize: 42,
-                fontWeight: 700,
-                boxShadow: "0 10px 30px rgba(99,102,241,.35)",
-              }}
-            >
-              {profile.fullName?.[0]?.toUpperCase() || "U"}
+            <div style={{ position: "relative" }}>
+              <img
+                src={
+                  previewAvatar
+                    ? previewAvatar
+                    : profile.avatarUrl
+                      ? `http://localhost:8080/uploads/users/${profile.avatarUrl}`
+                      : "/default-avatar.png"
+                }
+                alt="avatar"
+                style={{
+                  width: 110,
+                  height: 110,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "4px solid #fff",
+                  boxShadow: "0 10px 30px rgba(99,102,241,.35)",
+                }}
+              />
+
+              <label
+                style={
+                  {
+                    /* style chỉnh sửa ảnh */
+                  }
+                }
+              >
+                ✏️
+                <input
+                  type="file"
+                  hidden
+                  accept="image/png,image/jpeg"
+                  onChange={handleAvatarUpload}
+                />
+              </label>
             </div>
 
             <div>
@@ -276,37 +354,12 @@ function UserProfile() {
               >
                 {profile.fullName || "Người dùng"}
               </h1>
-
-              <p
-                style={{
-                  marginTop: 10,
-                  color: "#6b7280",
-                  fontSize: 15,
-                }}
-              >
+              <p style={{ marginTop: 10, color: "#6b7280", fontSize: 15 }}>
                 Quản lý thông tin tài khoản & bảo mật cá nhân
               </p>
-
-              <div
-                style={{
-                  marginTop: 16,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 16px",
-                  borderRadius: 999,
-                  background: "#eef2ff",
-                  color: "#4f46e5",
-                  fontWeight: 700,
-                  fontSize: 13,
-                }}
-              >
-                👤 USER ACCOUNT
-              </div>
             </div>
           </div>
-        </div>
-
+        </div>{" "}
         {/* CONTENT */}
         <div
           style={{

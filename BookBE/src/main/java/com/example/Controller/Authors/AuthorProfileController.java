@@ -1,5 +1,6 @@
 package com.example.Controller.Authors;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.DAO.UserDAO;
 import com.example.Entities.User;
 import com.example.Service.MailService;
@@ -52,11 +55,12 @@ public class AuthorProfileController {
 
             AuthContext ctx = RequestAuth.require(request);
 
-            String sql = """
-                    SELECT id, username, email, full_name, nationality, biography, role
-                    FROM users
-                    WHERE id = ? AND role = 'AUTHOR'
-                    """;
+            String sql =
+                    """
+                                SELECT id, username, email, full_name, nationality, biography, role, avatar_url
+                                FROM users
+                                WHERE id = ? AND role = 'AUTHOR'
+                            """;
 
             PreparedStatement ps = conn.prepareStatement(sql);
             ps.setInt(1, ctx.getUserId());
@@ -75,6 +79,7 @@ public class AuthorProfileController {
             user.setNationality(rs.getString("nationality"));
             user.setBiography(rs.getString("biography"));
             user.setRole(rs.getString("role"));
+            user.setAvatarUrl(rs.getString("avatar_url"));
 
             return ResponseEntity.ok(user);
 
@@ -94,11 +99,11 @@ public class AuthorProfileController {
             AuthContext ctx = RequestAuth.require(request);
 
             String sql = """
-                    UPDATE users
-                    SET full_name = ?,
-                        nationality = ?,
-                        biography = ?
-                    WHERE id = ? AND role = 'AUTHOR'
+                        UPDATE users
+                        SET full_name = ?,
+                            nationality = ?,
+                            biography = ?
+                        WHERE id = ? AND role = 'AUTHOR'
                     """;
 
             PreparedStatement ps = conn.prepareStatement(sql);
@@ -118,6 +123,49 @@ public class AuthorProfileController {
 
         } catch (Exception e) {
             e.printStackTrace();
+            return ResponseEntity.status(500).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file,
+            HttpServletRequest request) {
+
+        try (Connection conn = dataSource.getConnection()) {
+
+            AuthContext ctx = RequestAuth.require(request);
+
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body("File rỗng");
+            }
+
+            String fileName = System.currentTimeMillis() + "_"
+                    + file.getOriginalFilename().replaceAll("\\s+", "_");
+
+            String uploadDir = System.getProperty("user.dir") + "/uploads/users/";
+
+            File dir = new File(uploadDir);
+            if (!dir.exists())
+                dir.mkdirs();
+
+            File dest = new File(uploadDir + fileName);
+
+            file.transferTo(dest);
+
+            String sql = "UPDATE users SET avatar_url = ? WHERE id = ?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+
+            ps.setString(1, fileName);
+            ps.setInt(2, ctx.getUserId());
+            ps.executeUpdate();
+
+            Map<String, String> res = new HashMap<>();
+            res.put("avatarUrl", fileName);
+
+            return ResponseEntity.ok(res);
+
+        } catch (Exception e) {
+            e.printStackTrace(); // 👈 cực quan trọng để thấy lỗi thật
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }

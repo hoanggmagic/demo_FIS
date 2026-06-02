@@ -7,7 +7,9 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan
+
 public class App {
+
     public static void main(String[] args) {
         // Kích hoạt máy chủ nhúng Tomcat để mở cổng localhost
         SpringApplication.run(App.class, args);
