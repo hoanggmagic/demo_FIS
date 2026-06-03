@@ -1,6 +1,7 @@
 package com.example.Entities;
 
 import java.sql.Timestamp;
+import java.util.List;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -23,6 +24,7 @@ public class Book {
 
     private String description;
 
+    private List<String> image;
     @Column(name = "published_year")
     private int publishedYear;
     @Transient
@@ -52,6 +54,8 @@ public class Book {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @Transient
+    private List<String> images;
 
     public Book() {}
 
@@ -157,5 +161,13 @@ public class Book {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images;
     }
 }

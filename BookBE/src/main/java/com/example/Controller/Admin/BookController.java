@@ -1,6 +1,7 @@
 package com.example.Controller.Admin;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.List;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,9 +12,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.Entities.Book;
 import com.example.Entities.Category;
 import com.example.Service.BookService;
@@ -22,6 +24,7 @@ import com.example.Util.PasswordUtil;
 import com.example.Util.RequestAuth;
 import com.example.dto.BookDTO;
 import jakarta.servlet.http.HttpServletRequest;
+
 
 @RestController
 @RequestMapping("/api/admin/books")
@@ -71,62 +74,108 @@ public class BookController {
     }
 
     @PostMapping
-    public ResponseEntity<String> createBook(@RequestBody BookDTO dto, HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+    public ResponseEntity<String> createBook(@RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("price") Double price,
+            @RequestParam("publishedYear") Integer publishedYear,
+            @RequestParam(value = "status", defaultValue = "ACTIVE") String status,
+            @RequestParam(value = "authorId", required = false) Integer authorId,
+            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            HttpServletRequest request) {
 
+        List<byte[]> imageBytes = new ArrayList<>();
+        List<String> imageNames = new ArrayList<>();
+        try {
+            if (images != null) {
+                for (MultipartFile file : images) {
+                    if (file != null && !file.isEmpty()) {
+                        imageBytes.add(file.getBytes());
+                        imageNames.add(file.getOriginalFilename());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Lỗi đọc file ảnh: " + e.getMessage());
+        }
+
+        try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdminOrAuthor(ctx);
-
             BookService service = new BookService(conn, passwordUtil);
 
             Book book = new Book();
-            book.setTitle(dto.getTitle());
-            book.setDescription(dto.getDescription());
-            book.setPublishedYear(dto.getPublishedYear());
-            book.setAuthorId(dto.getAuthorId());
-            book.setStatus(dto.getStatus());
+            book.setTitle(title);
+            book.setDescription(description);
+            book.setPublishedYear(publishedYear);
+            book.setAuthorId(authorId != null ? authorId : 0);
+            book.setStatus(status);
 
-            // ⭐ FIX CATEGORY
-            if (dto.getCategoryId() != null) {
+            if (categoryId != null) {
                 Category c = new Category();
-                c.setId(dto.getCategoryId());
+                c.setId(categoryId);
                 book.setCategory(c);
             }
 
-            service.addBook(book, dto.getPrice(), ctx);
-
+            service.addBookWithImages(book, price, imageBytes, imageNames, ctx);
             return ResponseEntity.ok("Thêm sách thành công!");
 
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateBook(@PathVariable int id, @RequestBody BookDTO dto,
+    public ResponseEntity<String> updateBook(@PathVariable int id,
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("price") Double price,
+            @RequestParam("publishedYear") Integer publishedYear,
+            @RequestParam(value = "status", defaultValue = "ACTIVE") String status,
+            @RequestParam(value = "authorId", required = false) Integer authorId,
+            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+            @RequestParam(value = "images", required = false) MultipartFile[] images,
             HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
 
+        List<byte[]> imageBytes = new ArrayList<>();
+        List<String> imageNames = new ArrayList<>();
+        try {
+            if (images != null) {
+                for (MultipartFile file : images) {
+                    if (file != null && !file.isEmpty()) {
+                        imageBytes.add(file.getBytes());
+                        imageNames.add(file.getOriginalFilename());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Lỗi đọc file ảnh: " + e.getMessage());
+        }
+
+        try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdminOrAuthor(ctx);
-
             BookService service = new BookService(conn, passwordUtil);
 
             Book book = new Book();
-            book.setTitle(dto.getTitle());
-            book.setDescription(dto.getDescription());
-            book.setPublishedYear(dto.getPublishedYear());
-            book.setAuthorId(dto.getAuthorId());
-            book.setStatus(dto.getStatus());
+            book.setTitle(title);
+            book.setDescription(description);
+            book.setPublishedYear(publishedYear);
+            book.setAuthorId(authorId != null ? authorId : 0);
+            book.setStatus(status);
 
-            // ⭐ FIX CATEGORY
-            if (dto.getCategoryId() != null) {
+            if (categoryId != null) {
                 Category c = new Category();
-                c.setId(dto.getCategoryId());
+                c.setId(categoryId);
                 book.setCategory(c);
             }
 
-            service.updateBook(id, book, dto.getPrice(), ctx);
+            service.updateBook(id, book, price, ctx);
+
+            if (!imageBytes.isEmpty()) {
+                service.updateBookImages(id, imageBytes, imageNames);
+            }
 
             return ResponseEntity.ok("Cập nhật sách thành công!");
 

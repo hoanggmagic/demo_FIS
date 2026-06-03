@@ -1,6 +1,7 @@
 package com.example.dto;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 public class BookDTO {
 
@@ -32,6 +33,10 @@ public class BookDTO {
     // ======================
     private Timestamp createdAt;
     private Timestamp updatedAt;
+
+    // ======================
+    // Images (not in DB, chỉ để truyền data giữa FE-BE)
+    private List<String> images;
 
     // ======================
     // CONSTRUCTOR
@@ -162,5 +167,13 @@ public class BookDTO {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
+        this.images = images;
     }
 }

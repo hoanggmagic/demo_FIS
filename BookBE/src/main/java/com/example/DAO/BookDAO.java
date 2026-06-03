@@ -197,8 +197,9 @@ public class BookDAO {
         Book book = new Book(rs.getInt("id"), rs.getString("title"), rs.getInt("published_year"),
                 rs.getInt("author_id"));
         book.setDescription(rs.getString("description"));
-        book.setQuantity(rs.getInt("quantity")); // ← lấy từ inventories subquery
+        book.setQuantity(rs.getInt("quantity"));
         book.setStatus(rs.getString("status"));
+
         if (withJoins) {
             book.setAuthorName(rs.getString("author_name"));
             book.setPrice(rs.getDouble("price"));
@@ -209,7 +210,12 @@ public class BookDAO {
                 category.setName(rs.getString("category_name"));
                 book.setCategory(category);
             }
+
+            // THÊM DÒNG NÀY
+            BookImageDAO imageDAO = new BookImageDAO(connection);
+            book.setImages(imageDAO.getImagesByBookId(book.getId()));
         }
+
         return book;
     }
 }

@@ -1,11 +1,17 @@
 package com.example.Service;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.web.multipart.MultipartFile;
 import com.example.DAO.BookDAO;
+import com.example.DAO.BookImageDAO;
 import com.example.DAO.BookPriceDAO;
 import com.example.DAO.UserDAO;
 import com.example.Entities.Author;
@@ -22,9 +28,9 @@ public class BookService {
     private final BookDAO bookDAO;
     private final BookPriceDAO priceDAO;
     private final PasswordUtil passwordUtil;
+    private final Connection connection;
 
     private BookDTO toDTO(Book book) {
-
         BookDTO dto = new BookDTO();
 
         dto.setId(book.getId());
@@ -33,14 +39,17 @@ public class BookService {
         dto.setPublishedYear(book.getPublishedYear());
         dto.setPrice(book.getPrice());
         dto.setStatus(book.getStatus());
-
         dto.setAuthorId(book.getAuthorId());
         dto.setAuthorName(book.getAuthorName());
 
-        // CATEGORY
         if (book.getCategory() != null) {
             dto.setCategoryId(book.getCategory().getId());
             dto.setCategoryName(book.getCategory().getName());
+        }
+
+        // THÊM ĐOẠN NÀY
+        if (book.getImages() != null) {
+            dto.setImages(book.getImages());
         }
 
         return dto;
@@ -52,6 +61,7 @@ public class BookService {
         this.bookDAO = new BookDAO(connection);
         this.priceDAO = new BookPriceDAO(connection);
         this.passwordUtil = passwordUtil;
+        this.connection = connection;
     }
 
     public BookService(Connection connection) {
@@ -265,6 +275,99 @@ public class BookService {
         int bookId = bookDAO.insertBook(book);
 
         priceDAO.insertBookPrice(bookId, price);
+    }
+
+    public void addBookWithImages(Book book, Double price, List<byte[]> imageBytes,
+            List<String> imageNames, AuthContext ctx) throws Exception {
+
+        validatePublishedYear(book.getPublishedYear());
+
+        int authorId = book.getAuthorId();
+
+        if (ctx.isAuthor()) {
+            authorId = ctx.getUserId();
+            book.setAuthorId(authorId);
+        } else if (!ctx.isAdmin()) {
+            throw new IllegalArgumentException("Không có quyền thêm sách");
+        }
+
+        if (authorId <= 0 || !userDAO.isAuthor(authorId)) {
+            throw new IllegalArgumentException("Tác giả không hợp lệ");
+        }
+
+        if (price == null || price <= 0) {
+            throw new IllegalArgumentException("Giá sách phải lớn hơn 0");
+        }
+
+        if (book.getStatus() == null) {
+            book.setStatus("ACTIVE");
+        }
+
+        int bookId = bookDAO.insertBook(book);
+        priceDAO.insertBookPrice(bookId, price);
+
+        if (imageBytes == null || imageBytes.isEmpty())
+            return;
+        if (imageBytes.size() > 5)
+            throw new IllegalArgumentException("Tối đa 5 ảnh");
+
+        BookImageDAO imageDAO = new BookImageDAO(connection);
+
+        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads"
+                + File.separator + "books" + File.separator;
+        new File(uploadDir).mkdirs();
+
+        for (int i = 0; i < imageBytes.size(); i++) {
+            String fileName = UUID.randomUUID() + "_" + imageNames.get(i);
+            Files.write(Paths.get(uploadDir + fileName), imageBytes.get(i));
+            imageDAO.insertImage(bookId, fileName);
+        }
+    }
+
+    public void updateBookImages(int bookId, List<byte[]> imageBytes, List<String> imageNames)
+            throws Exception {
+
+        if (imageBytes == null || imageBytes.isEmpty())
+            return;
+        if (imageBytes.size() > 5)
+            throw new IllegalArgumentException("Tối đa 5 ảnh");
+
+        BookImageDAO imageDAO = new BookImageDAO(connection);
+        imageDAO.deleteByBookId(bookId);
+
+        String uploadDir = System.getProperty("user.dir") + File.separator + "uploads"
+                + File.separator + "books" + File.separator;
+        new File(uploadDir).mkdirs();
+
+        for (int i = 0; i < imageBytes.size(); i++) {
+            String fileName = UUID.randomUUID() + "_" + imageNames.get(i);
+            Files.write(Paths.get(uploadDir + fileName), imageBytes.get(i));
+            imageDAO.insertImage(bookId, fileName);
+        }
+    }
+
+    // BookService.java — thêm method này
+    public void updateBookImages(int bookId, MultipartFile[] images) throws Exception {
+        if (images == null || images.length == 0)
+            return;
+        if (images.length > 5)
+            throw new IllegalArgumentException("Tối đa 5 ảnh");
+
+        BookImageDAO imageDAO = new BookImageDAO(connection);
+
+        // Xóa ảnh cũ
+        imageDAO.deleteByBookId(bookId);
+
+        String uploadDir = "uploads/books/";
+        new File(uploadDir).mkdirs();
+
+        for (MultipartFile file : images) {
+            if (!file.isEmpty()) {
+                String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+                Files.write(Paths.get(uploadDir + fileName), file.getBytes());
+                imageDAO.insertImage(bookId, fileName);
+            }
+        }
     }
 
     public void updateBook(int id, Book book, Double price, AuthContext ctx) throws SQLException {

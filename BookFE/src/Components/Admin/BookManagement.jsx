@@ -28,11 +28,13 @@ export default function BookManagement({ user }) {
   const [editing, setEditing] = useState(null);
   const [book, setBook] = useState(empty);
   const [error, setError] = useState("");
+  const [images, setImages] = useState([]);
 
   const isAdmin = user?.role === "ADMIN";
   const isAuthor = user?.role === "AUTHOR";
   const currentYear = new Date().getFullYear();
   const [categories, setCategories] = useState([]);
+  const [existingImages, setExistingImages] = useState([]);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -73,6 +75,7 @@ export default function BookManagement({ user }) {
 
   useEffect(() => {
     if (editing) {
+      console.log("EDITING IMAGES:", editing.images);
       setBook({
         title: editing.title || "",
         description: editing.description || "",
@@ -82,13 +85,14 @@ export default function BookManagement({ user }) {
         categoryId: String(editing.categoryId || ""),
         status: editing.status || "ACTIVE",
       });
-
+      setExistingImages(editing.images || []); // ← load ảnh cũ
       setShowForm(true);
+      setImages([]); // reset ảnh mới
     } else {
       setBook(empty);
+      setExistingImages([]);
     }
   }, [editing]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "year" && Number(value) > currentYear) {
@@ -109,21 +113,31 @@ export default function BookManagement({ user }) {
       setError("Vui lòng chọn tác giả");
       return;
     }
-    const payload = {
-      title: book.title,
-      description: book.description || null,
-      price: Number(book.price),
-      publishedYear: Number(book.year),
-      status: book.status,
-      categoryId: Number(book.categoryId) || null,
-      authorId: isAuthor ? user.id : Number(book.authorId),
-    };
+    const formData = new FormData();
+
+    formData.append("title", book.title);
+
+    formData.append("description", book.description || "");
+
+    formData.append("price", Number(book.price));
+
+    formData.append("publishedYear", Number(book.year));
+
+    formData.append("status", book.status);
+
+    formData.append("categoryId", Number(book.categoryId) || "");
+
+    formData.append("authorId", isAuthor ? user.id : Number(book.authorId));
+
+    images.forEach((img) => {
+      formData.append("images", img);
+    });
     try {
       if (editing) {
-        await updateBook(editing.id, payload);
+        await updateBook(editing.id, formData);
         showToast("success", "Cập nhật sách thành công!");
       } else {
-        await createBook(payload);
+        await createBook(formData);
         showToast("success", "Thêm sách thành công!");
       }
       setBook(empty);
@@ -132,7 +146,10 @@ export default function BookManagement({ user }) {
       setError("");
       load();
     } catch (err) {
-      setError(err.response?.data || "Lưu sách thất bại");
+      const data = err.response?.data;
+      const msg =
+        typeof data === "string" ? data : data?.message || "Lưu sách thất bại";
+      setError(msg);
     }
   };
 
@@ -260,6 +277,96 @@ export default function BookManagement({ user }) {
                   </select>
                 </div>
                 <div className="col-12">
+                  <label className="form-label">Ảnh sách (tối đa 5)</label>
+
+                  {/* HIỂN THỊ ẢNH CŨ KHI ĐANG SỬA */}
+                  {editing && existingImages.length > 0 && (
+                    <div className="mb-2">
+                      <small className="text-muted">Ảnh hiện tại:</small>
+                      <div className="d-flex gap-2 flex-wrap mt-1">
+                        {existingImages.map((img, index) => (
+                          <div key={index} style={{ position: "relative" }}>
+                            <img
+                              src={`http://localhost:8080/uploads/books/${img}`}
+                              alt=""
+                              style={{
+                                width: 80,
+                                height: 100,
+                                objectFit: "cover",
+                                borderRadius: 8,
+                                border:
+                                  index === 0
+                                    ? "2px solid #0d6efd"
+                                    : "1px solid #ddd",
+                              }}
+                            />
+                            {index === 0 && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  bottom: 4,
+                                  left: 0,
+                                  right: 0,
+                                  textAlign: "center",
+                                  fontSize: 10,
+                                  background: "#0d6efd",
+                                  color: "#fff",
+                                  borderRadius: "0 0 6px 6px",
+                                }}
+                              >
+                                Bìa
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="form-control"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files);
+                      if (files.length > 5) {
+                        setError("Tối đa 5 ảnh");
+                        return;
+                      }
+                      setImages(files);
+                    }}
+                  />
+                  <small className="text-muted">
+                    {editing
+                      ? "Chọn ảnh mới để thay thế ảnh cũ, hoặc bỏ trống để giữ nguyên"
+                      : "Ảnh đầu tiên sẽ làm ảnh bìa"}
+                  </small>
+
+                  {/* Preview ảnh mới chọn */}
+                  {images.length > 0 && (
+                    <div className="d-flex gap-2 flex-wrap mt-2">
+                      {images.map((img, index) => (
+                        <img
+                          key={index}
+                          src={URL.createObjectURL(img)}
+                          alt=""
+                          style={{
+                            width: 80,
+                            height: 100,
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            border:
+                              index === 0
+                                ? "2px solid #0d6efd"
+                                : "1px solid #ddd",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="col-12">
                   <label className="form-label">Mô tả</label>
                   <textarea
                     name="description"
@@ -371,6 +478,7 @@ export default function BookManagement({ user }) {
             <table className="table table-hover table-striped align-middle mb-0">
               <thead className="table-light">
                 <tr>
+                  <th>Ảnh</th>
                   <th>Tiêu đề</th>
                   <th>Mô tả</th>
                   <th>Giá</th>
@@ -392,6 +500,26 @@ export default function BookManagement({ user }) {
                 ) : (
                   filtered.map((b) => (
                     <tr key={b.id}>
+                      {/* ảnh bìa */}
+                      <td>
+                        <img
+                          src={
+                            b.images?.length > 0
+                              ? `http://localhost:8080/uploads/books/${b.images[0]}`
+                              : "/no-image.png"
+                          }
+                          alt=""
+                          style={{
+                            width: 60,
+                            height: 80,
+                            objectFit: "cover",
+                            borderRadius: 8,
+                            border: "1px solid #ddd",
+                          }}
+                        />
+                      </td>
+
+                      {/* title */}
                       <td>
                         <strong>{b.title}</strong>
                       </td>
