@@ -48,7 +48,7 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest body) {
         try (Connection conn = dataSource.getConnection()) {
             AuthService authService = new AuthService(conn, passwordUtil);
-            User user = authService.login(body.getUsername(), body.getPassword());
+            User user = authService.login(body.getEmail(), body.getPassword()); // ← getEmail
             String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
             UserProfile profile = AuthService.toProfile(user);
             return ResponseEntity.ok(new AuthResponse(token, profile));
@@ -184,6 +184,7 @@ public class AuthController {
             return ResponseEntity.status(500).body("Lỗi gửi OTP: " + e.getMessage());
         }
     }
+
     @PostMapping("/google-login")
 
     @GetMapping("/me")
