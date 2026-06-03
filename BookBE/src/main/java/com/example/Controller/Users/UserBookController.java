@@ -62,15 +62,20 @@ public class UserBookController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Book> getBookById(@PathVariable int id, HttpServletRequest request) {
+    public ResponseEntity<?> getBookById(@PathVariable int id, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
-            AuthContext ctx = RequestAuth.optional(request); // ← đổi require → optional
+
+            AuthContext ctx = RequestAuth.optional(request);
+
             BookService service = new BookService(conn, passwordUtil);
-            Book book = service.getBookById(id, ctx);
-            return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
+
+            return ResponseEntity.ok(service.getBookByIdDTO(id, ctx));
+
         } catch (Exception e) {
+
             e.printStackTrace();
-            return ResponseEntity.status(500).build();
+
+            return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 

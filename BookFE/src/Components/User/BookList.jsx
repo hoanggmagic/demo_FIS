@@ -3,8 +3,10 @@ import { useSearchParams } from "react-router-dom";
 import { getBooks, searchBooks } from "../../Api/User/BookApi";
 import { addToCart } from "../../Api/User/CartApi";
 import BranchPickerModal from "./BranchPickerModal";
+import BookDetail from "./BookDetail";
 
-const PAGE_SIZE = 12; // 4 cột × 3 hàng
+const PAGE_SIZE = 12;
+const IMG_BASE = "http://localhost:8080/uploads/books/";
 
 export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [allBooks, setAllBooks] = useState([]);
@@ -13,7 +15,8 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [pickingBook, setPickingBook] = useState(null); //chon chi nhanh de lay sach
+  const [pickingBook, setPickingBook] = useState(null);
+  const [detailBookId, setDetailBookId] = useState(null); // ← modal chi tiết
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const categoryName = searchParams.get("categoryName");
@@ -21,13 +24,11 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     ? categoryIdsParam.split(",").map(Number)
     : [];
 
-  // Filter client-side theo categoryIds
   const filtered =
     categoryIds.length > 0
       ? allBooks.filter((b) => categoryIds.includes(b.category?.id))
       : allBooks;
 
-  // Pagination
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const books = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -61,13 +62,12 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
   const handleSearch = () => load();
 
-  // Thay toàn bộ handleAddToCart cũ:
   const handleAddToCart = (book) => {
     if (!user) {
       onShowLogin?.();
       return;
     }
-    setPickingBook(book); // mở modal chọn chi nhánh
+    setPickingBook(book);
   };
 
   const handleBranchConfirm = async (branchId) => {
@@ -75,7 +75,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     setPickingBook(null);
     setAdding(book.id);
     try {
-      // Truyền branchId làm tham số thứ 3 (hoặc tùy thuộc cấu trúc hàm của bạn)
       await addToCart(book.id, 1, branchId);
       onCartUpdate?.();
     } catch {
@@ -84,6 +83,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
       setAdding(null);
     }
   };
+
   const clearCategory = () => {
     setSearchParams({});
     setPage(1);
@@ -151,7 +151,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
           )}
         </div>
 
-        {/* Search */}
         <div
           style={{
             display: "flex",
@@ -239,7 +238,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         </div>
       )}
 
-      {/* Grid sách — 4 cột × 3 hàng */}
+      {/* Grid sách */}
       {!loading && books.length > 0 && (
         <div
           style={{
@@ -255,123 +254,182 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 background: "#fff",
                 borderRadius: 12,
                 border: "1px solid #e9ecef",
-                padding: 16,
+                overflow: "hidden",
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
-                transition: "box-shadow .2s",
+                transition: "box-shadow .2s, transform .2s",
+                cursor: "pointer",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)")
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = "0 6px 24px rgba(0,0,0,.10)";
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.transform = "translateY(0)";
+              }}
+              onClick={() => setDetailBookId(b.id)}
             >
-              {/* Cover */}
+              {/* Cover image */}
               <div
                 style={{
+                  height: 180,
                   background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
-                  borderRadius: 8,
-                  height: 120,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 4,
-                }}
-              >
-                <i
-                  className="bi bi-book"
-                  style={{ fontSize: 36, color: "#93c5fd" }}
-                />
-              </div>
-
-              <h4
-                style={{
-                  margin: 0,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  lineHeight: 1.4,
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
                   overflow: "hidden",
+                  flexShrink: 0,
+                  position: "relative",
                 }}
               >
-                {b.title}
-              </h4>
-
-              <span style={{ fontSize: 12, color: "#64748b" }}>
-                ✍️ {b.authorName || "—"}
-              </span>
-
-              {b.category && (
-                <span
+                {b.images?.length > 0 ? (
+                  <img
+                    src={`${IMG_BASE}${b.images[0]}`}
+                    alt={b.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                <div
                   style={{
-                    fontSize: 10,
-                    background: "#eff6ff",
-                    color: "#2563eb",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: 20,
-                    padding: "2px 8px",
-                    alignSelf: "flex-start",
+                    display: b.images?.length > 0 ? "none" : "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
                   }}
                 >
-                  {b.category.name}
-                </span>
-              )}
+                  <i
+                    className="bi bi-book"
+                    style={{ fontSize: 48, color: "#93c5fd" }}
+                  />
+                </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: "auto",
-                }}
-              >
-                <span
-                  style={{ fontSize: 15, fontWeight: 700, color: "#dc2626" }}
-                >
-                  {Number(b.price || 0).toLocaleString()} VND
-                </span>
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>
-                  📅 {b.publishedYear}
-                </span>
+                {/* Ảnh nhiều hơn 1 — hiện badge */}
+                {b.images?.length > 1 && (
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: 8,
+                      right: 8,
+                      background: "rgba(0,0,0,.5)",
+                      color: "#fff",
+                      fontSize: 10,
+                      borderRadius: 20,
+                      padding: "2px 7px",
+                    }}
+                  >
+                    +{b.images.length - 1} ảnh
+                  </span>
+                )}
               </div>
 
-              <span
+              {/* Content */}
+              <div
                 style={{
-                  fontSize: 11,
-                  color: b.quantity === 0 ? "#ef4444" : "#64748b",
+                  padding: 14,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 7,
+                  flex: 1,
                 }}
               >
-                📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
-              </span>
+                <h4
+                  style={{
+                    margin: 0,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#1e293b",
+                    lineHeight: 1.4,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {b.title}
+                </h4>
 
-              <button
-                disabled={adding === b.id || b.quantity === 0}
-                onClick={() => handleAddToCart(b)}
-                style={{
-                  background:
-                    b.quantity === 0
-                      ? "#f1f5f9"
-                      : "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                  color: b.quantity === 0 ? "#94a3b8" : "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "9px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: b.quantity === 0 ? "not-allowed" : "pointer",
-                  opacity: adding === b.id ? 0.7 : 1,
-                  transition: "opacity .15s",
-                }}
-              >
-                {adding === b.id
-                  ? "Đang thêm..."
-                  : b.quantity === 0
-                    ? "Hết hàng"
-                    : "🛒 Thêm vào giỏ"}
-              </button>
+                <span style={{ fontSize: 12, color: "#64748b" }}>
+                  ✍️ {b.authorName || "—"}
+                </span>
+
+                {b.category && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      border: "1px solid #bfdbfe",
+                      borderRadius: 20,
+                      padding: "2px 8px",
+                      alignSelf: "flex-start",
+                    }}
+                  >
+                    {b.category.name}
+                  </span>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "auto",
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 15, fontWeight: 700, color: "#dc2626" }}
+                  >
+                    {Number(b.price || 0).toLocaleString()} VND
+                  </span>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                    📅 {b.publishedYear}
+                  </span>
+                </div>
+
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: b.quantity === 0 ? "#ef4444" : "#64748b",
+                  }}
+                >
+                  📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
+                </span>
+
+                <button
+                  disabled={adding === b.id || b.quantity === 0}
+                  onClick={(e) => {
+                    e.stopPropagation(); // không mở modal khi bấm nút
+                    handleAddToCart(b);
+                  }}
+                  style={{
+                    background:
+                      b.quantity === 0
+                        ? "#f1f5f9"
+                        : "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    color: b.quantity === 0 ? "#94a3b8" : "#fff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: b.quantity === 0 ? "not-allowed" : "pointer",
+                    opacity: adding === b.id ? 0.7 : 1,
+                    transition: "opacity .15s",
+                  }}
+                >
+                  {adding === b.id
+                    ? "Đang thêm..."
+                    : b.quantity === 0
+                      ? "Hết hàng"
+                      : "🛒 Thêm vào giỏ"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -388,7 +446,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
             marginTop: 32,
           }}
         >
-          {/* Prev */}
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
@@ -409,7 +466,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
             <i className="bi bi-chevron-left" />
           </button>
 
-          {/* Page numbers với dấu ... */}
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter(
               (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
@@ -456,7 +512,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
               ),
             )}
 
-          {/* Next */}
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
@@ -479,7 +534,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         </div>
       )}
 
-      {/* Tổng số kết quả */}
       {!loading && filtered.length > 0 && (
         <div
           style={{
@@ -493,10 +547,20 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
           {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} sách
         </div>
       )}
+
+      {/* Modals */}
       <BranchPickerModal
         book={pickingBook}
         onConfirm={handleBranchConfirm}
         onClose={() => setPickingBook(null)}
+      />
+
+      {/* Modal chi tiết sách */}
+      <BookDetail
+        bookId={detailBookId}
+        onClose={() => setDetailBookId(null)}
+        onAddToCart={(book) => handleAddToCart(book)}
+        user={user}
       />
     </section>
   );

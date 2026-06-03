@@ -41,7 +41,7 @@ public class BookService {
         dto.setStatus(book.getStatus());
         dto.setAuthorId(book.getAuthorId());
         dto.setAuthorName(book.getAuthorName());
-
+        dto.setQuantity(book.getQuantity());
         if (book.getCategory() != null) {
             dto.setCategoryId(book.getCategory().getId());
             dto.setCategoryName(book.getCategory().getName());
@@ -437,6 +437,11 @@ public class BookService {
     }
 
     private void assertCanAccessBook(Book book, AuthContext ctx) {
+
+        // chưa login => cho xem
+        if (ctx == null) {
+            return;
+        }
 
         if (ctx.isAuthor() && book.getAuthorId() != ctx.getUserId()) {
 
