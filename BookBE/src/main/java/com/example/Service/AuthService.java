@@ -16,13 +16,18 @@ public class AuthService {
         this.passwordUtil = passwordUtil;
     }
 
-    public User login(String username, String password) throws SQLException {
-        User user = userDAO.findByUsername(username);
-        if (user == null || !user.isActive()) {
-            throw new IllegalArgumentException("Sai tên đăng nhập hoặc mật khẩu");
+    public User login(String email, String password) throws SQLException {
+        // Dùng this.userDAO thay vì tạo UserDAO mới
+        User user = userDAO.findByEmail(email);
+
+        if (user == null) {
+            throw new IllegalArgumentException("Email không tồn tại");
+        }
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Tài khoản đã bị ngừng hoạt động");
         }
         if (!passwordUtil.matches(password, user.getPassword())) {
-            throw new IllegalArgumentException("Sai tên đăng nhập hoặc mật khẩu");
+            throw new IllegalArgumentException("Sai email hoặc mật khẩu");
         }
         return user;
     }

@@ -312,4 +312,26 @@ public class UserDAO {
         }
     }
 
+    public User findByEmail(String email) throws SQLException {
+        String sql =
+                "SELECT id, username, email, password, full_name, nationality, biography, role, is_active, avatar_url "
+                        + "FROM users WHERE email = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next())
+                    return mapUser(rs);
+            }
+        }
+        return null;
+    }
+
+    public void updatePassword(int userId, String hashedPassword) throws SQLException {
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, hashedPassword);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        }
+    }
 }

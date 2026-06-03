@@ -13,12 +13,12 @@ function Profile() {
     otp: "",
   });
   const [profile, setProfile] = useState({
-  id: "",
-  fullName: "",
-  nationality: "",
-  biography: "",
-  avatarUrl: "",
-});
+    id: "",
+    fullName: "",
+    nationality: "",
+    biography: "",
+    avatarUrl: "",
+  });
 
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -45,54 +45,54 @@ function Profile() {
   }, []);
 
   const loadProfile = async () => {
-  try {
-    const res = await axios.get("http://localhost:8080/api/author/profile", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    setProfile({
-      id: res.data.id,
-      fullName: res.data.fullName,
-      nationality: res.data.nationality,
-      biography: res.data.biography,
-      avatarUrl: res.data.avatarUrl,
-    });
-  } catch (error) {
-    if (error.response?.status === 401) logout();
-  } finally {
-    setLoading(false);
-  }
-};
-
-const handleUploadAvatar = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  try {
-    const res = await axios.post(
-      "http://localhost:8080/api/author/profile/avatar",
-      formData,
-      {
+    try {
+      const res = await axios.get("http://localhost:8080/api/author/profile", {
         headers: {
-          "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-      }
-    );
+      });
 
-    setProfile((prev) => ({
-      ...prev,
-      avatarUrl: res.data.avatarUrl,
-    }));
-  } catch (err) {
-    console.log("Upload avatar lỗi:", err);
-  }
-};
+      setProfile({
+        id: res.data.id,
+        fullName: res.data.fullName,
+        nationality: res.data.nationality,
+        biography: res.data.biography,
+        avatarUrl: res.data.avatarUrl,
+      });
+    } catch (error) {
+      if (error.response?.status === 401) logout();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUploadAvatar = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await axios.post(
+        "http://localhost:8080/api/author/profile/avatar",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      setProfile((prev) => ({
+        ...prev,
+        avatarUrl: res.data.avatarUrl,
+      }));
+    } catch (err) {
+      console.log("Upload avatar lỗi:", err);
+    }
+  };
 
   // =========================
   // SEND OTP
@@ -241,18 +241,6 @@ const handleUploadAvatar = async (e) => {
         >
           <div
             style={{
-              position: "absolute",
-              width: 240,
-              height: 240,
-              borderRadius: "50%",
-              background: "#818cf820",
-              top: -80,
-              right: -60,
-            }}
-          />
-
-          <div
-            style={{
               display: "flex",
               alignItems: "center",
               gap: 28,
@@ -260,44 +248,100 @@ const handleUploadAvatar = async (e) => {
               zIndex: 2,
             }}
           >
+            {/* AVATAR */}
             <div
-  style={{
-    width: 110,
-    height: 110,
-    borderRadius: "50%",
-    overflow: "hidden",
-    cursor: "pointer",
-  }}
-  onClick={() => document.getElementById("avatarInput").click()}
->
-  {profile.avatarUrl ? (
-    <img
-      src={`http://localhost:8080/uploads/users/${profile.avatarUrl}`}
-      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-    />
-  ) : (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#ddd",
-      }}
-    >
-      U
-    </div>
-  )}
-</div>
+              style={{
+                width: 110,
+                height: 110,
+                borderRadius: "50%",
+                overflow: "hidden",
+                cursor: "pointer",
+                flexShrink: 0,
+                border: "4px solid rgba(255,255,255,.8)",
+                boxShadow: "0 10px 25px rgba(0,0,0,.12)",
+              }}
+              onClick={() => document.getElementById("avatarInput").click()}
+            >
+              {profile.avatarUrl ? (
+                <img
+                  src={`http://localhost:8080/uploads/users/${profile.avatarUrl}`}
+                  alt="avatar"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "#ddd",
+                    fontSize: 34,
+                    fontWeight: 700,
+                    color: "#555",
+                  }}
+                >
+                  U
+                </div>
+              )}
+            </div>
 
-<input
-  id="avatarInput"
-  type="file"
-  hidden
-  accept="image/*"
-  onChange={handleUploadAvatar}
-/>
+            <input
+              id="avatarInput"
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={handleUploadAvatar}
+            />
+
+            {/* INFO */}
+            <div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 30,
+                  fontWeight: 800,
+                  color: "#111827",
+                }}
+              >
+                {profile.fullName || "Tác giả"}
+              </h2>
+
+              <p
+                style={{
+                  marginTop: 8,
+                  marginBottom: 0,
+                  color: "#6b7280",
+                  fontSize: 15,
+                }}
+              >
+                ✍️ Author Profile
+              </p>
+
+              {profile.nationality && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "#eef2ff",
+                    color: "#4f46e5",
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
+                  🌍 {profile.nationality}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

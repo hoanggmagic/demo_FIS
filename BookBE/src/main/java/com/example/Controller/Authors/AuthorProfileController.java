@@ -73,7 +73,6 @@ public class AuthorProfileController {
 
             User user = new User();
             user.setId(rs.getInt("id"));
-            user.setUsername(rs.getString("username"));
             user.setEmail(rs.getString("email"));
             user.setFullName(rs.getString("full_name"));
             user.setNationality(rs.getString("nationality"));

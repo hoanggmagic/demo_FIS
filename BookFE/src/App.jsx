@@ -24,6 +24,7 @@ import UserBookList from "./Components/User/BookList";
 import Cart from "./Components/User/Cart";
 import Profile from "./Components/User/UserProfile";
 import Payment from "./Components/User/Payment";
+import ForgotPassword from "./Components/Auth/ForgotPassword";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function loadSession() {
@@ -46,6 +47,7 @@ const AUTH_PAGES = {
   login: Login,
   register: Register,
   "register-author": RegisterAuthor,
+  "forgot-password": ForgotPassword,
 };
 function AuthGate({ onLogin, onGuest }) {
   const [page, setPage] = useState("login");
@@ -56,6 +58,7 @@ function AuthGate({ onLogin, onGuest }) {
       goToLogin={() => setPage("login")}
       goToRegister={() => setPage("register")}
       goToRegisterAuthor={() => setPage("register-author")}
+      goToForgotPassword={() => setPage("forgot-password")}
       onGuest={onGuest}
     />
   );

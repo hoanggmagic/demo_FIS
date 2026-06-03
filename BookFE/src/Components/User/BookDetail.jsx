@@ -50,9 +50,9 @@ export default function BookDetail({ bookId, onClose, onAddToCart, user }) {
         backdropFilter: "blur(4px)",
         zIndex: 1000,
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
+        paddingTop: 120,
         justifyContent: "center",
-        padding: 20,
         animation: "fadeIn .18s ease",
       }}
     >
@@ -280,7 +280,13 @@ export default function BookDetail({ bookId, onClose, onAddToCart, user }) {
                 />
 
                 {/* Description */}
-                <div>
+                <div
+                  style={{
+                    height: 180, // chiều cao cố định
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
                   <h4
                     style={{
                       margin: "0 0 8px",
@@ -289,20 +295,36 @@ export default function BookDetail({ bookId, onClose, onAddToCart, user }) {
                       color: "#64748b",
                       textTransform: "uppercase",
                       letterSpacing: 1,
+                      flexShrink: 0,
                     }}
                   >
                     Mô tả sách
                   </h4>
-                  <p
+
+                  <div
                     style={{
-                      margin: 0,
-                      fontSize: 14,
-                      color: "#475569",
-                      lineHeight: 1.7,
+                      flex: 1,
+                      overflowY: "auto",
+                      paddingRight: 6,
+                      borderRadius: 8,
+                      background: "#f8fafc",
+                      padding: 12,
+                      border: "1px solid #e2e8f0",
                     }}
                   >
-                    {book.description || "Chưa có mô tả cho sách này."}
-                  </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        color: "#475569",
+                        lineHeight: 1.7,
+                        whiteSpace: "pre-line",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {book.description || "Chưa có mô tả cho sách này."}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Add to cart button */}
