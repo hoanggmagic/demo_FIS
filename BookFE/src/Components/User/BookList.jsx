@@ -16,7 +16,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pickingBook, setPickingBook] = useState(null);
-  const [detailBookId, setDetailBookId] = useState(null); // ← modal chi tiết
+  const [detailBookId, setDetailBookId] = useState(null);
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const categoryName = searchParams.get("categoryName");
@@ -26,9 +26,8 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
   const filtered =
     categoryIds.length > 0
-      ? allBooks.filter((b) => categoryIds.includes(b.category?.id))
+      ? allBooks.filter((b) => categoryIds.includes(b.categoryId))
       : allBooks;
-
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const books = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -140,7 +139,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                   cursor: "pointer",
                   color: "#93c5fd",
                   fontSize: 14,
-                  lineHeight: 1,
                   padding: 0,
                   marginLeft: 2,
                 }}
@@ -168,7 +166,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
               padding: "10px 14px",
               fontSize: 13,
               outline: "none",
-              background: "transparent",
               color: "#1e293b",
             }}
             type="text"
@@ -197,7 +194,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
       {/* Loading */}
       {loading && (
         <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
-          <div className="spinner-border spinner-border-sm text-primary me-2" />
+          <div className="spinner-border spinner-border-sm text-primary me-2" />{" "}
           Đang tải...
         </div>
       )}
@@ -276,7 +273,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                   height: 180,
                   background: "linear-gradient(135deg, #dbeafe, #eff6ff)",
                   overflow: "hidden",
-                  flexShrink: 0,
                   position: "relative",
                 }}
               >
@@ -308,8 +304,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                     style={{ fontSize: 48, color: "#93c5fd" }}
                   />
                 </div>
-
-                {/* Ảnh nhiều hơn 1 — hiện badge */}
                 {b.images?.length > 1 && (
                   <span
                     style={{
@@ -353,12 +347,10 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 >
                   {b.title}
                 </h4>
-
                 <span style={{ fontSize: 12, color: "#64748b" }}>
                   ✍️ {b.authorName || "—"}
                 </span>
-
-                {b.category && (
+                {b.categoryName && (
                   <span
                     style={{
                       fontSize: 10,
@@ -370,28 +362,92 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                       alignSelf: "flex-start",
                     }}
                   >
-                    {b.category.name}
+                    {b.categoryName} {/* ← đổi từ b.category.name */}
                   </span>
                 )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginTop: "auto",
-                  }}
-                >
-                  <span
-                    style={{ fontSize: 15, fontWeight: 700, color: "#dc2626" }}
-                  >
-                    {Number(b.price || 0).toLocaleString()} VND
-                  </span>
-                  <span style={{ fontSize: 11, color: "#94a3b8" }}>
-                    📅 {b.publishedYear}
-                  </span>
+                {/* ✅ Thay bằng: */}
+                <div style={{ marginTop: "auto" }}>
+                  {b.discountPercent > 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: "#dc2626",
+                          }}
+                        >
+                          {Number(b.discountedPrice || 0).toLocaleString()} VND
+                        </span>
+                        <span
+                          style={{
+                            background: "#fef2f2",
+                            color: "#dc2626",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            borderRadius: 4,
+                            padding: "1px 5px",
+                          }}
+                        >
+                          -{Math.round(b.discountPercent)}%
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#94a3b8",
+                            textDecoration: "line-through",
+                          }}
+                        >
+                          {Number(b.originalPrice || 0).toLocaleString()} VND
+                        </span>
+                        <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                          📅 {b.publishedYear}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: "#dc2626",
+                        }}
+                      >
+                        {Number(b.price || 0).toLocaleString()} VND
+                      </span>
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>
+                        📅 {b.publishedYear}
+                      </span>
+                    </div>
+                  )}
                 </div>
-
                 <span
                   style={{
                     fontSize: 11,
@@ -400,11 +456,10 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 >
                   📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
                 </span>
-
                 <button
                   disabled={adding === b.id || b.quantity === 0}
                   onClick={(e) => {
-                    e.stopPropagation(); // không mở modal khi bấm nút
+                    e.stopPropagation();
                     handleAddToCart(b);
                   }}
                   style={{
@@ -457,7 +512,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
               background: page === 1 ? "#f8fafc" : "#fff",
               color: page === 1 ? "#cbd5e1" : "#1e293b",
               cursor: page === 1 ? "not-allowed" : "pointer",
-              fontSize: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -465,7 +519,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
           >
             <i className="bi bi-chevron-left" />
           </button>
-
           {Array.from({ length: totalPages }, (_, i) => i + 1)
             .filter(
               (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
@@ -511,7 +564,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 </button>
               ),
             )}
-
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
@@ -523,7 +575,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
               background: page === totalPages ? "#f8fafc" : "#fff",
               color: page === totalPages ? "#cbd5e1" : "#1e293b",
               cursor: page === totalPages ? "not-allowed" : "pointer",
-              fontSize: 14,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -548,18 +599,15 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         </div>
       )}
 
-      {/* Modals */}
       <BranchPickerModal
         book={pickingBook}
         onConfirm={handleBranchConfirm}
         onClose={() => setPickingBook(null)}
       />
-
-      {/* Modal chi tiết sách */}
       <BookDetail
         bookId={detailBookId}
         onClose={() => setDetailBookId(null)}
-        onAddToCart={(book) => handleAddToCart(book)}
+        onAddToCart={handleAddToCart}
         user={user}
       />
     </section>

@@ -1,9 +1,6 @@
 package com.example.Controller.Admin;
 
-import java.sql.Connection;
-import java.util.ArrayList;
 import java.util.List;
-import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -20,52 +17,41 @@ import com.example.Entities.Book;
 import com.example.Entities.Category;
 import com.example.Service.BookService;
 import com.example.Util.AuthContext;
-import com.example.Util.PasswordUtil;
 import com.example.Util.RequestAuth;
 import com.example.dto.BookDTO;
 import jakarta.servlet.http.HttpServletRequest;
-
 
 @RestController
 @RequestMapping("/api/admin/books")
 @CrossOrigin(origins = "*")
 public class BookController {
 
+    // TIÊM THẲNG BEAN BOOK_SERVICE ĐƯỢC SPRING QUẢN LÝ VÀO ĐÂY
     @Autowired
-    private DataSource dataSource;
+    private BookService bookService;
 
-    @Autowired
-    private PasswordUtil passwordUtil;
-
+    // GET: Lấy danh sách sách cho Admin/Author
     @GetMapping
     public ResponseEntity<List<BookDTO>> getAllBooks(HttpServletRequest request) {
-
-        try (Connection conn = dataSource.getConnection()) {
-
+        try {
             AuthContext ctx = RequestAuth.require(request);
 
-            BookService service = new BookService(conn, passwordUtil);
-
-            return ResponseEntity.ok(service.getBooksForContextDTO(ctx));
-
+            // Gọi hàm getBooksForContext đã trả về List<BookDTO> trong Service của bạn
+            return ResponseEntity.ok(bookService.getBooksForContext(ctx));
         } catch (Exception e) {
-
             e.printStackTrace();
-
             return ResponseEntity.status(500).body(List.of());
         }
     }
 
+    // GET: Xem chi tiết sách qua ID
     @GetMapping("/{id}")
     public ResponseEntity<BookDTO> getBookById(@PathVariable int id, HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
-            BookService service = new BookService(conn, passwordUtil);
 
-            BookDTO book = service.getBookByIdDTO(id, ctx);
-
+            BookDTO book = bookService.getBookById(id, ctx);
             return book != null ? ResponseEntity.ok(book) : ResponseEntity.notFound().build();
-
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(403).build();
         } catch (Exception e) {
@@ -73,6 +59,7 @@ public class BookController {
         }
     }
 
+    // POST: Thêm sách mới kèm upload hình ảnh (Multipart Form Data)
     @PostMapping
     public ResponseEntity<String> createBook(@RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
@@ -81,28 +68,15 @@ public class BookController {
             @RequestParam(value = "status", defaultValue = "ACTIVE") String status,
             @RequestParam(value = "authorId", required = false) Integer authorId,
             @RequestParam(value = "categoryId", required = false) Integer categoryId,
-            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            @RequestParam(value = "images", required = false) MultipartFile[] images, // Nhận vào
+                                                                                      // đây
             HttpServletRequest request) {
 
-        List<byte[]> imageBytes = new ArrayList<>();
-        List<String> imageNames = new ArrayList<>();
-        try {
-            if (images != null) {
-                for (MultipartFile file : images) {
-                    if (file != null && !file.isEmpty()) {
-                        imageBytes.add(file.getBytes());
-                        imageNames.add(file.getOriginalFilename());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body("Lỗi đọc file ảnh: " + e.getMessage());
-        }
+        // --- XOÁ HOẶC COMMENT ĐOẠN VÒNG LẶP ADD IMAGE_BYTES CŨ ĐI ---
 
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdminOrAuthor(ctx);
-            BookService service = new BookService(conn, passwordUtil);
 
             Book book = new Book();
             book.setTitle(title);
@@ -117,15 +91,17 @@ public class BookController {
                 book.setCategory(c);
             }
 
-            service.addBookWithImages(book, price, imageBytes, imageNames, ctx);
-            return ResponseEntity.ok("Thêm sách thành công!");
+            // SỬA DÒNG NÀY: Truyền thẳng mảng 'images' vào theo đúng thiết kế của Service
+            bookService.addBookWithImages(book, price, images, ctx);
 
+            return ResponseEntity.ok("Thêm sách thành công!");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 
+    // PUT: Cập nhật thông tin sách và cập nhật ảnh mới
     @PutMapping("/{id}")
     public ResponseEntity<String> updateBook(@PathVariable int id,
             @RequestParam("title") String title,
@@ -135,28 +111,19 @@ public class BookController {
             @RequestParam(value = "status", defaultValue = "ACTIVE") String status,
             @RequestParam(value = "authorId", required = false) Integer authorId,
             @RequestParam(value = "categoryId", required = false) Integer categoryId,
-            @RequestParam(value = "images", required = false) MultipartFile[] images,
+            @RequestParam(value = "images", required = false) MultipartFile[] images, // Nhận mảng
+                                                                                      // ảnh ở đây
             HttpServletRequest request) {
 
-        List<byte[]> imageBytes = new ArrayList<>();
-        List<String> imageNames = new ArrayList<>();
-        try {
-            if (images != null) {
-                for (MultipartFile file : images) {
-                    if (file != null && !file.isEmpty()) {
-                        imageBytes.add(file.getBytes());
-                        imageNames.add(file.getOriginalFilename());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body("Lỗi đọc file ảnh: " + e.getMessage());
-        }
+        // --- BƯỚC 1: XOÁ HOẶC COMMENT ĐOẠN LOGIC DUYỆT VÒNG LẶP BÓC TÁCH BYTE CŨ ĐI ---
+        /*
+         * List<byte[]> imageBytes = new ArrayList<>(); List<String> imageNames = new ArrayList<>();
+         * ... Đống code try-catch cũ dọn sạch đi cho nhẹ nợ ...
+         */
 
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdminOrAuthor(ctx);
-            BookService service = new BookService(conn, passwordUtil);
 
             Book book = new Book();
             book.setTitle(title);
@@ -171,26 +138,28 @@ public class BookController {
                 book.setCategory(c);
             }
 
-            service.updateBook(id, book, price, ctx);
+            // Cập nhật thông tin cơ bản và giá sách
+            bookService.updateBook(id, book, price, ctx);
 
-            if (!imageBytes.isEmpty()) {
-                service.updateBookImages(id, imageBytes, imageNames);
+            // BƯỚC 2: SỬA DÒNG NÀY — Truyền thẳng mảng 'images' gốc vào Service
+            if (images != null && images.length > 0) {
+                bookService.updateBookImages(id, images);
             }
 
             return ResponseEntity.ok("Cập nhật sách thành công!");
-
         } catch (Exception e) {
             return ResponseEntity.status(500).body(e.getMessage());
         }
     }
 
+    // DELETE: Xóa sách (Hoặc đổi trạng thái sang ẩn tùy logic của Service)
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteBook(@PathVariable int id, HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdminOrAuthor(ctx);
-            BookService service = new BookService(conn, passwordUtil);
-            service.deleteBook(id, ctx);
+
+            bookService.deleteBook(id, ctx);
             return ResponseEntity.ok("Xóa sách thành công!");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());

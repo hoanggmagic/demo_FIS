@@ -253,16 +253,68 @@ export default function BookDetail({ bookId, onClose, onAddToCart, user }) {
 
                 {/* Price */}
                 <div style={{ margin: "4px 0" }}>
-                  <span
-                    style={{
-                      fontSize: 26,
-                      fontWeight: 800,
-                      color: "#dc2626",
-                      letterSpacing: "-0.5px",
-                    }}
-                  >
-                    {Number(book.price || 0).toLocaleString()} VND
-                  </span>
+                  {book.discountPercent > 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 26,
+                            fontWeight: 800,
+                            color: "#dc2626",
+                            letterSpacing: "-0.5px",
+                          }}
+                        >
+                          {Number(book.discountedPrice || 0).toLocaleString()}{" "}
+                          VND
+                        </span>
+                        <span
+                          style={{
+                            background: "#fef2f2",
+                            color: "#dc2626",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            borderRadius: 6,
+                            padding: "2px 8px",
+                          }}
+                        >
+                          -{Math.round(book.discountPercent)}%
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          color: "#94a3b8",
+                          textDecoration: "line-through",
+                        }}
+                      >
+                        Giá gốc:{" "}
+                        {Number(book.originalPrice || 0).toLocaleString()} VND
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: 26,
+                        fontWeight: 800,
+                        color: "#dc2626",
+                        letterSpacing: "-0.5px",
+                      }}
+                    >
+                      {Number(book.price || 0).toLocaleString()} VND
+                    </span>
+                  )}
                 </div>
 
                 {/* Stock */}

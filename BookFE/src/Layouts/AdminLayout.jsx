@@ -13,7 +13,7 @@ const NAV_ITEMS = [
       {
         label: "Giảm giá",
         icon: "bi bi-ticket-detailed",
-        to: "/admin/discounts",
+        to: "/admin/sale",
       },
       { label: "Danh mục", icon: "bi bi-tags", to: "/admin/categories" },
       { label: "Tác giả", icon: "bi bi-person-badge", to: "/admin/authors" },

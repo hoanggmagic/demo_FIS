@@ -1,221 +1,120 @@
 package com.example.DAO;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.List;
 import com.example.Entities.Book;
-import com.example.Entities.Category;
 import com.example.Util.AuthContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 
 public class BookDAO {
-    private final Connection connection;
 
-    public BookDAO(Connection connection) {
-        this.connection = connection;
-    }
+        // Thay vì dùng Connection, ta dùng EntityManager của JPA
+        private final EntityManager em;
 
-    private static final String QUANTITY_SUBQUERY =
-            "COALESCE((SELECT SUM(i.quantity) FROM inventories i WHERE i.book_id = b.id), 0) AS quantity";
-
-    private static final String BASE_SELECT =
-            "SELECT b.id, b.title, b.description, b.published_year, " + QUANTITY_SUBQUERY + ", "
-                    + "b.author_id, b.status, " + "u.full_name AS author_name, " + "bp.price, "
-                    + "c.id AS category_id, " + "c.name AS category_name " + "FROM books b "
-                    + "LEFT JOIN users u ON b.author_id = u.id "
-                    + "LEFT JOIN book_prices bp ON b.id = bp.book_id "
-                    + "LEFT JOIN categories c ON b.category_id = c.id ";
-
-    public List<Book> getAllBooks() throws SQLException {
-        List<Book> books = new ArrayList<>();
-        String query = BASE_SELECT + "ORDER BY b.id";
-        try (Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                books.add(mapBookRow(rs, true));
-            }
+        public BookDAO(EntityManager em) {
+                this.em = em;
         }
-        return books;
-    }
 
-    public Book getBookById(int id) throws SQLException {
-        String query = BASE_SELECT + "WHERE b.id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, id);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapBookRow(rs, true);
+        // 1. Lấy tất cả sách
+        public List<Book> getAllBooks() {
+                String jpql = "SELECT b FROM Book b ORDER BY b.id";
+                TypedQuery<Book> query = em.createQuery(jpql, Book.class);
+                return query.getResultList();
+        }
+
+        // 2. Lấy sách theo ID
+        public Book getBookById(int id) {
+                // JPA tự tìm kiếm và map luôn BookPrice, Category nếu có liên kết
+                return em.find(Book.class, id);
+        }
+
+        // 3. Tìm kiếm sách theo tên (Không phân biệt hoa thường giống ILIKE)
+        public List<Book> searchBookByTitle(String title) {
+                String jpql = "SELECT b FROM Book b WHERE LOWER(b.title) LIKE LOWER(:title) ORDER BY b.id";
+                TypedQuery<Book> query = em.createQuery(jpql, Book.class);
+                query.setParameter("title", "%" + title + "%");
+                return query.getResultList();
+        }
+
+        // 4. Lấy sách theo danh mục (Xử lý cả danh mục con và quyền tác giả)
+        public List<Book> getBooksByCategory(int categoryId, AuthContext ctx) {
+                StringBuilder jpql = new StringBuilder(
+                                "SELECT b FROM Book b WHERE (b.category.id = :categoryId "
+                                                + "OR b.category.id IN (SELECT c.id FROM Category c WHERE c.parentId = :categoryId)) ");
+
+                if (ctx != null && ctx.isAuthor()) {
+                        jpql.append("AND b.authorId = :authorId ");
                 }
-            }
-        }
-        return null;
-    }
+                jpql.append("ORDER BY b.id");
 
-    public List<Book> searchBookByTitle(String title) throws SQLException {
-        List<Book> books = new ArrayList<>();
-        String query = BASE_SELECT + "WHERE b.title ILIKE ? ORDER BY b.id";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, "%" + title + "%");
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    books.add(mapBookRow(rs, true));
+                TypedQuery<Book> query = em.createQuery(jpql.toString(), Book.class);
+                query.setParameter("categoryId", categoryId);
+                if (ctx != null && ctx.isAuthor()) {
+                        query.setParameter("authorId", ctx.getUserId());
                 }
-            }
-        }
-        return books;
-    }
 
-    public List<Book> getBooksByCategory(int categoryId, AuthContext ctx) throws SQLException {
-        List<Book> books = new ArrayList<>();
-        String query = BASE_SELECT + "WHERE (b.category_id = ? "
-                + "OR b.category_id IN (SELECT id FROM categories WHERE parent_id = ?)) ";
-        if (ctx != null && ctx.isAuthor()) {
-            query += "AND b.author_id = ? ";
+                return query.getResultList();
         }
-        query += "ORDER BY b.id";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, categoryId);
-            pstmt.setInt(2, categoryId);
-            if (ctx != null && ctx.isAuthor()) {
-                pstmt.setInt(3, ctx.getUserId());
-            }
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    books.add(mapBookRow(rs, true));
+
+        // 5. Tìm kiếm sách trong danh mục
+        public List<Book> searchBooksByCategory(String keyword, Integer categoryId,
+                        AuthContext ctx) {
+                StringBuilder jpql = new StringBuilder(
+                                "SELECT b FROM Book b WHERE (b.category.id = :categoryId "
+                                                + "OR b.category.id IN (SELECT c.id FROM Category c WHERE c.parentId = :categoryId)) "
+                                                + "AND LOWER(b.title) LIKE LOWER(:keyword) ");
+
+                if (ctx != null && ctx.isAuthor()) {
+                        jpql.append("AND b.authorId = :authorId ");
                 }
-            }
-        }
-        return books;
-    }
+                jpql.append("ORDER BY b.id");
 
-    public List<Book> searchBooksByCategory(String keyword, Integer categoryId, AuthContext ctx)
-            throws SQLException {
-        List<Book> books = new ArrayList<>();
-        String query = BASE_SELECT + "WHERE (b.category_id = ? "
-                + "OR b.category_id IN (SELECT id FROM categories WHERE parent_id = ?)) "
-                + "AND b.title ILIKE ? ";
-        if (ctx != null && ctx.isAuthor()) {
-            query += "AND b.author_id = ? ";
-        }
-        query += "ORDER BY b.id";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, categoryId);
-            pstmt.setInt(2, categoryId);
-            pstmt.setString(3, "%" + keyword + "%");
-            if (ctx != null && ctx.isAuthor()) {
-                pstmt.setInt(4, ctx.getUserId());
-            }
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    books.add(mapBookRow(rs, true));
+                TypedQuery<Book> query = em.createQuery(jpql.toString(), Book.class);
+                query.setParameter("categoryId", categoryId);
+                query.setParameter("keyword", "%" + keyword + "%");
+                if (ctx != null && ctx.isAuthor()) {
+                        query.setParameter("authorId", ctx.getUserId());
                 }
-            }
-        }
-        return books;
-    }
 
-    public boolean isOwnedByAuthor(int bookId, int authorId) throws SQLException {
-        String query = "SELECT 1 FROM books WHERE id = ? AND author_id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, bookId);
-            pstmt.setInt(2, authorId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                return rs.next();
-            }
+                return query.getResultList();
         }
-    }
 
-    public int insertBook(Book book) throws SQLException {
-        String query =
-                "INSERT INTO books (title, description, published_year, author_id, category_id, status) "
-                        + "VALUES (?, ?, ?, ?, ?, COALESCE(?, 'ACTIVE')) RETURNING id";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, book.getTitle());
-            pstmt.setString(2, book.getDescription());
-            pstmt.setInt(3, book.getPublishedYear());
-            pstmt.setInt(4, book.getAuthorId());
-            if (book.getCategory() != null) {
-                pstmt.setInt(5, book.getCategory().getId());
-            } else {
-                pstmt.setNull(5, java.sql.Types.INTEGER);
-            }
-            pstmt.setString(6, book.getStatus() != null ? book.getStatus() : "ACTIVE");
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("id");
+        // 6. Kiểm tra quyền sở hữu của tác giả
+        public boolean isOwnedByAuthor(int bookId, int authorId) {
+                String jpql = "SELECT COUNT(b) FROM Book b WHERE b.id = :bookId AND b.authorId = :authorId";
+                Long count = em.createQuery(jpql, Long.class).setParameter("bookId", bookId)
+                                .setParameter("authorId", authorId).getSingleResult();
+                return count > 0;
+        }
+
+        // 7. Thêm mới sách (Thay thế INSERT INTO ... RETURNING id)
+        public int insertBook(Book book) {
+                em.persist(book); // JPA tự động lưu xuống DB
+                em.flush(); // Đẩy dữ liệu xuống ngay để lấy ID tự tăng
+                return book.getId();
+        }
+
+        // 8. Cập nhật sách
+        public void updateBook(Book book) {
+                em.merge(book); // JPA tự động tìm theo ID và cập nhật các trường thay đổi
+        }
+
+        // 9. Xóa sách
+        public void deleteBook(int id) {
+                Book book = em.find(Book.class, id);
+                if (book != null) {
+                        em.remove(book);
                 }
-            }
-        }
-        throw new SQLException("Không lấy được id sách vừa thêm");
-    }
-
-    public void updateBook(Book book) throws SQLException {
-        String query = "UPDATE books SET title = ?, description = ?, published_year = ?, "
-                + "author_id = ?, status = COALESCE(?, status), "
-                + "category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, book.getTitle());
-            pstmt.setString(2, book.getDescription());
-            pstmt.setInt(3, book.getPublishedYear());
-            pstmt.setInt(4, book.getAuthorId());
-            pstmt.setString(5, book.getStatus());
-            if (book.getCategory() != null) {
-                pstmt.setInt(6, book.getCategory().getId());
-            } else {
-                pstmt.setNull(6, java.sql.Types.INTEGER);
-            }
-            pstmt.setInt(7, book.getId());
-            pstmt.executeUpdate();
-        }
-    }
-
-    public void deleteBook(int id) throws SQLException {
-        String query = "DELETE FROM books WHERE id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, id);
-            pstmt.executeUpdate();
-        }
-    }
-
-    public List<String> getAllBooksWithAuthors() throws SQLException {
-        List<String> results = new ArrayList<>();
-        String query = BASE_SELECT + "ORDER BY b.id";
-        try (Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(query)) {
-            while (rs.next()) {
-                results.add(String.format("ID: %d | Sách: %s | Tác giả: %s", rs.getInt("id"),
-                        rs.getString("title"), rs.getString("author_name")));
-            }
-        }
-        return results;
-    }
-
-    private Book mapBookRow(ResultSet rs, boolean withJoins) throws SQLException {
-        Book book = new Book(rs.getInt("id"), rs.getString("title"), rs.getInt("published_year"),
-                rs.getInt("author_id"));
-        book.setDescription(rs.getString("description"));
-        book.setQuantity(rs.getInt("quantity"));
-        book.setStatus(rs.getString("status"));
-
-        if (withJoins) {
-            book.setAuthorName(rs.getString("author_name"));
-            book.setPrice(rs.getDouble("price"));
-            int categoryId = rs.getInt("category_id");
-            if (!rs.wasNull()) {
-                Category category = new Category();
-                category.setId(categoryId);
-                category.setName(rs.getString("category_name"));
-                book.setCategory(category);
-            }
-
-            // THÊM DÒNG NÀY
-            BookImageDAO imageDAO = new BookImageDAO(connection);
-            book.setImages(imageDAO.getImagesByBookId(book.getId()));
         }
 
-        return book;
-    }
+        // 10. Lấy chuỗi định dạng ID | Sách | Tác giả
+        public List<String> getAllBooksWithAuthors() {
+                // Lưu ý: Nếu bạn chưa map đối tượng Author/User trong Book, ta dùng tạm b.authorId
+                // Ở đây mình giả định bạn dùng b.authorName đã được map hoặc xử lý sau
+                String jpql = "SELECT b FROM Book b ORDER BY b.id";
+                List<Book> books = em.createQuery(jpql, Book.class).getResultList();
+
+                return books.stream().map(b -> String.format("ID: %d | Sách: %s | Tác giả ID: %d",
+                                b.getId(), b.getTitle(), b.getAuthorId())).toList();
+        }
 }

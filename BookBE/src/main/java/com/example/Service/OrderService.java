@@ -38,6 +38,8 @@ public class OrderService {
     private WalletRepository walletRepository; // 👈 THÊM
     @Autowired
     private WalletTransactionRepository walletTransactionRepository; // 👈 THÊM
+    @Autowired
+    private BookService bookService;
 
     // ── DTO ─────────────────────────────────────────────────────────────────
     public static class OrderRequest {
@@ -179,7 +181,7 @@ public class OrderService {
             oi.setOrder(order);
             oi.setBook(book);
             oi.setQuantity(itemReq.getQuantity());
-            BigDecimal price = BigDecimal.valueOf(book.getPrice());
+            BigDecimal price = BigDecimal.valueOf(bookService.getEffectivePrice(book.getId()));
             oi.setPrice(price);
             orderItems.add(oi);
 

@@ -26,7 +26,7 @@ public class RevenueController {
     @Autowired
     private DataSource dataSource;
 
-    // GET /api/admin/revenue/summary?from=2024-01-01&to=2024-12-31
+
     @GetMapping("/summary")
     public ResponseEntity<?> getSummary(@RequestParam(required = false) String from,
             @RequestParam(required = false) String to, HttpServletRequest request) {
@@ -54,7 +54,7 @@ public class RevenueController {
         }
     }
 
-    // GET /api/admin/revenue/by-day?from=2024-01-01&to=2024-12-31
+
     @GetMapping("/by-day")
     public ResponseEntity<?> getByDay(@RequestParam(required = false) String from,
             @RequestParam(required = false) String to, HttpServletRequest request) {
@@ -80,7 +80,7 @@ public class RevenueController {
         }
     }
 
-    // GET /api/admin/revenue/by-month?year=2024
+
     @GetMapping("/by-month")
     public ResponseEntity<?> getByMonth(
             @RequestParam(required = false, defaultValue = "0") int year,
@@ -110,7 +110,7 @@ public class RevenueController {
         }
     }
 
-    // GET /api/admin/revenue/by-branch?from=2024-01-01&to=2024-12-31
+
     @GetMapping("/by-branch")
     public ResponseEntity<?> getByBranch(@RequestParam(required = false) String from,
             @RequestParam(required = false) String to, HttpServletRequest request) {

@@ -1,8 +1,6 @@
 package com.example.Controller.Admin;
 
-import java.sql.Connection;
 import java.util.List;
-import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -14,11 +12,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.example.DAO.UserDAO;
-import com.example.Entities.Author;
+import com.example.Entities.User;
 import com.example.Service.BookService;
 import com.example.Util.AuthContext;
-import com.example.Util.PasswordUtil;
 import com.example.Util.RequestAuth;
 import com.example.dto.AuthorRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,30 +24,36 @@ import jakarta.servlet.http.HttpServletRequest;
 @CrossOrigin(origins = "*")
 public class AuthorController {
 
+    // Tiêm thẳng BookService được Spring quản lý vào đây
     @Autowired
-    private DataSource dataSource;
+    private BookService bookService;
 
-    @Autowired
-    private PasswordUtil passwordUtil;
-
+    // GET: Lấy danh sách tác giả (Trả về List<User> thay vì Author)
     @GetMapping
-    public ResponseEntity<List<Author>> getAllAuthors(HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+    public ResponseEntity<List<User>> getAllAuthors(HttpServletRequest request) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
-            BookService service = new BookService(conn, passwordUtil);
-            return ResponseEntity.ok(service.getAuthorsForContext(ctx));
+
+            // Hàm getAuthors(ctx) trong BookService mới của bạn trả về List<User>
+            return ResponseEntity.ok(bookService.getAuthors(ctx));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
     }
 
+    // GET: Lấy chi tiết tác giả qua ID
     @GetMapping("/{id}")
-    public ResponseEntity<Author> getAuthorById(@PathVariable int id, HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+    public ResponseEntity<User> getAuthorById(@PathVariable int id, HttpServletRequest request) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
-            BookService service = new BookService(conn, passwordUtil);
-            Author author = service.getAuthorById(id, ctx);
-            return author != null ? ResponseEntity.ok(author) : ResponseEntity.notFound().build();
+
+            // BookService hiện tại chưa có getAuthorById đơn lẻ, ta dùng getAuthors lọc theo ID
+            // Hoặc nếu bạn có UserService thì nên chuyển sang dùng UserService
+            List<User> authors = bookService.getAuthors(ctx);
+            User target = authors.stream().filter(a -> a.getId() == id).findFirst().orElse(null);
+
+            return target != null ? ResponseEntity.ok(target) : ResponseEntity.notFound().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(403).build();
         } catch (Exception e) {
@@ -59,14 +61,15 @@ public class AuthorController {
         }
     }
 
+    // POST: Tạo tác giả mới (Sử dụng DTO AuthorRequest có sẵn)
     @PostMapping
     public ResponseEntity<String> createAuthor(@RequestBody AuthorRequest body,
             HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdmin(ctx);
-            BookService service = new BookService(conn, passwordUtil);
-            service.createAuthor(body, ctx);
+
+            bookService.createAuthor(body, ctx);
             return ResponseEntity.ok("Thêm tác giả thành công!");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
@@ -75,13 +78,17 @@ public class AuthorController {
         }
     }
 
+    // PUT: Cập nhật thông tin tác giả
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateAuthor(@PathVariable int id, @RequestBody Author author,
+    public ResponseEntity<String> updateAuthor(@PathVariable int id,
+            @RequestBody AuthorRequest body, // Chuyển từ Author sang AuthorRequest cho đồng bộ dữ
+                                             // liệu sửa
             HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
+        try {
             AuthContext ctx = RequestAuth.require(request);
-            BookService service = new BookService(conn, passwordUtil);
-            service.updateAuthor(id, author, ctx);
+
+            // Gọi hàm updateAuthorById có sẵn trong BookService của bạn
+            bookService.updateAuthorById(id, body, ctx);
             return ResponseEntity.ok("Cập nhật tác giả thành công!");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
@@ -90,16 +97,15 @@ public class AuthorController {
         }
     }
 
+    // DELETE: Bật / Tắt trạng thái hoạt động của tác giả (Soft Delete)
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteAuthor(@PathVariable int id, HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
-
+        try {
             AuthContext ctx = RequestAuth.require(request);
             RequestAuth.requireAdmin(ctx);
 
-            UserDAO dao = new UserDAO(conn);
-
-            boolean newStatus = dao.toggleAuthorStatus(id);
+            // KHÔNG dùng UserDAO cũ nữa. Gọi thẳng hàm toggleAuthorStatus có sẵn trong BookService
+            boolean newStatus = bookService.toggleAuthorStatus(id, ctx);
 
             if (newStatus) {
                 return ResponseEntity.ok("Mở lại thành công!");
@@ -107,6 +113,8 @@ public class AuthorController {
                 return ResponseEntity.ok("Vô hiệu hóa thành công!");
             }
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }

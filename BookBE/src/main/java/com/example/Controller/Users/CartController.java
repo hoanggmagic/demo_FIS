@@ -29,15 +29,19 @@ public class CartController {
     private DataSource dataSource;
 
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getCart(HttpServletRequest request) {
+    public ResponseEntity<?> getCart(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             AuthContext ctx = RequestAuth.require(request);
             CartDAO dao = new CartDAO(conn);
-            return ResponseEntity.ok(dao.getCartByUserId(ctx.getUserId()));
+            List<Map<String, Object>> cart = dao.getCartByUserId(ctx.getUserId());
+            return ResponseEntity.ok(cart);
         } catch (Exception e) {
+            // Ghi log chi tiết ra terminal
+            System.err.println("--- LỖI TẠI GET CART ---");
             e.printStackTrace();
-
-            return ResponseEntity.status(500).body(List.of(Map.of("error", e.getMessage())));
+            // Trả về thông báo lỗi dễ đọc hơn
+            return ResponseEntity.status(500)
+                    .body("Chi tiết lỗi: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
     }
 
@@ -46,11 +50,28 @@ public class CartController {
     @PostMapping
     public ResponseEntity<String> addToCart(@RequestBody Map<String, Integer> body,
             HttpServletRequest request) {
+        // SỬA ⑥: Tách auth error ra ngoài
+        AuthContext ctx;
+        try {
+            ctx = RequestAuth.require(request);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Unauthorized: " + e.getMessage());
+        }
+
+        // SỬA ⑤: Validate input trước khi dùng
+        if (!body.containsKey("bookId")) {
+            return ResponseEntity.badRequest().body("Thiếu trường bookId");
+        }
+
         try (Connection conn = dataSource.getConnection()) {
-            AuthContext ctx = RequestAuth.require(request);
             int bookId = body.get("bookId");
             int quantity = body.getOrDefault("quantity", 1);
-            int branchId = body.getOrDefault("branchId", 1); // mặc định chi nhánh 1
+            int branchId = body.getOrDefault("branchId", 1);
+
+            if (quantity <= 0) {
+                return ResponseEntity.badRequest().body("Số lượng phải lớn hơn 0");
+            }
+
             CartDAO dao = new CartDAO(conn);
             dao.addToCart(ctx.getUserId(), bookId, quantity, branchId);
             return ResponseEntity.ok("Thêm vào giỏ hàng thành công!");

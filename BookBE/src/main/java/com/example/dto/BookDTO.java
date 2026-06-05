@@ -5,65 +5,36 @@ import java.util.List;
 
 public class BookDTO {
 
-    // ======================
-    // BOOK INFO
-    // ======================
     private Integer id;
     private String title;
     private String description;
     private Integer publishedYear;
     private Integer quantity;
-    private Double price;
     private String status;
 
-    // ======================
-    // AUTHOR (FK)
-    // ======================
+    // PRICING
+    private Double originalPrice;
+    private Double discountedPrice;
+    private Double discountPercent;
+
+    // AUTHOR
     private Integer authorId;
     private String authorName;
 
-    // ======================
-    // CATEGORY (FK)
-    // ======================
+    // CATEGORY
     private Integer categoryId;
     private String categoryName;
 
-    // ======================
-    // AUDIT (optional nhưng rất nên có)
-    // ======================
+    // AUDIT
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    // ======================
-    // Images (not in DB, chỉ để truyền data giữa FE-BE)
+    // IMAGES
     private List<String> images;
 
-    // ======================
-    // CONSTRUCTOR
-    // ======================
+    private double price;
+
     public BookDTO() {}
-
-    public BookDTO(Integer id, String title, String description, Integer publishedYear,
-            Integer quantity, Double price, String status, Integer authorId, String authorName,
-            Integer categoryId, String categoryName, Timestamp createdAt, Timestamp updatedAt) {
-        this.id = id;
-        this.title = title;
-        this.description = description;
-        this.publishedYear = publishedYear;
-        this.quantity = quantity;
-        this.price = price;
-        this.status = status;
-        this.authorId = authorId;
-        this.authorName = authorName;
-        this.categoryId = categoryId;
-        this.categoryName = categoryName;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    // ======================
-    // GETTER / SETTER
-    // ======================
 
     public Integer getId() {
         return id;
@@ -105,20 +76,36 @@ public class BookDTO {
         this.quantity = quantity;
     }
 
-    public Double getPrice() {
-        return price;
-    }
-
-    public void setPrice(Double price) {
-        this.price = price;
-    }
-
     public String getStatus() {
         return status;
     }
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Double getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(Double originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+
+    public Double getDiscountedPrice() {
+        return discountedPrice;
+    }
+
+    public void setDiscountedPrice(Double discountedPrice) {
+        this.discountedPrice = discountedPrice;
+    }
+
+    public Double getDiscountPercent() {
+        return discountPercent;
+    }
+
+    public void setDiscountPercent(Double discountPercent) {
+        this.discountPercent = discountPercent;
     }
 
     public Integer getAuthorId() {
@@ -176,4 +163,13 @@ public class BookDTO {
     public void setImages(List<String> images) {
         this.images = images;
     }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
 }

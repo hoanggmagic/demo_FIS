@@ -338,6 +338,7 @@ export default function Cart({ reload }) {
                           />
 
                           {/* Thông tin tên sách + Giá bán */}
+                          {/* ✅ Thay toàn bộ div đó bằng: */}
                           <div>
                             <h5
                               style={{
@@ -357,17 +358,18 @@ export default function Cart({ reload }) {
                                 flexWrap: "wrap",
                               }}
                             >
-                              <span
-                                style={{
-                                  color: "#ef4444",
-                                  fontWeight: 700,
-                                  fontSize: 14,
-                                }}
-                              >
-                                {Number(item.price || 0).toLocaleString()} VND
-                              </span>
-                              {item.discountPercent > 0 && (
+                              {item.discountPercent > 0 ? (
                                 <>
+                                  <span
+                                    style={{
+                                      color: "#ef4444",
+                                      fontWeight: 700,
+                                      fontSize: 14,
+                                    }}
+                                  >
+                                    {Number(item.price || 0).toLocaleString()}{" "}
+                                    VND
+                                  </span>
                                   <span
                                     style={{
                                       textDecoration: "line-through",
@@ -383,16 +385,26 @@ export default function Cart({ reload }) {
                                   <span
                                     style={{
                                       background: "#fef2f2",
-                                      color: "#ef4444",
+                                      color: "#dc2626",
                                       borderRadius: 4,
                                       padding: "1px 6px",
                                       fontSize: 11,
                                       fontWeight: 700,
                                     }}
                                   >
-                                    -{item.discountPercent}%
+                                    -{Math.round(item.discountPercent)}%
                                   </span>
                                 </>
+                              ) : (
+                                <span
+                                  style={{
+                                    color: "#ef4444",
+                                    fontWeight: 700,
+                                    fontSize: 14,
+                                  }}
+                                >
+                                  {Number(item.price || 0).toLocaleString()} VND
+                                </span>
                               )}
                             </div>
                           </div>
