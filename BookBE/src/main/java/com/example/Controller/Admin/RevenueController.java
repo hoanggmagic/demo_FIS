@@ -174,6 +174,35 @@ public class RevenueController {
         }
     }
 
+    @GetMapping("/platform-balance")
+    public ResponseEntity<?> getPlatformBalance(HttpServletRequest request) {
+        try (Connection conn = dataSource.getConnection()) {
+            RequestAuth.require(request);
+
+            // Tổng nền tảng thu vào (32%)
+            PreparedStatement ps1 = conn.prepareStatement(
+                    "SELECT COALESCE(SUM(platform_income), 0) as total_earned FROM orders WHERE status = 'SUCCESS'");
+            ResultSet rs1 = ps1.executeQuery();
+            double totalEarned = rs1.next() ? rs1.getDouble("total_earned") : 0;
+
+            // Tổng nền tảng đã trả cho tác giả (từ ví nền tảng — nếu có)
+            // Hoặc để 0 nếu nền tảng không chi trực tiếp
+            PreparedStatement ps2 = conn.prepareStatement(
+                    "SELECT COALESCE(SUM(amount), 0) as total_paid FROM withdraw_requests WHERE status = 'APPROVED'");
+            ResultSet rs2 = ps2.executeQuery();
+            double totalAuthorWithdrawn = rs2.next() ? rs2.getDouble("total_paid") : 0;
+
+            Map<String, Object> res = new HashMap<>();
+            res.put("totalEarned", totalEarned); // nền tảng thu 32%
+            res.put("totalAuthorWithdrawn", totalAuthorWithdrawn); // tác giả đã rút (chỉ để tham
+                                                                   // khảo)
+            res.put("balance", totalEarned); // số dư nền tảng = chính nó, không trừ ví tác giả
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
     private String buildDateFilter(String from, String to) {
         return buildDateFilter(from, to, "o."); // ← đổi "" thành "o."
     }

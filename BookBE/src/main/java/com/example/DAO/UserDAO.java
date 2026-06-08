@@ -179,9 +179,7 @@ public class UserDAO {
     }
 
     public void ensureDemoPasswords(PasswordUtil passwordUtil) throws SQLException {
-        updatePasswordIfNeeded("admin", "admin123", passwordUtil);
-        updatePasswordIfNeeded("hoang_author", "author123", passwordUtil);
-        updatePasswordIfNeeded("user01", "user123", passwordUtil);
+        updatePasswordIfNeeded("admin", "hoangg", passwordUtil);
     }
 
     public int insertUser(User user) throws SQLException {

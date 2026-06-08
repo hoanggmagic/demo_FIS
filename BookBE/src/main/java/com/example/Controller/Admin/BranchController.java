@@ -11,7 +11,6 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,7 +35,7 @@ public class BranchController {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
             PreparedStatement ps = conn.prepareStatement(
-                    "SELECT id, name, address, phone, created_at FROM branches ORDER BY id");
+                    "SELECT id, name, address, phone, status, created_at FROM branches ORDER BY id");
             ResultSet rs = ps.executeQuery();
             List<Map<String, Object>> list = new ArrayList<>();
             while (rs.next()) {
@@ -45,6 +44,7 @@ public class BranchController {
                 row.put("name", rs.getString("name"));
                 row.put("address", rs.getString("address"));
                 row.put("phone", rs.getString("phone"));
+                row.put("status", rs.getString("status"));
                 row.put("createdAt", rs.getTimestamp("created_at"));
                 list.add(row);
             }
@@ -53,6 +53,8 @@ public class BranchController {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
+
+
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, String> body,
@@ -105,26 +107,36 @@ public class BranchController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable int id, HttpServletRequest request) {
+    @PutMapping("/{id}/toggle-status")
+    public ResponseEntity<?> toggleStatus(@PathVariable int id, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
-            // Kiểm tra còn tồn kho không
-            PreparedStatement checkPs =
-                    conn.prepareStatement("SELECT COUNT(*) FROM inventories WHERE branch_id = ?");
-            checkPs.setInt(1, id);
-            ResultSet checkRs = checkPs.executeQuery();
-            checkRs.next();
-            if (checkRs.getInt(1) > 0)
-                return ResponseEntity.badRequest().body("Không thể xóa chi nhánh còn tồn kho!");
 
-            PreparedStatement ps = conn.prepareStatement("DELETE FROM branches WHERE id = ?");
-            ps.setInt(1, id);
-            int rows = ps.executeUpdate();
+            // Lấy status hiện tại
+            PreparedStatement getPs =
+                    conn.prepareStatement("SELECT status FROM branches WHERE id = ?");
+            getPs.setInt(1, id);
+            ResultSet rs = getPs.executeQuery();
 
-            if (rows == 0)
+            if (!rs.next())
                 return ResponseEntity.status(404).body("Không tìm thấy chi nhánh");
-            return ResponseEntity.ok("Xóa chi nhánh thành công!");
+
+            String currentStatus = rs.getString("status");
+            String newStatus = currentStatus.equals("active") ? "inactive" : "active";
+
+            // Cập nhật sang trạng thái mới
+            PreparedStatement updatePs =
+                    conn.prepareStatement("UPDATE branches SET status = ? WHERE id = ?");
+            updatePs.setString(1, newStatus);
+            updatePs.setInt(2, id);
+            updatePs.executeUpdate();
+
+            Map<String, Object> res = new HashMap<>();
+            res.put("id", id);
+            res.put("status", newStatus);
+            res.put("message", newStatus.equals("active") ? "Đã kích hoạt chi nhánh!"
+                    : "Đã vô hiệu hóa chi nhánh!");
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }

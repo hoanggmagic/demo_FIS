@@ -11,3 +11,5 @@ export const createBranch = (data) => axios.post(BASE, data, getHeaders());
 export const updateBranch = (id, data) =>
   axios.put(`${BASE}/${id}`, data, getHeaders());
 export const deleteBranch = (id) => axios.delete(`${BASE}/${id}`, getHeaders());
+export const toggleBranchStatus = (id) =>
+  axios.put(`${BASE}/${id}/toggle-status`, {}, getHeaders());

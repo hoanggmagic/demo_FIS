@@ -307,7 +307,6 @@ export default function SaleManagement() {
         }}
       >
         <div>
-          <h5 style={{ margin: 0, fontWeight: 700 }}>🏷️ Quản lý Sale</h5>
           <small style={{ color: "#64748b" }}>
             Đặt giá sale theo thời gian cho từng sách
           </small>

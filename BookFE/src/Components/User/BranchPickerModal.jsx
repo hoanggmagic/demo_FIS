@@ -15,7 +15,10 @@ export default function BranchPickerModal({ book, onConfirm, onClose }) {
     if (!book) return;
     setLoading(true);
     getBookStock(book.id)
-      .then((res) => setStock(res.data || []))
+      .then((res) => {
+        setStock(res.data || []);
+        setSelected(null);
+      })
       .catch(() => setStock([]))
       .finally(() => setLoading(false));
   }, [book]);
@@ -98,7 +101,11 @@ export default function BranchPickerModal({ book, onConfirm, onClose }) {
             {stock.map((s) => (
               <div
                 key={s.branchId}
-                onClick={() => s.quantity > 0 && setSelected(s.branchId)}
+                onClick={() =>
+                  s.quantity > 0 &&
+                  s.status === "active" &&
+                  setSelected(s.branchId)
+                }
                 style={{
                   border:
                     selected === s.branchId
@@ -106,14 +113,17 @@ export default function BranchPickerModal({ book, onConfirm, onClose }) {
                       : "1.5px solid #e2e8f0",
                   borderRadius: 10,
                   padding: "12px 16px",
-                  cursor: s.quantity > 0 ? "pointer" : "not-allowed",
+                  cursor:
+                    s.quantity > 0 && s.status === "active"
+                      ? "pointer"
+                      : "not-allowed",
                   background:
                     selected === s.branchId
                       ? "#eff6ff"
-                      : s.quantity === 0
+                      : s.status !== "active" || s.quantity === 0
                         ? "#f8fafc"
                         : "#fff",
-                  opacity: s.quantity === 0 ? 0.6 : 1,
+                  opacity: s.status !== "active" || s.quantity === 0 ? 0.6 : 1,
                   transition: "all .15s",
                 }}
               >
@@ -158,11 +168,25 @@ export default function BranchPickerModal({ book, onConfirm, onClose }) {
                       fontWeight: 600,
                       padding: "3px 10px",
                       borderRadius: 20,
-                      background: s.quantity === 0 ? "#fee2e2" : "#dcfce7",
-                      color: s.quantity === 0 ? "#ef4444" : "#16a34a",
+                      background:
+                        s.status !== "active"
+                          ? "#fef3c7"
+                          : s.quantity === 0
+                            ? "#fee2e2"
+                            : "#dcfce7",
+                      color:
+                        s.status !== "active"
+                          ? "#d97706"
+                          : s.quantity === 0
+                            ? "#ef4444"
+                            : "#16a34a",
                     }}
                   >
-                    {s.quantity === 0 ? "Hết hàng" : `Còn ${s.quantity}`}
+                    {s.status !== "active"
+                      ? "Tạm thời đóng cửa"
+                      : s.quantity === 0
+                        ? "Hết hàng"
+                        : `Còn ${s.quantity}`}
                   </span>
                 </div>
               </div>

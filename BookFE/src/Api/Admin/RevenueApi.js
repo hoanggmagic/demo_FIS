@@ -1,36 +1,15 @@
-import axios from "axios";
+import api from "../axiosClient";
 
-const BASE = "http://localhost:8080/api/admin/revenue";
+const BASE = "/admin/revenue";
 
-export const getSummary = (from, to) => {
-  const token = localStorage.getItem("token");
-  console.log("TOKEN:", token);
-  return axios.get(`${BASE}/summary`, {
-    headers: { Authorization: `Bearer ${token}` },
-    params: { from, to },
-  });
-};
-
+export const getSummary = (from, to) =>
+  api.get(`${BASE}/summary`, { params: { from, to } });
 export const getByDay = (from, to) =>
-  axios.get(`${BASE}/by-day`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    params: { from, to },
-  });
-
+  api.get(`${BASE}/by-day`, { params: { from, to } });
 export const getByMonth = (year) =>
-  axios.get(`${BASE}/by-month`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    params: { year },
-  });
-
+  api.get(`${BASE}/by-month`, { params: { year } });
 export const getByBranch = (from, to) =>
-  axios.get(`${BASE}/by-branch`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    params: { from, to },
-  });
-
+  api.get(`${BASE}/by-branch`, { params: { from, to } });
 export const getByBook = (from, to) =>
-  axios.get(`${BASE}/by-book`, {
-    headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    params: { from, to },
-  });
+  api.get(`${BASE}/by-book`, { params: { from, to } });
+export const getPlatformBalance = () => api.get(`${BASE}/platform-balance`);

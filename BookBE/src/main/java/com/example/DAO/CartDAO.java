@@ -20,8 +20,6 @@ public class CartDAO {
     // Lấy giỏ hàng theo userId
     public List<Map<String, Object>> getCartByUserId(int userId) throws SQLException {
         List<Map<String, Object>> cart = new ArrayList<>();
-        // SỬA ②: p.price → p.original_price và p.sale_price
-        // SỬA ③: Dùng thống nhất sale_price từ book_prices, bỏ book_discounts
         String sql = """
                 SELECT c.id,
                        c.book_id,
@@ -33,7 +31,8 @@ public class CartDAO {
                        c.quantity * COALESCE(NULLIF(p.sale_price, 0), p.original_price) AS subtotal,
                        COALESCE(i.quantity, 0) AS stock,
                        c.branch_id,
-                       br.name AS branch_name
+                       br.name AS branch_name,
+                       br.status AS branch_status
                 FROM cart c
                 JOIN books b ON c.book_id = b.id
                 JOIN book_prices p ON b.id = p.book_id
@@ -41,7 +40,6 @@ public class CartDAO {
                 LEFT JOIN inventories i ON i.book_id = c.book_id AND i.branch_id = c.branch_id
                 WHERE c.user_id = ?
                 """;
-        // SỬA ①: Dùng try-with-resources để tự động close
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -57,6 +55,7 @@ public class CartDAO {
                     item.put("stock", rs.getInt("stock"));
                     item.put("branchId", rs.getInt("branch_id"));
                     item.put("branchName", rs.getString("branch_name"));
+                    item.put("branchStatus", rs.getString("branch_status"));
                     cart.add(item);
                 }
             }

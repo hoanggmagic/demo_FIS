@@ -62,6 +62,16 @@ export default function Cart({ reload }) {
       alert("❌ Vui lòng chọn ít nhất 1 sản phẩm!");
       return;
     }
+    const hasInactiveBranch = selectedItems.some(
+      (i) => i.branchStatus === "inactive",
+    );
+    if (hasInactiveBranch) {
+      alert(
+        "❌ Một số sản phẩm thuộc chi nhánh đang tạm đóng cửa. Vui lòng bỏ chọn các sản phẩm đó!",
+      );
+      return;
+    }
+
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) {
@@ -166,17 +176,18 @@ export default function Cart({ reload }) {
   }
 
   // Nhóm theo chi nhánh
+
   const byBranch = items.reduce((acc, item) => {
     const key = item.branchId || 0;
     if (!acc[key])
       acc[key] = {
         branchName: item.branchName || "Chưa rõ chi nhánh",
+        branchStatus: item.branchStatus || "active", // 👈 thêm
         items: [],
       };
     acc[key].items.push(item);
     return acc;
   }, {});
-
   return (
     <div
       style={{
@@ -261,6 +272,7 @@ export default function Cart({ reload }) {
                   }}
                 >
                   {/* Header Chi nhánh */}
+                  {/* Header Chi nhánh */}
                   <div
                     style={{
                       display: "flex",
@@ -282,6 +294,7 @@ export default function Cart({ reload }) {
                         accentColor: "#2563eb",
                       }}
                     />
+                    {/* 👇 Thay span này */}
                     <span
                       style={{
                         display: "flex",
@@ -296,9 +309,22 @@ export default function Cart({ reload }) {
                       }}
                     >
                       🏪 {group.branchName}
+                      {group.branchStatus === "inactive" && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "2px 8px",
+                            borderRadius: 20,
+                            background: "#fef3c7",
+                            color: "#d97706",
+                          }}
+                        >
+                          Tạm đóng cửa
+                        </span>
+                      )}
                     </span>
                   </div>
-
                   {/* Danh sách các cuốn sách trong chi nhánh này */}
                   <div
                     style={{

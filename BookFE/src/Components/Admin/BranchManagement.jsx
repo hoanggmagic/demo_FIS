@@ -3,7 +3,7 @@ import {
   getBranches,
   createBranch,
   updateBranch,
-  deleteBranch,
+  toggleBranchStatus,
 } from "../../Api/Admin/BranchApi";
 
 const empty = { name: "", address: "", phone: "" };
@@ -71,14 +71,15 @@ export default function BranchManagement() {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Xóa chi nhánh "${name}"?`)) return;
+  const handleToggle = async (id, name, currentStatus) => {
+    const action = currentStatus === "active" ? "vô hiệu hóa" : "kích hoạt";
+    if (!window.confirm(`Bạn muốn ${action} chi nhánh "${name}"?`)) return;
     try {
-      await deleteBranch(id);
-      showToast("success", "Đã xóa chi nhánh!");
+      const res = await toggleBranchStatus(id);
+      showToast("success", res.data.message);
       load();
     } catch (err) {
-      showToast("danger", err.response?.data || "Xóa thất bại");
+      showToast("danger", err.response?.data || "Thao tác thất bại");
     }
   };
 
@@ -221,6 +222,7 @@ export default function BranchManagement() {
                   <th>Số điện thoại</th>
                   <th>Ngày tạo</th>
                   <th className="text-center">Hành động</th>
+                  <th className="text-center">Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
@@ -236,6 +238,15 @@ export default function BranchManagement() {
                     <tr key={b.id}>
                       <td className="text-muted" style={{ fontSize: 13 }}>
                         #{b.id}
+                      </td>
+                      <td className="text-center">
+                        <span
+                          className={`badge ${b.status === "active" ? "bg-success" : "bg-secondary"}`}
+                        >
+                          {b.status === "active"
+                            ? "Đang hoạt động"
+                            : "Đang dừng hoạt động"}
+                        </span>
                       </td>
                       <td>
                         <div className="d-flex align-items-center gap-2">
@@ -274,10 +285,17 @@ export default function BranchManagement() {
                             <i className="bi bi-pencil" /> Sửa
                           </button>
                           <button
-                            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                            onClick={() => handleDelete(b.id, b.name)}
+                            className={`btn btn-sm d-flex align-items-center gap-1 ${
+                              b.status === "active"
+                                ? "btn-outline-warning"
+                                : "btn-outline-success"
+                            }`}
+                            onClick={() => handleToggle(b.id, b.name, b.status)}
                           >
-                            <i className="bi bi-trash" /> Xóa
+                            <i
+                              className={`bi ${b.status === "active" ? "bi-toggle-on" : "bi-toggle-off"}`}
+                            />
+                            {b.status === "active" ? "Tắt" : "Bật"}
                           </button>
                         </div>
                       </td>

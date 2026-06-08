@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../../Api/axiosClient";
 
-const API = "http://localhost:8080/api/admin/wallet";
-const getHeaders = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+const BASE = "/admin/wallet";
 
 const STATUS = {
   PENDING: { label: "Chờ duyệt", cls: "bg-warning text-dark" },
@@ -25,14 +22,14 @@ export default function AdminWallet() {
 
   const load = async () => {
     try {
-      const [balRes, reqRes] = await Promise.all([
-        axios.get(`${API}/balance`, getHeaders()),
-        axios.get(`${API}/withdraw-requests`, getHeaders()),
+      const [balanceRes, requestsRes] = await Promise.all([
+        api.get(`${BASE}/balance`),
+        api.get(`${BASE}/withdraw-requests`),
       ]);
-      setBalance(balRes.data.balance);
-      setRequests(reqRes.data);
+      setBalance(balanceRes.data?.balance ?? 0);
+      setRequests(requestsRes.data || []);
     } catch (err) {
-      console.error(err);
+      showToast("danger", "Lỗi tải dữ liệu");
     }
   };
 
@@ -48,10 +45,9 @@ export default function AdminWallet() {
         : `Từ chối yêu cầu của ${r.fullName}?`;
     if (!window.confirm(`Xác nhận ${label}?\n\n${detail}`)) return;
     try {
-      const res = await axios.put(
-        `${API}/withdraw-requests/${id}/${action}`,
+      const res = await api.put(
+        `${BASE}/withdraw-requests/${id}/${action}`,
         {},
-        getHeaders(),
       );
       showToast("success", res.data.message);
       load();
@@ -85,28 +81,7 @@ export default function AdminWallet() {
 
       {/* Balance card */}
       <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <div
-            className="card border-0 text-white"
-            style={{ background: "linear-gradient(135deg, #1976d2, #42a5f5)" }}
-          >
-            <div className="card-body d-flex align-items-center justify-content-between p-4">
-              <div>
-                <p className="mb-1 opacity-75" style={{ fontSize: 13 }}>
-                  Số dư ví Admin
-                </p>
-                <h3 className="mb-0 fw-bold">
-                  {Number(balance).toLocaleString()} VND
-                </h3>
-              </div>
-              <i
-                className="bi bi-bank2"
-                style={{ fontSize: 40, opacity: 0.4 }}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="col-md-4">
+        <div className="col-md-6">
           <div
             className="card border-0 h-100"
             style={{ background: "#fff3e0" }}
@@ -127,7 +102,7 @@ export default function AdminWallet() {
             </div>
           </div>
         </div>
-        <div className="col-md-4">
+        <div className="col-md-6">
           <div
             className="card border-0 h-100"
             style={{ background: "#e8f5e9" }}

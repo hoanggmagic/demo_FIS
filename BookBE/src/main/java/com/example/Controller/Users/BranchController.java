@@ -24,13 +24,12 @@ public class BranchController {
     @Autowired
     private DataSource dataSource;
 
-    // GET /api/user/branches
-    // Lấy danh sách tất cả chi nhánh
+    // GET /api/user/branches — chỉ lấy chi nhánh active
     @GetMapping("/branches")
     public ResponseEntity<?> getAllBranches() {
         try (Connection conn = dataSource.getConnection()) {
-            PreparedStatement ps = conn
-                    .prepareStatement("SELECT id, name, address, phone FROM branches ORDER BY id");
+            PreparedStatement ps = conn.prepareStatement(
+                    "SELECT id, name, address, phone FROM branches WHERE status = 'active' ORDER BY id");
             ResultSet rs = ps.executeQuery();
 
             List<Map<String, Object>> branches = new ArrayList<>();
@@ -44,20 +43,17 @@ public class BranchController {
             }
             return ResponseEntity.ok(branches);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
 
-    // GET /api/user/books/{bookId}/stock
-    // Lấy tồn kho của 1 sách theo từng chi nhánh
-    // Response: [{ branchId, branchName, address, phone, quantity }]
+    // GET /api/user/books/{bookId}/stock — chỉ lấy chi nhánh active + có status
     @GetMapping("/books/{bookId}/stock")
     public ResponseEntity<?> getStockByBook(@PathVariable int bookId) {
         try (Connection conn = dataSource.getConnection()) {
             PreparedStatement ps = conn.prepareStatement("""
                         SELECT b.id as branch_id, b.name as branch_name,
-                               b.address, b.phone,
+                               b.address, b.phone, b.status,
                                COALESCE(i.quantity, 0) as quantity
                         FROM branches b
                         LEFT JOIN inventories i
@@ -74,12 +70,12 @@ public class BranchController {
                 row.put("branchName", rs.getString("branch_name"));
                 row.put("address", rs.getString("address"));
                 row.put("phone", rs.getString("phone"));
+                row.put("status", rs.getString("status"));
                 row.put("quantity", rs.getInt("quantity"));
                 stock.add(row);
             }
             return ResponseEntity.ok(stock);
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
