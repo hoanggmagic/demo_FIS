@@ -2,19 +2,36 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 const API = "http://localhost:8080/api/admin/users";
+const PAGE_SIZE = 5;
+
 const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
 const emptyForm = { username: "", email: "", fullName: "", password: "" };
 
+const AVATAR_COLORS = [
+  ["#dbeafe", "#2563eb"],
+  ["#dcfce7", "#16a34a"],
+  ["#fef3c7", "#d97706"],
+  ["#fce7f3", "#db2777"],
+  ["#ede9fe", "#7c3aed"],
+  ["#ffedd5", "#ea580c"],
+  ["#cffafe", "#0891b2"],
+];
+
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -22,17 +39,33 @@ export default function UserManagement() {
   };
 
   const load = async () => {
+    setLoading(true);
     try {
-      const res = await axios.get(API, getHeaders());
-      setUsers(res.data.filter((u) => u.role === "USER"));
+      const res = await axios.get(
+        `${API}?page=${page}&size=${PAGE_SIZE}&keyword=${encodeURIComponent(search)}`,
+        getHeaders(),
+      );
+      setUsers(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
+      setTotalElements(res.data.totalElements || 0);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
+    setPage(0);
+  }, [search]);
+  useEffect(() => {
     load();
-  }, []);
+  }, [page, search]);
+
+  const handleSearch = () => {
+    setSearch(searchInput);
+    setPage(0);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -100,19 +133,6 @@ export default function UserManagement() {
     setShowForm(true);
   };
 
-  const handleCancel = () => {
-    setEditing(null);
-    setShowForm(false);
-    setForm(emptyForm);
-  };
-
-  const filtered = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(search.toLowerCase()) ||
-      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.fullName || "").toLowerCase().includes(search.toLowerCase()),
-  );
-
   return (
     <div>
       {/* Toast */}
@@ -132,7 +152,7 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Header row */}
+      {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <div className="input-group" style={{ maxWidth: 360 }}>
           <span className="input-group-text bg-white">
@@ -142,9 +162,24 @@ export default function UserManagement() {
             type="text"
             className="form-control"
             placeholder="Tìm theo username, email, họ tên..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
+          {searchInput && (
+            <button
+              className="btn btn-outline-secondary"
+              onClick={() => {
+                setSearchInput("");
+                setSearch("");
+              }}
+            >
+              ×
+            </button>
+          )}
+          <button className="btn btn-outline-primary" onClick={handleSearch}>
+            Tìm
+          </button>
         </div>
         <button
           className={`btn ${showForm && !editing ? "btn-secondary" : "btn-primary"} d-flex align-items-center gap-2`}
@@ -186,10 +221,10 @@ export default function UserManagement() {
                     value={form.username}
                     required={!editing}
                     disabled={!!editing}
+                    style={{ background: editing ? "#f8f9fa" : undefined }}
                     onChange={(e) =>
                       setForm({ ...form, username: e.target.value })
                     }
-                    style={{ background: editing ? "#f8f9fa" : undefined }}
                   />
                 </div>
                 <div className="col-md-6">
@@ -233,7 +268,6 @@ export default function UserManagement() {
                   </div>
                 )}
               </div>
-
               <div className="d-flex gap-2 mt-3">
                 <button
                   type="submit"
@@ -246,7 +280,11 @@ export default function UserManagement() {
                   <button
                     type="button"
                     className="btn btn-secondary"
-                    onClick={handleCancel}
+                    onClick={() => {
+                      setEditing(null);
+                      setShowForm(false);
+                      setForm(emptyForm);
+                    }}
                   >
                     Hủy
                   </button>
@@ -257,122 +295,285 @@ export default function UserManagement() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between">
-          <span className="d-flex align-items-center gap-2">
-            <i className="bi bi-people text-primary" />
-            <strong>Danh sách người dùng</strong>
+      {/* Stats bar */}
+      <div className="d-flex align-items-center justify-content-between mb-3">
+        <span style={{ fontSize: 14, color: "#64748b" }}>
+          <i className="bi bi-people me-1 text-primary" />
+          <strong>{totalElements}</strong> người dùng
+          {search ? " tìm thấy" : " tổng cộng"}
+        </span>
+        {totalPages > 1 && (
+          <span style={{ fontSize: 13, color: "#94a3b8" }}>
+            Trang {page + 1} / {totalPages}
           </span>
-          <span className="badge bg-primary">{filtered.length} người dùng</span>
-        </div>
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table table-hover table-striped align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th>ID</th>
-                  <th>Người dùng</th>
-                  <th>Email</th>
-                  <th className="text-center">Trạng thái</th>
-                  <th>Ngày tạo</th>
-                  <th className="text-center">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center text-muted py-4">
-                      <i className="bi bi-inbox fs-4 d-block mb-1" />
-                      Không có người dùng nào
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map((u) => (
-                    <tr key={u.id} style={{ opacity: u.active ? 1 : 0.55 }}>
-                      <td className="text-muted" style={{ width: 60 }}>
-                        #{u.id}
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <div
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: "50%",
-                              background: "#3b7ddd20",
-                              color: "#3b7ddd",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontWeight: 600,
-                              fontSize: 13,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {(u.fullName || u.username)
-                              ?.charAt(0)
-                              ?.toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 500, fontSize: 14 }}>
-                              {u.fullName || "—"}
-                            </div>
-                            <div
-                              className="text-muted"
-                              style={{ fontSize: 12 }}
-                            >
-                              @{u.username}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{u.email || "—"}</td>
-                      <td className="text-center">
-                        <span
-                          className={`badge ${u.active ? "bg-success" : "bg-danger"}`}
-                        >
-                          {u.active ? "Hoạt động" : "Bị khóa"}
-                        </span>
-                      </td>
-                      <td className="text-muted" style={{ fontSize: 13 }}>
-                        {u.createdAt
-                          ? new Date(u.createdAt).toLocaleDateString("vi-VN")
-                          : "—"}
-                      </td>
-                      <td className="text-center">
-                        <div className="d-flex gap-1 justify-content-center">
-                          <button
-                            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-                            onClick={() => handleEditClick(u)}
-                          >
-                            <i className="bi bi-pencil" /> Sửa
-                          </button>
-                          <button
-                            className={`btn btn-sm d-flex align-items-center gap-1 ${u.active ? "btn-outline-warning" : "btn-outline-success"}`}
-                            onClick={() => handleToggle(u)}
-                          >
-                            <i
-                              className={`bi ${u.active ? "bi-lock" : "bi-unlock"}`}
-                            />
-                            {u.active ? "Khóa" : "Mở"}
-                          </button>
-                          <button
-                            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                            onClick={() => handleDelete(u)}
-                          >
-                            <i className="bi bi-trash" /> Xóa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Cards */}
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>
+          <div className="spinner-border spinner-border-sm text-primary me-2" />{" "}
+          Đang tải...
+        </div>
+      ) : users.length === 0 ? (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            color: "#94a3b8",
+          }}
+        >
+          <i
+            className="bi bi-person-x"
+            style={{ fontSize: 48, display: "block", marginBottom: 12 }}
+          />
+          <p style={{ margin: 0 }}>Không tìm thấy người dùng nào.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {users.map((u, idx) => {
+            const [bg, fg] =
+              AVATAR_COLORS[(page * PAGE_SIZE + idx) % AVATAR_COLORS.length];
+            const initial = (u.fullName || u.username || "U")
+              .charAt(0)
+              .toUpperCase();
+            return (
+              <div
+                key={u.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: 14,
+                  border: "1px solid #e9ecef",
+                  padding: "20px 24px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 18,
+                  opacity: u.active ? 1 : 0.6,
+                  transition: "box-shadow .18s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.boxShadow =
+                    "0 4px 20px rgba(0,0,0,.08)")
+                }
+                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+              >
+                {/* Avatar */}
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    background: bg,
+                    color: fg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                    fontSize: 20,
+                    flexShrink: 0,
+                    border: `2px solid ${fg}33`,
+                  }}
+                >
+                  {initial}
+                </div>
+
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      marginBottom: 3,
+                    }}
+                  >
+                    <strong style={{ fontSize: 15, color: "#0f172a" }}>
+                      {u.fullName || "—"}
+                    </strong>
+                    <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                      @{u.username}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: "#64748b",
+                        background: "#f1f5f9",
+                        borderRadius: 20,
+                        padding: "1px 7px",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      #{u.id}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        borderRadius: 20,
+                        padding: "1px 8px",
+                        background: u.active ? "#f0fdf4" : "#fef2f2",
+                        color: u.active ? "#16a34a" : "#dc2626",
+                        border: `1px solid ${u.active ? "#bbf7d0" : "#fecaca"}`,
+                      }}
+                    >
+                      {u.active ? "Hoạt động" : "Bị khóa"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+                    {u.email && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "#64748b",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <i
+                          className="bi bi-envelope"
+                          style={{ fontSize: 11 }}
+                        />{" "}
+                        {u.email}
+                      </span>
+                    )}
+                    {u.createdAt && (
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "#94a3b8",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                        }}
+                      >
+                        <i
+                          className="bi bi-calendar3"
+                          style={{ fontSize: 11 }}
+                        />
+                        {new Date(u.createdAt).toLocaleDateString("vi-VN")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                  <button
+                    className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                    onClick={() => handleEditClick(u)}
+                  >
+                    <i className="bi bi-pencil" /> Sửa
+                  </button>
+                  <button
+                    className={`btn btn-sm d-flex align-items-center gap-1 ${u.active ? "btn-outline-warning" : "btn-outline-success"}`}
+                    onClick={() => handleToggle(u)}
+                  >
+                    <i className={`bi ${u.active ? "bi-lock" : "bi-unlock"}`} />
+                    {u.active ? "Khóa" : "Mở"}
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                    onClick={() => handleDelete(u)}
+                  >
+                    <i className="bi bi-trash" /> Xóa
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 24,
+          }}
+        >
+          <button
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            style={{
+              padding: "7px 14px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              background: page === 0 ? "#f8fafc" : "#fff",
+              color: page === 0 ? "#cbd5e1" : "#374151",
+              cursor: page === 0 ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            ‹ Prev
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setPage(i)}
+              style={{
+                width: 36,
+                height: 36,
+                border: i === page ? "none" : "1px solid #e2e8f0",
+                borderRadius: 8,
+                background:
+                  i === page
+                    ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                    : "#fff",
+                color: i === page ? "#fff" : "#374151",
+                cursor: "pointer",
+                fontWeight: i === page ? 700 : 400,
+                fontSize: 13,
+                boxShadow:
+                  i === page ? "0 2px 8px rgba(37,99,235,.35)" : "none",
+                transition: "all .15s",
+              }}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={page === totalPages - 1}
+            style={{
+              padding: "7px 14px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              background: page === totalPages - 1 ? "#f8fafc" : "#fff",
+              color: page === totalPages - 1 ? "#cbd5e1" : "#374151",
+              cursor: page === totalPages - 1 ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
+            Next ›
+          </button>
+        </div>
+      )}
+
+      {totalElements > 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            marginTop: 10,
+            fontSize: 12,
+            color: "#94a3b8",
+          }}
+        >
+          Hiển thị {page * PAGE_SIZE + 1}–
+          {Math.min((page + 1) * PAGE_SIZE, totalElements)} / {totalElements}{" "}
+          người dùng
+        </div>
+      )}
     </div>
   );
 }

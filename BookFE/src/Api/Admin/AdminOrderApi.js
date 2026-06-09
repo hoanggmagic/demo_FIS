@@ -6,10 +6,10 @@ const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
-export const getOrders = (status, from, to) =>
+export const getOrders = (status, from, to, page = 0, size = 10) =>
   axios.get(BASE, {
     headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-    params: { status, from, to },
+    params: { status, from, to, page, size },
   });
 
 export const getOrderItems = (id) =>

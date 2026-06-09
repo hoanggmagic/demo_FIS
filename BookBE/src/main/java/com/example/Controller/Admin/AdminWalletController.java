@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.Service.MailService;
 import com.example.Util.RequestAuth;
@@ -48,20 +49,41 @@ public class AdminWalletController {
         }
     }
 
-    // Xem tất cả yêu cầu rút tiền
     @GetMapping("/withdraw-requests")
-    public ResponseEntity<?> getRequests(HttpServletRequest request) {
+    public ResponseEntity<?> getRequests(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String status, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
+
+            String where = status.isEmpty() ? "" : " WHERE wr.status = ?";
+
+            // Count
+            PreparedStatement countPs =
+                    conn.prepareStatement("SELECT COUNT(*) FROM withdraw_requests wr" + where);
+            if (!status.isEmpty())
+                countPs.setString(1, status);
+            ResultSet countRs = countPs.executeQuery();
+            countRs.next();
+            long total = countRs.getLong(1);
+            int totalPages = (int) Math.ceil((double) total / size);
+
+            // Data
             String sql = """
-                        SELECT wr.id, u.username, u.full_name, wr.amount,
-                               wr.bank_name, wr.account_number, wr.account_holder,
-                               wr.status, wr.created_at
-                        FROM withdraw_requests wr
-                        JOIN users u ON wr.user_id = u.id
-                        ORDER BY wr.created_at DESC
-                    """;
+                    SELECT wr.id, u.username, u.full_name, wr.amount,
+                           wr.bank_name, wr.account_number, wr.account_holder,
+                           wr.status, wr.created_at
+                    FROM withdraw_requests wr
+                    JOIN users u ON wr.user_id = u.id
+                    """ + where + " ORDER BY wr.created_at DESC LIMIT ? OFFSET ?";
+
             PreparedStatement ps = conn.prepareStatement(sql);
+            int idx = 1;
+            if (!status.isEmpty())
+                ps.setString(idx++, status);
+            ps.setInt(idx++, size);
+            ps.setInt(idx, page * size);
+
             ResultSet rs = ps.executeQuery();
             List<Map<String, Object>> list = new ArrayList<>();
             while (rs.next()) {
@@ -77,7 +99,15 @@ public class AdminWalletController {
                 row.put("createdAt", rs.getTimestamp("created_at"));
                 list.add(row);
             }
-            return ResponseEntity.ok(list);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("content", list);
+            result.put("totalElements", total);
+            result.put("totalPages", totalPages);
+            result.put("page", page);
+            result.put("size", size);
+            return ResponseEntity.ok(result);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }

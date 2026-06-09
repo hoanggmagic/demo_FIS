@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../../Api/axiosClient";
 
 const BASE = "/admin/wallet";
+const PAGE_SIZE = 10;
 
 const STATUS = {
   PENDING: { label: "Chờ duyệt", cls: "bg-warning text-dark" },
@@ -10,32 +11,50 @@ const STATUS = {
 };
 
 export default function AdminWallet() {
-  const [balance, setBalance] = useState(0);
   const [requests, setRequests] = useState([]);
   const [tab, setTab] = useState("pending");
   const [toast, setToast] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [doneCount, setDoneCount] = useState(0);
+
+  // Pagination per tab
+  const [pendingPage, setPendingPage] = useState(0);
+  const [donePage, setDonePage] = useState(0);
+  const [pendingTotalPages, setPendingTotalPages] = useState(0);
+  const [doneTotalPages, setDoneTotalPages] = useState(0);
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3500);
   };
 
-  const load = async () => {
+  const loadTab = async (tabName, page) => {
     try {
-      const [balanceRes, requestsRes] = await Promise.all([
-        api.get(`${BASE}/balance`),
-        api.get(`${BASE}/withdraw-requests`),
-      ]);
-      setBalance(balanceRes.data?.balance ?? 0);
-      setRequests(requestsRes.data || []);
-    } catch (err) {
+      const status = tabName === "pending" ? "PENDING" : "";
+      const res = await api.get(`${BASE}/withdraw-requests`, {
+        params: { page, size: PAGE_SIZE, status },
+      });
+      const data = res.data;
+      if (tabName === "pending") {
+        setRequests((prev) => ({ ...prev, pending: data.content || [] }));
+        setPendingTotalPages(data.totalPages || 0);
+        setPendingCount(data.totalElements || 0);
+      } else {
+        setRequests((prev) => ({ ...prev, done: data.content || [] }));
+        setDoneTotalPages(data.totalPages || 0);
+        setDoneCount(data.totalElements || 0);
+      }
+    } catch {
       showToast("danger", "Lỗi tải dữ liệu");
     }
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    loadTab("pending", pendingPage);
+  }, [pendingPage]);
+  useEffect(() => {
+    loadTab("done", donePage);
+  }, [donePage]);
 
   const handleAction = async (id, action, r) => {
     const label = action === "approve" ? "duyệt" : "từ chối";
@@ -50,19 +69,70 @@ export default function AdminWallet() {
         {},
       );
       showToast("success", res.data.message);
-      load();
+      loadTab("pending", pendingPage);
+      loadTab("done", donePage);
     } catch (err) {
       showToast("danger", err.response?.data || "Lỗi xử lý");
     }
   };
 
-  const pending = requests.filter((r) => r.status === "PENDING");
-  const done = requests.filter((r) => r.status !== "PENDING");
-  const list = tab === "pending" ? pending : done;
+  const list = tab === "pending" ? requests.pending || [] : requests.done || [];
+  const page = tab === "pending" ? pendingPage : donePage;
+  const totalPages = tab === "pending" ? pendingTotalPages : doneTotalPages;
+  const setPage = tab === "pending" ? setPendingPage : setDonePage;
+
+  const Pagination = () =>
+    totalPages <= 1 ? null : (
+      <div
+        className="d-flex align-items-center justify-content-between px-3 py-2 border-top"
+        style={{ fontSize: 13 }}
+      >
+        <span className="text-muted">
+          Trang {page + 1} / {totalPages}
+        </span>
+        <ul className="pagination pagination-sm mb-0">
+          <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage(0)}>
+              «
+            </button>
+          </li>
+          <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+            <button className="page-link" onClick={() => setPage((p) => p - 1)}>
+              ‹
+            </button>
+          </li>
+          {Array.from({ length: totalPages }, (_, i) => i)
+            .filter((i) => Math.abs(i - page) <= 2)
+            .map((i) => (
+              <li key={i} className={`page-item ${i === page ? "active" : ""}`}>
+                <button className="page-link" onClick={() => setPage(i)}>
+                  {i + 1}
+                </button>
+              </li>
+            ))}
+          <li
+            className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+          >
+            <button className="page-link" onClick={() => setPage((p) => p + 1)}>
+              ›
+            </button>
+          </li>
+          <li
+            className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+          >
+            <button
+              className="page-link"
+              onClick={() => setPage(totalPages - 1)}
+            >
+              »
+            </button>
+          </li>
+        </ul>
+      </div>
+    );
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div
           className={`alert alert-${toast.type} alert-dismissible d-flex align-items-center gap-2 mb-3`}
@@ -79,7 +149,7 @@ export default function AdminWallet() {
         </div>
       )}
 
-      {/* Balance card */}
+      {/* Stats */}
       <div className="row g-3 mb-4">
         <div className="col-md-6">
           <div
@@ -92,7 +162,7 @@ export default function AdminWallet() {
                   Chờ duyệt
                 </p>
                 <h3 className="mb-0 fw-bold" style={{ color: "#e65100" }}>
-                  {pending.length}
+                  {pendingCount}
                 </h3>
               </div>
               <i
@@ -113,7 +183,7 @@ export default function AdminWallet() {
                   Đã xử lý
                 </p>
                 <h3 className="mb-0 fw-bold" style={{ color: "#2e7d32" }}>
-                  {done.length}
+                  {doneCount}
                 </h3>
               </div>
               <i
@@ -125,7 +195,7 @@ export default function AdminWallet() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs + Table */}
       <div className="card">
         <div className="card-header">
           <ul className="nav nav-tabs card-header-tabs">
@@ -134,11 +204,10 @@ export default function AdminWallet() {
                 className={`nav-link d-flex align-items-center gap-2 ${tab === "pending" ? "active" : ""}`}
                 onClick={() => setTab("pending")}
               >
-                <i className="bi bi-hourglass-split" />
-                Chờ duyệt
-                {pending.length > 0 && (
+                <i className="bi bi-hourglass-split" /> Chờ duyệt
+                {pendingCount > 0 && (
                   <span className="badge bg-warning text-dark ms-1">
-                    {pending.length}
+                    {pendingCount}
                   </span>
                 )}
               </button>
@@ -148,9 +217,8 @@ export default function AdminWallet() {
                 className={`nav-link d-flex align-items-center gap-2 ${tab === "done" ? "active" : ""}`}
                 onClick={() => setTab("done")}
               >
-                <i className="bi bi-check2-all" />
-                Đã xử lý
-                <span className="badge bg-secondary ms-1">{done.length}</span>
+                <i className="bi bi-check2-all" /> Đã xử lý
+                <span className="badge bg-secondary ms-1">{doneCount}</span>
               </button>
             </li>
           </ul>
@@ -167,12 +235,9 @@ export default function AdminWallet() {
                   <th>STK</th>
                   <th>Chủ TK</th>
                   <th>Ngày</th>
-                  {tab === "done" && (
-                    <th className="text-center">Trạng thái</th>
-                  )}
-                  {tab === "pending" && (
-                    <th className="text-center">Hành động</th>
-                  )}
+                  <th className="text-center">
+                    {tab === "pending" ? "Hành động" : "Trạng thái"}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -233,17 +298,14 @@ export default function AdminWallet() {
                       <td className="text-muted" style={{ fontSize: 13 }}>
                         {new Date(r.createdAt).toLocaleDateString("vi-VN")}
                       </td>
-                      {tab === "done" && (
-                        <td className="text-center">
+                      <td className="text-center">
+                        {tab === "done" ? (
                           <span
                             className={`badge ${STATUS[r.status]?.cls ?? "bg-secondary"}`}
                           >
                             {STATUS[r.status]?.label ?? r.status}
                           </span>
-                        </td>
-                      )}
-                      {tab === "pending" && (
-                        <td className="text-center">
+                        ) : (
                           <div className="d-flex gap-1 justify-content-center">
                             <button
                               className="btn btn-sm btn-success d-flex align-items-center gap-1"
@@ -258,14 +320,15 @@ export default function AdminWallet() {
                               <i className="bi bi-x-lg" /> Từ chối
                             </button>
                           </div>
-                        </td>
-                      )}
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+          <Pagination />
         </div>
       </div>
     </div>

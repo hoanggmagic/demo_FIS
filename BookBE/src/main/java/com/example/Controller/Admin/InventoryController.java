@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.Util.RequestAuth;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,20 +28,53 @@ public class InventoryController {
     @Autowired
     private DataSource dataSource;
 
-    // GET /api/admin/inventory — lấy tất cả tồn kho theo chi nhánh
     @GetMapping
-    public ResponseEntity<?> getAll(HttpServletRequest request) {
+    public ResponseEntity<?> getAll(@RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "") String branchId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
-            PreparedStatement ps = conn.prepareStatement("""
-                        SELECT i.book_id, i.branch_id, i.quantity,
-                               b.title as book_title,
-                               br.name as branch_name
-                        FROM inventories i
-                        JOIN books b ON b.id = i.book_id
-                        JOIN branches br ON br.id = i.branch_id
-                        ORDER BY br.name, b.title
-                    """);
+
+            String where = " WHERE 1=1";
+            List<Object> params = new ArrayList<>();
+
+            if (!search.isEmpty()) {
+                where += " AND b.title ILIKE ?";
+                params.add("%" + search + "%");
+            }
+            if (!branchId.isEmpty()) {
+                where += " AND i.branch_id = ?";
+                params.add(Integer.parseInt(branchId));
+            }
+
+            String baseFrom = """
+                    FROM inventories i
+                    JOIN books b ON b.id = i.book_id
+                    JOIN branches br ON br.id = i.branch_id
+                    """;
+
+            // Count
+            PreparedStatement countPs =
+                    conn.prepareStatement("SELECT COUNT(*) " + baseFrom + where);
+            for (int i = 0; i < params.size(); i++)
+                countPs.setObject(i + 1, params.get(i));
+            ResultSet countRs = countPs.executeQuery();
+            countRs.next();
+            long total = countRs.getLong(1);
+            int totalPages = (int) Math.ceil((double) total / size);
+
+            // Data
+            String dataSql = "SELECT i.book_id, i.branch_id, i.quantity, "
+                    + "b.title as book_title, br.name as branch_name " + baseFrom + where
+                    + " ORDER BY br.name, b.title LIMIT ? OFFSET ?";
+
+            PreparedStatement ps = conn.prepareStatement(dataSql);
+            for (int i = 0; i < params.size(); i++)
+                ps.setObject(i + 1, params.get(i));
+            ps.setInt(params.size() + 1, size);
+            ps.setInt(params.size() + 2, page * size);
+
             ResultSet rs = ps.executeQuery();
             List<Map<String, Object>> list = new ArrayList<>();
             while (rs.next()) {
@@ -52,7 +86,15 @@ public class InventoryController {
                 row.put("branchName", rs.getString("branch_name"));
                 list.add(row);
             }
-            return ResponseEntity.ok(list);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("content", list);
+            result.put("totalElements", total);
+            result.put("totalPages", totalPages);
+            result.put("page", page);
+            result.put("size", size);
+            return ResponseEntity.ok(result);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }

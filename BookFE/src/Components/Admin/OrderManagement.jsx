@@ -21,20 +21,29 @@ export default function OrderManagement() {
   const [filterStatus, setFilterStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [selected, setSelected] = useState(null); // đơn hàng đang xem chi tiết
+  const [selected, setSelected] = useState(null);
   const [items, setItems] = useState([]);
   const [toast, setToast] = useState(null);
+
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = async () => {
+  const load = async (p = page) => {
     setLoading(true);
     try {
-      const res = await getOrders(filterStatus, from, to);
-      setOrders(res.data || []);
+      const res = await getOrders(filterStatus, from, to, p, PAGE_SIZE);
+      const data = res.data;
+      setOrders(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -42,9 +51,16 @@ export default function OrderManagement() {
     }
   };
 
+  // Reset về trang 0 khi đổi filter
   useEffect(() => {
-    load();
+    setPage(0);
+    load(0);
   }, [filterStatus, from, to]);
+
+  // Load khi đổi page (nhưng không chạy lần đầu — đã có useEffect trên)
+  useEffect(() => {
+    load(page);
+  }, [page]);
 
   const handleViewDetail = async (order) => {
     setSelected(order);
@@ -60,13 +76,14 @@ export default function OrderManagement() {
     try {
       await updateOrderStatus(id, status);
       showToast("success", "Cập nhật trạng thái thành công!");
-      load();
+      load(page);
       if (selected?.id === id) setSelected({ ...selected, status });
     } catch (err) {
       showToast("danger", "Cập nhật thất bại");
     }
   };
 
+  // Search lọc client-side trên trang hiện tại
   const filtered = orders.filter((o) => {
     const q = search.toLowerCase();
     return (
@@ -162,7 +179,10 @@ export default function OrderManagement() {
 
         <button
           className="btn btn-sm btn-primary d-flex align-items-center gap-1"
-          onClick={load}
+          onClick={() => {
+            setPage(0);
+            load(0);
+          }}
           disabled={loading}
         >
           <i className="bi bi-arrow-clockwise" />
@@ -179,7 +199,7 @@ export default function OrderManagement() {
                 <i className="bi bi-cart3 text-primary" />
                 <strong>Danh sách đơn hàng</strong>
               </span>
-              <span className="badge bg-primary">{filtered.length} đơn</span>
+              <span className="badge bg-primary">{totalElements} đơn</span>
             </div>
             <div className="card-body p-0">
               <div className="table-responsive">
@@ -196,7 +216,14 @@ export default function OrderManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-4 text-muted">
+                          <div className="spinner-border spinner-border-sm me-2" />
+                          Đang tải...
+                        </td>
+                      </tr>
+                    ) : filtered.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="text-center text-muted py-4">
                           <i className="bi bi-inbox fs-4 d-block mb-1" />
@@ -274,11 +301,76 @@ export default function OrderManagement() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div
+                  className="d-flex align-items-center justify-content-between px-3 py-2 border-top"
+                  style={{ fontSize: 13 }}
+                >
+                  <span className="text-muted">
+                    Trang {page + 1} / {totalPages} — {totalElements} đơn hàng
+                  </span>
+                  <ul className="pagination pagination-sm mb-0">
+                    <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                      <button className="page-link" onClick={() => setPage(0)}>
+                        «
+                      </button>
+                    </li>
+                    <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                      <button
+                        className="page-link"
+                        onClick={() => setPage((p) => p - 1)}
+                      >
+                        ‹
+                      </button>
+                    </li>
+
+                    {/* Hiển thị số trang xung quanh trang hiện tại */}
+                    {Array.from({ length: totalPages }, (_, i) => i)
+                      .filter((i) => Math.abs(i - page) <= 2)
+                      .map((i) => (
+                        <li
+                          key={i}
+                          className={`page-item ${i === page ? "active" : ""}`}
+                        >
+                          <button
+                            className="page-link"
+                            onClick={() => setPage(i)}
+                          >
+                            {i + 1}
+                          </button>
+                        </li>
+                      ))}
+
+                    <li
+                      className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => setPage((p) => p + 1)}
+                      >
+                        ›
+                      </button>
+                    </li>
+                    <li
+                      className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => setPage(totalPages - 1)}
+                      >
+                        »
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Detail panel */}
+        {/* Detail panel — giữ nguyên */}
         {selected && (
           <div
             style={{
@@ -318,58 +410,36 @@ export default function OrderManagement() {
               </button>
             </div>
 
-            {/* Info */}
             <div style={{ fontSize: 13, marginBottom: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span style={{ color: "#64748b" }}>Khách hàng</span>
-                <span style={{ fontWeight: 600 }}>{selected.userName}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span style={{ color: "#64748b" }}>Chi nhánh</span>
-                <span>{selected.branchName}</span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span style={{ color: "#64748b" }}>Tổng tiền</span>
-                <span style={{ fontWeight: 700, color: "#059669" }}>
-                  {fmt(selected.totalPrice)}
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "6px 0",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <span style={{ color: "#64748b" }}>Thời gian</span>
-                <span style={{ fontSize: 12 }}>
-                  {selected.createdAt
+              {[
+                ["Khách hàng", selected.userName, { fontWeight: 600 }],
+                ["Chi nhánh", selected.branchName, {}],
+                [
+                  "Tổng tiền",
+                  fmt(selected.totalPrice),
+                  { fontWeight: 700, color: "#059669" },
+                ],
+                [
+                  "Thời gian",
+                  selected.createdAt
                     ? new Date(selected.createdAt).toLocaleString("vi-VN")
-                    : "—"}
-                </span>
-              </div>
+                    : "—",
+                  { fontSize: 12 },
+                ],
+              ].map(([label, val, style]) => (
+                <div
+                  key={label}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    padding: "6px 0",
+                    borderBottom: "1px solid #f1f5f9",
+                  }}
+                >
+                  <span style={{ color: "#64748b" }}>{label}</span>
+                  <span style={style}>{val}</span>
+                </div>
+              ))}
               <div
                 style={{
                   display: "flex",
@@ -395,7 +465,6 @@ export default function OrderManagement() {
               </div>
             </div>
 
-            {/* Items */}
             <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>
               <i className="bi bi-bag me-1 text-primary" /> Sách đã đặt
             </div>

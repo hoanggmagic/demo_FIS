@@ -1,6 +1,9 @@
 import api from "../axiosClient";
 
-export const getAuthors = () => api.get("/admin/authors");
+export const getAuthors = (page = 0, size = 5, keyword = "") =>
+  api.get(
+    `/admin/authors?page=${page}&size=${size}&keyword=${encodeURIComponent(keyword)}`,
+  );
 
 export const getAuthor = (id) => api.get(`/admin/authors/${id}`);
 

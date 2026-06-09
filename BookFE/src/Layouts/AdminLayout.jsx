@@ -478,11 +478,14 @@ export default function AdminLayout({ user, onLogout, children }) {
 
       {/* Main */}
       <div
+        className="main-content"
         style={{
           marginLeft: sidebarWidth,
           flex: 1,
           transition: "margin-left 0.25s ease",
           minWidth: 0,
+          height: "100vh",
+          overflowY: "auto",
         }}
       >
         <Topbar

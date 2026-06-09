@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.Util.RequestAuth;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,23 +28,36 @@ public class TransferController {
     @Autowired
     private DataSource dataSource;
 
-    // GET — lịch sử điều chuyển
     @GetMapping
-    public ResponseEntity<?> getAll(HttpServletRequest request) {
+    public ResponseEntity<?> getAll(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size, HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
             RequestAuth.require(request);
+
+            // Count
+            PreparedStatement countPs = conn.prepareStatement("SELECT COUNT(*) FROM transfers");
+            ResultSet countRs = countPs.executeQuery();
+            countRs.next();
+            long total = countRs.getLong(1);
+            int totalPages = (int) Math.ceil((double) total / size);
+
+            // Data
             PreparedStatement ps = conn.prepareStatement("""
-                        SELECT t.id, t.book_id, t.from_branch_id, t.to_branch_id,
-                               t.quantity, t.note, t.created_at,
-                               b.title as book_title,
-                               br1.name as from_branch_name,
-                               br2.name as to_branch_name
-                        FROM transfers t
-                        JOIN books b ON b.id = t.book_id
-                        JOIN branches br1 ON br1.id = t.from_branch_id
-                        JOIN branches br2 ON br2.id = t.to_branch_id
-                        ORDER BY t.created_at DESC
+                    SELECT t.id, t.book_id, t.from_branch_id, t.to_branch_id,
+                           t.quantity, t.note, t.created_at,
+                           b.title as book_title,
+                           br1.name as from_branch_name,
+                           br2.name as to_branch_name
+                    FROM transfers t
+                    JOIN books b ON b.id = t.book_id
+                    JOIN branches br1 ON br1.id = t.from_branch_id
+                    JOIN branches br2 ON br2.id = t.to_branch_id
+                    ORDER BY t.created_at DESC
+                    LIMIT ? OFFSET ?
                     """);
+            ps.setInt(1, size);
+            ps.setInt(2, page * size);
+
             ResultSet rs = ps.executeQuery();
             List<Map<String, Object>> list = new ArrayList<>();
             while (rs.next()) {
@@ -60,14 +74,20 @@ public class TransferController {
                 row.put("createdAt", rs.getTimestamp("created_at"));
                 list.add(row);
             }
-            return ResponseEntity.ok(list);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("content", list);
+            result.put("totalElements", total);
+            result.put("totalPages", totalPages);
+            result.put("page", page);
+            result.put("size", size);
+            return ResponseEntity.ok(result);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
         }
     }
 
-    // POST — tạo phiếu điều chuyển
-    // Body: { bookId, fromBranchId, toBranchId, quantity, note }
     @PostMapping
     public ResponseEntity<?> transfer(@RequestBody Map<String, Object> body,
             HttpServletRequest request) {

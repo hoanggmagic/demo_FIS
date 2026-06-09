@@ -76,9 +76,6 @@ public class UserProfileController {
         }
     }
 
-    // =================================================
-    // UPDATE PROFILE (Sửa tại Controller - Giữ nguyên DAO)
-    // =================================================
     // Cập nhật user
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable int id, @RequestBody Map<String, String> body,

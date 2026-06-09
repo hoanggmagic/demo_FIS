@@ -16,30 +16,60 @@ export default function InventoryManagement() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ bookId: "", branchId: "", quantity: "" });
   const [error, setError] = useState("");
+  const [bookSearch, setBookSearch] = useState("");
+  const [showBookDropdown, setShowBookDropdown] = useState(false);
+
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = async () => {
+  // Load branches + books 1 lần duy nhất
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const [branchRes, bookRes] = await Promise.all([
+          getBranches(),
+          getBooks(),
+        ]);
+        setBranches(branchRes.data || []);
+        const bookData = bookRes?.data;
+        setBooks(Array.isArray(bookData) ? bookData : bookData?.content || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    init();
+  }, []);
+
+  // Load inventory — dùng useCallback-style để tránh khai báo trùng
+  const loadInventory = async (p, s, b) => {
     try {
-      const [invRes, branchRes, bookRes] = await Promise.all([
-        getInventory(),
-        getBranches(),
-        getBooks(),
-      ]);
-      setInventory(invRes.data || []);
-      setBranches(branchRes.data || []);
-      setBooks(Array.isArray(bookRes) ? bookRes : bookRes.data || []);
+      const invRes = await getInventory(s, b, p, PAGE_SIZE);
+      const data = invRes.data;
+      setInventory(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
     } catch (err) {
       console.error(err);
     }
   };
 
+  // Reset trang 0 khi đổi filter
   useEffect(() => {
-    load();
-  }, []);
+    setPage(0);
+    loadInventory(0, search, filterBranch);
+  }, [search, filterBranch]);
+
+  // Đổi trang (không chạy khi page bị reset về 0 từ effect trên vì deps khác nhau)
+  useEffect(() => {
+    loadInventory(page, search, filterBranch);
+  }, [page]); // eslint-disable-line
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,25 +89,14 @@ export default function InventoryManagement() {
       );
       showToast("success", "Cập nhật tồn kho thành công!");
       setForm({ bookId: "", branchId: "", quantity: "" });
+      setBookSearch("");
       setShowForm(false);
       setError("");
-      load();
+      loadInventory(page, search, filterBranch);
     } catch (err) {
       setError(err.response?.data || "Cập nhật thất bại");
     }
   };
-
-  const filtered = inventory.filter((i) => {
-    const matchSearch = (i.bookTitle || "")
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchBranch = filterBranch
-      ? String(i.branchId) === filterBranch
-      : true;
-    return matchSearch && matchBranch;
-  });
-  const [bookSearch, setBookSearch] = useState("");
-  const [showBookDropdown, setShowBookDropdown] = useState(false);
 
   const filteredBooks = books.filter((b) =>
     (b.title || "").toLowerCase().includes(bookSearch.toLowerCase()),
@@ -85,7 +104,6 @@ export default function InventoryManagement() {
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div
           className={`alert alert-${toast.type} d-flex align-items-center gap-2`}
@@ -98,7 +116,7 @@ export default function InventoryManagement() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header + Filters */}
       <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
         <div className="d-flex gap-2 flex-wrap">
           <div className="input-group" style={{ maxWidth: 280 }}>
@@ -168,7 +186,6 @@ export default function InventoryManagement() {
                       setTimeout(() => setShowBookDropdown(false), 200)
                     }
                   />
-                  {/* Hiển thị sách đã chọn */}
                   {form.bookId && (
                     <small className="text-success">
                       ✓{" "}
@@ -178,7 +195,6 @@ export default function InventoryManagement() {
                       }
                     </small>
                   )}
-                  {/* Dropdown */}
                   {showBookDropdown && bookSearch && (
                     <div
                       style={{
@@ -258,18 +274,14 @@ export default function InventoryManagement() {
                   <label className="form-label">
                     Số lượng(+) <span className="text-danger">*</span>
                   </label>
-
                   <input
                     type="number"
                     className="form-control"
                     value={form.quantity}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        quantity: e.target.value,
-                      })
-                    }
                     min={0}
+                    onChange={(e) =>
+                      setForm({ ...form, quantity: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -296,7 +308,7 @@ export default function InventoryManagement() {
             <i className="bi bi-boxes text-primary" />
             <strong>Tồn kho theo chi nhánh</strong>
           </span>
-          <span className="badge bg-primary">{filtered.length} bản ghi</span>
+          <span className="badge bg-primary">{totalElements} bản ghi</span>
         </div>
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -309,7 +321,7 @@ export default function InventoryManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {inventory.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="text-center text-muted py-4">
                       <i className="bi bi-inbox fs-4 d-block mb-1" />
@@ -317,7 +329,7 @@ export default function InventoryManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((i, idx) => (
+                  inventory.map((i, idx) => (
                     <tr key={idx}>
                       <td>
                         <strong>{i.bookTitle}</strong>
@@ -341,6 +353,64 @@ export default function InventoryManagement() {
               </tbody>
             </table>
           </div>
+
+          {totalPages > 1 && (
+            <div
+              className="d-flex align-items-center justify-content-between px-3 py-2 border-top"
+              style={{ fontSize: 13 }}
+            >
+              <span className="text-muted">
+                Trang {page + 1} / {totalPages} — {totalElements} bản ghi
+              </span>
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                  <button className="page-link" onClick={() => setPage(0)}>
+                    «
+                  </button>
+                </li>
+                <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    ‹
+                  </button>
+                </li>
+                {Array.from({ length: totalPages }, (_, i) => i)
+                  .filter((i) => Math.abs(i - page) <= 2)
+                  .map((i) => (
+                    <li
+                      key={i}
+                      className={`page-item ${i === page ? "active" : ""}`}
+                    >
+                      <button className="page-link" onClick={() => setPage(i)}>
+                        {i + 1}
+                      </button>
+                    </li>
+                  ))}
+                <li
+                  className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    ›
+                  </button>
+                </li>
+                <li
+                  className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setPage(totalPages - 1)}
+                  >
+                    »
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>

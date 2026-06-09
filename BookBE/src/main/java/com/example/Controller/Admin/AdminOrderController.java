@@ -29,54 +29,90 @@ public class AdminOrderController {
     @Autowired
     private DataSource dataSource;
 
-    // GET /api/admin/orders — lấy tất cả đơn hàng
     @GetMapping
-    public ResponseEntity<?> getAll(@RequestParam(required = false) String status,
-            @RequestParam(required = false) String from, @RequestParam(required = false) String to,
-            HttpServletRequest request) {
-        try (Connection conn = dataSource.getConnection()) {
-            RequestAuth.require(request);
+public ResponseEntity<?> getAll(
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) String from,
+        @RequestParam(required = false) String to,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        HttpServletRequest request) {
+    try (Connection conn = dataSource.getConnection()) {
+        RequestAuth.require(request);
 
-            StringBuilder sql = new StringBuilder("""
-                        SELECT o.id, o.user_id, o.total_price, o.status, o.created_at,
-                               u.full_name as user_name, u.username,
-                               br.name as branch_name
-                        FROM orders o
-                        LEFT JOIN users u ON u.id = o.user_id
-                        LEFT JOIN branches br ON br.id = o.branch_id
-                        WHERE 1=1
-                    """);
+        String where = " WHERE 1=1";
+        List<Object> params = new ArrayList<>();
 
-            if (status != null && !status.isEmpty())
-                sql.append(" AND o.status = '").append(status).append("'");
-            if (from != null && !from.isEmpty())
-                sql.append(" AND o.created_at >= '").append(from).append("'");
-            if (to != null && !to.isEmpty())
-                sql.append(" AND o.created_at <= '").append(to).append(" 23:59:59'");
-
-            sql.append(" ORDER BY o.created_at DESC");
-
-            PreparedStatement ps = conn.prepareStatement(sql.toString());
-            ResultSet rs = ps.executeQuery();
-            List<Map<String, Object>> list = new ArrayList<>();
-            while (rs.next()) {
-                Map<String, Object> row = new HashMap<>();
-                row.put("id", rs.getInt("id"));
-                row.put("userId", rs.getInt("user_id"));
-                row.put("userName", rs.getString("user_name"));
-                row.put("username", rs.getString("username"));
-                row.put("totalPrice", rs.getDouble("total_price"));
-                row.put("status", rs.getString("status"));
-                row.put("createdAt", rs.getTimestamp("created_at"));
-                row.put("branchName", rs.getString("branch_name"));
-                list.add(row);
-            }
-            return ResponseEntity.ok(list);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        if (status != null && !status.isEmpty()) {
+            where += " AND o.status = ?";
+            params.add(status);
         }
+        if (from != null && !from.isEmpty()) {
+            where += " AND o.created_at >= ?";
+            params.add(from);
+        }
+        if (to != null && !to.isEmpty()) {
+            where += " AND o.created_at <= ?";
+            params.add(to + " 23:59:59");
+        }
+
+        String baseFrom = """
+                FROM orders o
+                LEFT JOIN users u ON u.id = o.user_id
+                LEFT JOIN branches br ON br.id = o.branch_id
+                """;
+
+        // Count
+        PreparedStatement countPs = conn.prepareStatement(
+                "SELECT COUNT(*) " + baseFrom + where);
+        for (int i = 0; i < params.size(); i++)
+            countPs.setObject(i + 1, params.get(i));
+        ResultSet countRs = countPs.executeQuery();
+        countRs.next();
+        long total = countRs.getLong(1);
+        int totalPages = (int) Math.ceil((double) total / size);
+
+        // Data
+        String dataSql = """
+                SELECT o.id, o.user_id, o.total_price, o.status, o.created_at,
+                       u.full_name as user_name, u.username,
+                       br.name as branch_name
+                """ + baseFrom + where + " ORDER BY o.created_at DESC LIMIT ? OFFSET ?";
+
+        PreparedStatement ps = conn.prepareStatement(dataSql);
+        for (int i = 0; i < params.size(); i++)
+            ps.setObject(i + 1, params.get(i));
+        ps.setInt(params.size() + 1, size);
+        ps.setInt(params.size() + 2, page * size);
+
+        ResultSet rs = ps.executeQuery();
+        List<Map<String, Object>> list = new ArrayList<>();
+        while (rs.next()) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", rs.getInt("id"));
+            row.put("userId", rs.getInt("user_id"));
+            row.put("userName", rs.getString("user_name"));
+            row.put("username", rs.getString("username"));
+            row.put("totalPrice", rs.getDouble("total_price"));
+            row.put("status", rs.getString("status"));
+            row.put("createdAt", rs.getTimestamp("created_at"));
+            row.put("branchName", rs.getString("branch_name"));
+            list.add(row);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", list);
+        result.put("totalElements", total);
+        result.put("totalPages", totalPages);
+        result.put("page", page);
+        result.put("size", size);
+        return ResponseEntity.ok(result);
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
     }
+}
 
     // GET /api/admin/orders/{id}/items — lấy chi tiết đơn hàng
     @GetMapping("/{id}/items")

@@ -2,6 +2,7 @@ package com.example.Controller.Admin;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.Entities.Category;
 import com.example.Service.CategoryService;
@@ -25,18 +27,23 @@ public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
-    // GET /api/categories
     @GetMapping
-    public List<CategoryDTO> getAll() {
-        return categoryService.getAll().stream().map(c -> {
+    public Page<CategoryDTO> getAll(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return categoryService.getAll(page, size).map(c -> {
             CategoryDTO dto = new CategoryDTO();
             dto.setId(c.getId());
             dto.setName(c.getName());
             dto.setDescription(c.getDescription());
-            return dto;
-        }).toList();
-    }
 
+            if (c.getParent() != null) {
+                dto.setParentId(c.getParent().getId());
+            }
+
+            return dto;
+        });
+    }
     // GET /api/categories/tree
 
     @GetMapping("/tree")

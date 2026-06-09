@@ -15,9 +15,14 @@ const now = () => {
 
 export default function SaleManagement() {
   const [books, setBooks] = useState([]);
+
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [size] = useState(15);
+
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
-  const [editing, setEditing] = useState(null); // book đang set sale
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     salePrice: "",
     saleStart: "",
@@ -33,8 +38,10 @@ export default function SaleManagement() {
 
   const load = async () => {
     try {
-      const res = await getBooks();
-      setBooks(Array.isArray(res) ? res : res.data || []);
+      const res = await getBooks(page, size);
+
+      setBooks(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
     } catch {
       setBooks([]);
     }
@@ -42,7 +49,14 @@ export default function SaleManagement() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
+
+  useEffect(() => {
+    document.querySelector(".main-content")?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }, [page]);
 
   const openEdit = (book) => {
     setEditing(book);
@@ -448,6 +462,126 @@ export default function SaleManagement() {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+      <div
+        style={{
+          overflowX: "auto",
+          paddingBottom: 8,
+        }}
+      >
+        <div
+          className="d-flex justify-content-center align-items-center gap-2 mt-4 mb-3"
+          style={{
+            flexWrap: "nowrap",
+            minWidth: "max-content",
+          }}
+        >
+          {/* Prev */}
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 0}
+            style={{
+              border: "1px solid #1a94ec",
+              background: page === 0 ? "#fff" : "#fff",
+              color: "#1a94ec",
+              borderRadius: 10,
+              minWidth: 38,
+              height: 38,
+              fontWeight: 600,
+              transition: ".2s",
+            }}
+          >
+            ‹
+          </button>
+
+          {(() => {
+            const pages = [];
+
+            const addPage = (p) => {
+              const active = p === page;
+
+              pages.push(
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  style={{
+                    minWidth: 38,
+                    height: 38,
+                    padding: "0 12px",
+                    borderRadius: 10,
+                    border: active ? "1px solid #1a94ec" : "1px solid #1a94ec",
+                    background: active ? "#1a94ec" : "#fff",
+                    color: active ? "#fff" : "#1a94ec",
+                    fontWeight: active ? 700 : 500,
+                    transition: ".2s",
+                  }}
+                >
+                  {p + 1}
+                </button>,
+              );
+            };
+
+            const addDots = (key) => {
+              pages.push(
+                <span
+                  key={key}
+                  style={{
+                    padding: "0 4px",
+                    color: "#6c757d",
+                    fontWeight: 600,
+                  }}
+                >
+                  ...
+                </span>,
+              );
+            };
+
+            if (totalPages <= 7) {
+              for (let i = 0; i < totalPages; i++) {
+                addPage(i);
+              }
+            } else {
+              addPage(0);
+
+              if (page > 3) {
+                addDots("left");
+              }
+
+              const start = Math.max(1, page - 1);
+              const end = Math.min(totalPages - 2, page + 1);
+
+              for (let i = start; i <= end; i++) {
+                addPage(i);
+              }
+
+              if (page < totalPages - 4) {
+                addDots("right");
+              }
+
+              addPage(totalPages - 1);
+            }
+
+            return pages;
+          })()}
+
+          {/* Next */}
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page + 1 >= totalPages}
+            style={{
+              border: "1px solid #1a94ec",
+              background: page + 1 >= totalPages ? "#fff" : "#fff",
+              color: "#1a94ec",
+              borderRadius: 10,
+              minWidth: 38,
+              height: 38,
+              fontWeight: 600,
+              transition: ".2s",
+            }}
+          >
+            ›
+          </button>
         </div>
       </div>
     </div>

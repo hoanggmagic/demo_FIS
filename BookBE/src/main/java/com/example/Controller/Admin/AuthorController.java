@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.Entities.User;
 import com.example.Service.BookService;
@@ -30,12 +31,37 @@ public class AuthorController {
 
     // GET: Lấy danh sách tác giả (Trả về List<User> thay vì Author)
     @GetMapping
-    public ResponseEntity<List<User>> getAllAuthors(HttpServletRequest request) {
+    public ResponseEntity<?> getAllAuthors(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "") String keyword, HttpServletRequest request) {
         try {
             AuthContext ctx = RequestAuth.require(request);
+            List<User> all = bookService.getAuthors(ctx);
 
-            // Hàm getAuthors(ctx) trong BookService mới của bạn trả về List<User>
-            return ResponseEntity.ok(bookService.getAuthors(ctx));
+            // Filter keyword
+            List<User> filtered = all.stream()
+                    .filter(a -> keyword.isEmpty()
+                            || a.getFullName().toLowerCase().contains(keyword.toLowerCase())
+                            || a.getUsername().toLowerCase().contains(keyword.toLowerCase())
+                            || (a.getEmail() != null
+                                    && a.getEmail().toLowerCase().contains(keyword.toLowerCase())))
+                    .collect(java.util.stream.Collectors.toList());
+
+            // Phân trang thủ công
+            int total = filtered.size();
+            int totalPages = (int) Math.ceil((double) total / size);
+            int from = Math.min(page * size, total);
+            int to = Math.min(from + size, total);
+            List<User> content = filtered.subList(from, to);
+
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("content", content);
+            result.put("totalElements", total);
+            result.put("totalPages", totalPages);
+            result.put("page", page);
+            result.put("size", size);
+
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).build();

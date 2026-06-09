@@ -2,7 +2,8 @@ import api from "../api";
 
 const API = "/admin/books";
 
-export const getBooks = () => api.get(API);
+export const getBooks = (page = 0, size = 15) =>
+  api.get(`${API}?page=${page}&size=${size}`);
 
 export const getBookById = (id) => api.get(`${API}/${id}`);
 

@@ -4,6 +4,10 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.Entities.Book;
@@ -151,5 +155,11 @@ public class CategoryService {
     public List<Category> getCategoriesByBook(Integer bookId) {
         return bookCategoryRepo.findByBookId(bookId).stream().map(bc -> bc.getCategory())
                 .collect(Collectors.toList());
+    }
+
+    public Page<Category> getAll(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+
+        return categoryRepo.findAll(pageable);
     }
 }

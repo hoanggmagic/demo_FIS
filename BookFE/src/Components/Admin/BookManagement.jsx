@@ -21,6 +21,9 @@ import { categoryApi } from "../../Api/Admin/CategoryApi";
 
 export default function BookManagement({ user }) {
   const [books, setBooks] = useState([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [size] = useState(15);
   const [authors, setAuthors] = useState([]);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null); // { type: "success"|"danger", msg }
@@ -43,11 +46,12 @@ export default function BookManagement({ user }) {
 
   const load = async () => {
     try {
-      const res = await getBooks();
+      const res = await getBooks(page, size);
 
-      console.log("BOOKS:", res);
+      console.log("BOOKS:", res.data);
 
-      setBooks(Array.isArray(res) ? res : res.data || []);
+      setBooks(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
     } catch (err) {
       console.error(err);
       setBooks([]);
@@ -56,7 +60,9 @@ export default function BookManagement({ user }) {
 
   useEffect(() => {
     load();
+  }, [page]);
 
+  useEffect(() => {
     categoryApi
       .getAll()
       .then((res) => {
@@ -93,6 +99,18 @@ export default function BookManagement({ user }) {
       setExistingImages([]);
     }
   }, [editing]);
+
+  useEffect(() => {
+    const container = document.querySelector(".main-content");
+
+    if (container) {
+      container.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  }, [page]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "year" && Number(value) > currentYear) {
@@ -551,6 +569,7 @@ export default function BookManagement({ user }) {
                           <button
                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
                             onClick={() => setEditing(b)}
+                            x
                           >
                             <i className="bi bi-pencil" /> Sửa
                           </button>
@@ -568,6 +587,119 @@ export default function BookManagement({ user }) {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+      <div
+        style={{
+          overflowX: "auto",
+          paddingBottom: 8,
+        }}
+      >
+        <div
+          className="d-flex justify-content-center align-items-center gap-1 mt-4 mb-3"
+          style={{
+            flexWrap: "nowrap",
+            minWidth: "max-content",
+          }}
+        >
+          {/* Prev */}
+          <button
+            className="btn btn-sm btn-outline-primary"
+            disabled={page === 0}
+            onClick={() => setPage(page - 1)}
+            style={{
+              borderRadius: 8,
+              minWidth: 34,
+              height: 34,
+              padding: "0 10px",
+            }}
+          >
+            ‹
+          </button>
+
+          {(() => {
+            const pages = [];
+
+            const addPage = (p) => {
+              pages.push(
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`btn btn-sm ${
+                    p === page ? "btn-primary" : "btn-outline-primary"
+                  }`}
+                  style={{
+                    minWidth: 34,
+                    width: "auto",
+                    flex: "0 0 auto",
+                    height: 34,
+                    borderRadius: 8,
+                    padding: "0 10px",
+                    fontWeight: p === page ? 600 : 500,
+                  }}
+                >
+                  {p + 1}
+                </button>,
+              );
+            };
+
+            const addDots = (key) => {
+              pages.push(
+                <span
+                  key={key}
+                  style={{
+                    padding: "0 6px",
+                    color: "#6c757d",
+                    fontWeight: 600,
+                  }}
+                >
+                  ...
+                </span>,
+              );
+            };
+
+            if (totalPages <= 7) {
+              for (let i = 0; i < totalPages; i++) {
+                addPage(i);
+              }
+            } else {
+              addPage(0);
+
+              if (page > 3) {
+                addDots("left");
+              }
+
+              const start = Math.max(1, page - 1);
+              const end = Math.min(totalPages - 2, page + 1);
+
+              for (let i = start; i <= end; i++) {
+                addPage(i);
+              }
+
+              if (page < totalPages - 4) {
+                addDots("right");
+              }
+
+              addPage(totalPages - 1);
+            }
+
+            return pages;
+          })()}
+
+          {/* Next */}
+          <button
+            className="btn btn-sm btn-outline-primary"
+            disabled={page + 1 >= totalPages}
+            onClick={() => setPage(page + 1)}
+            style={{
+              borderRadius: 8,
+              minWidth: 34,
+              height: 34,
+              padding: "0 10px",
+            }}
+          >
+            ›
+          </button>
         </div>
       </div>
     </div>

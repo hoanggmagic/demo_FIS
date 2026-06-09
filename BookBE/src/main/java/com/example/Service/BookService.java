@@ -113,11 +113,20 @@ public class BookService {
         return dto;
     }
 
-    public List<BookDTO> getBooksForContext(AuthContext ctx) {
-        List<Book> books =
-                (ctx != null && ctx.isAuthor()) ? bookRepo.findByAuthorId(ctx.getUserId())
-                        : bookRepo.findAll();
-        return books.stream().map(this::toDTO).collect(Collectors.toList());
+    public Page<BookDTO> getBooksForContext(AuthContext ctx, Pageable pageable) {
+
+        Page<Book> books;
+
+        if (ctx != null && ctx.isAuthor()) {
+
+            books = bookRepo.findByAuthorId(ctx.getUserId(), pageable);
+
+        } else {
+
+            books = bookRepo.findAll(pageable);
+        }
+
+        return books.map(this::toDTO);
     }
 
     public BookDTO getBookById(int id, AuthContext ctx) {
@@ -127,17 +136,6 @@ public class BookService {
         return toDTO(book);
     }
 
-    public List<BookDTO> searchBooks(String keyword, Integer categoryId, AuthContext ctx) {
-
-        Pageable pageable = PageRequest.of(0, 1000);
-
-        List<Book> books =
-                bookRepo.searchByKeywordAndCategory(keyword, categoryId, pageable).getContent();
-
-        return books.stream()
-                .filter(b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
-                .map(this::toDTO).collect(Collectors.toList());
-    }
 
 
     public PaginationResponse<BookDTO> getBooksPagination(String keyword, List<Integer> categoryIds,

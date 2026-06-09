@@ -20,6 +20,9 @@ import com.example.Util.AuthContext;
 import com.example.Util.RequestAuth;
 import com.example.dto.BookDTO;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @RestController
 @RequestMapping("/api/admin/books")
@@ -30,19 +33,26 @@ public class BookController {
     @Autowired
     private BookService bookService;
 
-    // GET: Lấy danh sách sách cho Admin/Author
     @GetMapping
-    public ResponseEntity<List<BookDTO>> getAllBooks(HttpServletRequest request) {
-        try {
-            AuthContext ctx = RequestAuth.require(request);
+public ResponseEntity<Page<BookDTO>> getAllBooks(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "15") int size,
+        HttpServletRequest request) {
 
-            // Gọi hàm getBooksForContext đã trả về List<BookDTO> trong Service của bạn
-            return ResponseEntity.ok(bookService.getBooksForContext(ctx));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(List.of());
-        }
+    try {
+        AuthContext ctx = RequestAuth.require(request);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return ResponseEntity.ok(
+                bookService.getBooksForContext(ctx, pageable)
+        );
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return ResponseEntity.status(500).build();
     }
+}
 
     // GET: Xem chi tiết sách qua ID
     @GetMapping("/{id}")

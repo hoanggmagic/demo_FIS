@@ -21,29 +21,50 @@ export default function TransferManagement() {
     note: "",
   });
 
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const PAGE_SIZE = 10;
+
   const showToast = (type, msg) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
   };
 
-  const load = async () => {
+  // Branches + books chỉ load 1 lần
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const [branchRes, bookRes] = await Promise.all([
+          getBranches(),
+          getBooks(),
+        ]);
+        setBranches(branchRes.data || []);
+        const bookData = bookRes?.data;
+        setBooks(Array.isArray(bookData) ? bookData : bookData?.content || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    init();
+  }, []);
+
+  const loadTransfers = async (p = page) => {
     try {
-      const [transferRes, branchRes, bookRes] = await Promise.all([
-        getTransfers(),
-        getBranches(),
-        getBooks(),
-      ]);
-      setTransfers(transferRes.data || []);
-      setBranches(branchRes.data || []);
-      setBooks(Array.isArray(bookRes) ? bookRes : bookRes.data || []);
+      const res = await getTransfers(p, PAGE_SIZE);
+      const data = res.data;
+      setTransfers(data.content || []);
+      setTotalPages(data.totalPages || 0);
+      setTotalElements(data.totalElements || 0);
     } catch (err) {
       console.error(err);
     }
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    loadTransfers(page);
+  }, [page]);
 
   const filteredBooks = books.filter((b) =>
     (b.title || "").toLowerCase().includes(bookSearch.toLowerCase()),
@@ -84,7 +105,8 @@ export default function TransferManagement() {
       setBookSearch("");
       setShowForm(false);
       setError("");
-      load();
+      setPage(0);
+      loadTransfers(0);
     } catch (err) {
       setError(err.response?.data || "Điều chuyển thất bại");
     } finally {
@@ -94,7 +116,6 @@ export default function TransferManagement() {
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div
           className={`alert alert-${toast.type} d-flex align-items-center gap-2`}
@@ -134,7 +155,6 @@ export default function TransferManagement() {
           <div className="card-body">
             <form onSubmit={handleSubmit}>
               <div className="row g-3">
-                {/* Chọn sách */}
                 <div className="col-md-6" style={{ position: "relative" }}>
                   <label className="form-label">
                     Sách <span className="text-danger">*</span>
@@ -210,7 +230,6 @@ export default function TransferManagement() {
                   )}
                 </div>
 
-                {/* Số lượng */}
                 <div className="col-md-6">
                   <label className="form-label">
                     Số lượng <span className="text-danger">*</span>
@@ -227,7 +246,6 @@ export default function TransferManagement() {
                   />
                 </div>
 
-                {/* Chi nhánh nguồn */}
                 <div className="col-md-6">
                   <label className="form-label">
                     Chi nhánh nguồn <span className="text-danger">*</span>
@@ -248,7 +266,6 @@ export default function TransferManagement() {
                   </select>
                 </div>
 
-                {/* Chi nhánh đích */}
                 <div className="col-md-6">
                   <label className="form-label">
                     Chi nhánh đích <span className="text-danger">*</span>
@@ -271,7 +288,6 @@ export default function TransferManagement() {
                   </select>
                 </div>
 
-                {/* Ghi chú */}
                 <div className="col-12">
                   <label className="form-label">Ghi chú</label>
                   <input
@@ -303,14 +319,14 @@ export default function TransferManagement() {
         </div>
       )}
 
-      {/* Bảng lịch sử */}
+      {/* Table */}
       <div className="card">
         <div className="card-header d-flex align-items-center justify-content-between">
           <span className="d-flex align-items-center gap-2">
             <i className="bi bi-clock-history text-primary" />
             <strong>Lịch sử điều chuyển</strong>
           </span>
-          <span className="badge bg-primary">{transfers.length} phiếu</span>
+          <span className="badge bg-primary">{totalElements} phiếu</span>
         </div>
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -372,6 +388,65 @@ export default function TransferManagement() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div
+              className="d-flex align-items-center justify-content-between px-3 py-2 border-top"
+              style={{ fontSize: 13 }}
+            >
+              <span className="text-muted">
+                Trang {page + 1} / {totalPages} — {totalElements} phiếu
+              </span>
+              <ul className="pagination pagination-sm mb-0">
+                <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                  <button className="page-link" onClick={() => setPage(0)}>
+                    «
+                  </button>
+                </li>
+                <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    ‹
+                  </button>
+                </li>
+                {Array.from({ length: totalPages }, (_, i) => i)
+                  .filter((i) => Math.abs(i - page) <= 2)
+                  .map((i) => (
+                    <li
+                      key={i}
+                      className={`page-item ${i === page ? "active" : ""}`}
+                    >
+                      <button className="page-link" onClick={() => setPage(i)}>
+                        {i + 1}
+                      </button>
+                    </li>
+                  ))}
+                <li
+                  className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    ›
+                  </button>
+                </li>
+                <li
+                  className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setPage(totalPages - 1)}
+                  >
+                    »
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>

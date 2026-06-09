@@ -14,5 +14,5 @@ export const categoryApi = {
   update: (id, data) =>
     axiosClient.put(`${BASE}/${id}`, data).then((r) => r.data),
 
-  delete: (id) => axiosClient.delete(`${BASE}/${id}`),
+  delete: (id) => axiosClient.delete(`${BASE}/${id}`).then((r) => r.data),
 };
