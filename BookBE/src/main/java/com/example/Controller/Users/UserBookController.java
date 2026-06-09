@@ -1,5 +1,6 @@
 package com.example.Controller.Users;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -25,17 +26,14 @@ public class UserBookController {
 
     @GetMapping
     public ResponseEntity<?> getAllBooks(@RequestParam(defaultValue = "") String keyword,
-            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) List<Integer> categoryIds,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "12") int size,
-            HttpServletRequest request) {
-
+            @RequestParam(required = false) String priceFilter,
+            @RequestParam(required = false) String specialFilter, HttpServletRequest request) {
         try {
-
             AuthContext ctx = RequestAuth.optional(request);
-
-            return ResponseEntity
-                    .ok(bookService.getBooksPagination(keyword, categoryId, page, size, ctx));
-
+            return ResponseEntity.ok(bookService.getBooksPagination(keyword, categoryIds, page,
+                    size, ctx, priceFilter, specialFilter));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(e.getMessage());

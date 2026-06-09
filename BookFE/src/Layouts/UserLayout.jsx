@@ -1,9 +1,526 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { getCart } from "../Api/User/CartApi";
 import { categoryApi } from "../Api/Admin/CategoryApi";
 
-// ── Category Mega Menu ────────────────────────────────────────────────────────
+// ── Category Sidebar ──────────────────────────────────────────────────────────
+function CategorySidebar({ tree, onSelect }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [hoveredL1, setHoveredL1] = useState(null);
+  const [hoveredL2, setHoveredL2] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sidebarRef = useRef();
+  const hideTimer = useRef();
+
+  const navigate = useNavigate();
+
+  const categoryIdsParam = searchParams.get("categoryIds");
+  const priceFilter = searchParams.get("priceFilter");
+  const specialFilter = searchParams.get("specialFilter");
+
+  const setFilter = (key, value) => {
+    console.log("setFilter called:", key, value);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (next.get(key) === value) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+        next.set("page", "1");
+      }
+      console.log("navigating to:", `/?${next.toString()}`);
+      return next;
+    });
+  };
+
+  const clearHover = () => {
+    hideTimer.current = setTimeout(() => {
+      setHoveredL1(null);
+      setHoveredL2(null);
+    }, 120);
+  };
+
+  const keepHover = () => {
+    clearTimeout(hideTimer.current);
+  };
+
+  const PRICE_RANGES = [
+    { label: "Dưới 50.000đ", value: "0-50000" },
+    { label: "50.000 – 100.000đ", value: "50000-100000" },
+    { label: "100.000 – 200.000đ", value: "100000-200000" },
+    { label: "Trên 200.000đ", value: "200000-999999999" },
+  ];
+
+  const SPECIAL_FILTERS = [
+    { label: "🔥 Bán chạy", value: "bestseller", color: "#ea580c" },
+    { label: "🏷️ Đang giảm giá", value: "sale", color: "#16a34a" },
+  ];
+
+  const sidebarW = collapsed ? 48 : 220;
+
+  return (
+    <div
+      ref={sidebarRef}
+      style={{
+        width: sidebarW,
+        minWidth: sidebarW,
+        transition: "width .2s, min-width .2s",
+        background: "#fff",
+        borderRight: "1px solid #e9ecef",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        zIndex: 100,
+        overflowX: "visible",
+      }}
+    >
+      {/* Toggle button */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          padding: collapsed ? "14px 0" : "14px 14px",
+          borderBottom: "1px solid #f1f5f9",
+        }}
+      >
+        {!collapsed && (
+          <span style={{ fontWeight: 700, fontSize: 13, color: "#1e293b" }}>
+            <i className="bi bi-funnel me-2" style={{ color: "#2563eb" }} />
+            Danh mục & Lọc
+          </span>
+        )}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: "#64748b",
+            fontSize: 16,
+            padding: 4,
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+          }}
+          title={collapsed ? "Mở sidebar" : "Đóng sidebar"}
+        >
+          <i className={`bi bi-layout-sidebar${collapsed ? "" : "-reverse"}`} />
+        </button>
+      </div>
+
+      {/* Nội dung sidebar */}
+      {!collapsed && (
+        <div style={{ flex: 1, overflowY: "auto", padding: "10px 0" }}>
+          {/* ── Danh mục ── */}
+          <div
+            style={{
+              padding: "4px 14px 6px",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Danh mục
+          </div>
+
+          {tree.map((cat) => {
+            const isActive = categoryIdsParam?.startsWith(String(cat.id));
+            return (
+              <div
+                key={cat.id}
+                style={{ position: "relative" }}
+                onMouseEnter={() => {
+                  keepHover();
+                  setHoveredL1(cat.id);
+                  setHoveredL2(null);
+                }}
+                onMouseLeave={clearHover}
+              >
+                <div
+                  onClick={() => onSelect(cat)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "8px 14px",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? "#2563eb" : "#1e293b",
+                    background: isActive ? "#eff6ff" : "transparent",
+                    borderLeft: isActive
+                      ? "3px solid #2563eb"
+                      : "3px solid transparent",
+                    transition: "all .12s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = "#f8fafc";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive)
+                      e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <span
+                    style={{ display: "flex", alignItems: "center", gap: 7 }}
+                  >
+                    <i
+                      className="bi bi-tag"
+                      style={{
+                        fontSize: 11,
+                        color: isActive ? "#2563eb" : "#94a3b8",
+                      }}
+                    />
+                    <span
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        maxWidth: 140,
+                      }}
+                    >
+                      {cat.name}
+                    </span>
+                  </span>
+                  {cat.children?.length > 0 && (
+                    <i
+                      className="bi bi-chevron-right"
+                      style={{ fontSize: 10, color: "#94a3b8", flexShrink: 0 }}
+                    />
+                  )}
+                </div>
+
+                {/* L2 flyout */}
+                {hoveredL1 === cat.id && cat.children?.length > 0 && (
+                  <div
+                    onMouseEnter={keepHover}
+                    onMouseLeave={clearHover}
+                    style={{
+                      position: "absolute",
+                      left: "100%",
+                      top: 0,
+                      background: "#fff",
+                      border: "1px solid #e9ecef",
+                      borderRadius: 10,
+                      boxShadow: "0 8px 32px rgba(0,0,0,.12)",
+                      minWidth: 200,
+                      zIndex: 500,
+                      padding: "6px 0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "4px 14px 8px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#94a3b8",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {cat.name}
+                    </div>
+                    {cat.children.map((child) => (
+                      <div
+                        key={child.id}
+                        style={{ position: "relative" }}
+                        onMouseEnter={() => {
+                          keepHover();
+                          setHoveredL2(child.id);
+                        }}
+                        onMouseLeave={clearHover}
+                      >
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(child);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 14px",
+                            cursor: "pointer",
+                            fontSize: 13,
+                            color: "#1e293b",
+                            transition: "background .12s",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background = "#f0f7ff")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          <span
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 7,
+                            }}
+                          >
+                            <i
+                              className="bi bi-arrow-return-right"
+                              style={{ fontSize: 10, color: "#94a3b8" }}
+                            />
+                            {child.name}
+                          </span>
+                          {child.children?.length > 0 && (
+                            <i
+                              className="bi bi-chevron-right"
+                              style={{ fontSize: 10, color: "#94a3b8" }}
+                            />
+                          )}
+                        </div>
+
+                        {/* L3 flyout */}
+                        {hoveredL2 === child.id &&
+                          child.children?.length > 0 && (
+                            <div
+                              onMouseEnter={keepHover}
+                              onMouseLeave={clearHover}
+                              style={{
+                                position: "absolute",
+                                left: "100%",
+                                top: 0,
+                                background: "#fff",
+                                border: "1px solid #e9ecef",
+                                borderRadius: 10,
+                                boxShadow: "0 8px 32px rgba(0,0,0,.12)",
+                                minWidth: 190,
+                                zIndex: 600,
+                                padding: "6px 0",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: "4px 14px 8px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {child.name}
+                              </div>
+                              {child.children.map((gc) => (
+                                <div
+                                  key={gc.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelect(gc);
+                                  }}
+                                  style={{
+                                    padding: "8px 14px",
+                                    cursor: "pointer",
+                                    fontSize: 13,
+                                    color: "#1e293b",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 7,
+                                    transition: "background .12s",
+                                  }}
+                                  onMouseEnter={(e) =>
+                                    (e.currentTarget.style.background =
+                                      "#f0f7ff")
+                                  }
+                                  onMouseLeave={(e) =>
+                                    (e.currentTarget.style.background =
+                                      "transparent")
+                                  }
+                                >
+                                  <i
+                                    className="bi bi-dot"
+                                    style={{ fontSize: 18, color: "#94a3b8" }}
+                                  />
+                                  {gc.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div
+            style={{ margin: "12px 14px", borderTop: "1px solid #f1f5f9" }}
+          />
+
+          {/* ── Lọc đặc biệt ── */}
+          <div
+            style={{
+              padding: "4px 14px 6px",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Nổi bật
+          </div>
+          {SPECIAL_FILTERS.map((f) => {
+            const active = specialFilter === f.value;
+            return (
+              <div
+                key={f.value}
+                onClick={() => setFilter("specialFilter", f.value)}
+                style={{
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? f.color : "#1e293b",
+                  background: active ? "#fff7ed" : "transparent",
+                  borderLeft: active
+                    ? `3px solid ${f.color}`
+                    : "3px solid transparent",
+                  transition: "all .12s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {f.label}
+              </div>
+            );
+          })}
+
+          <div
+            style={{ margin: "12px 14px", borderTop: "1px solid #f1f5f9" }}
+          />
+
+          {/* ── Lọc giá ── */}
+          <div
+            style={{
+              padding: "4px 14px 6px",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Khoảng giá
+          </div>
+          {PRICE_RANGES.map((r) => {
+            const active = priceFilter === r.value;
+            return (
+              <div
+                key={r.value}
+                onClick={() => setFilter("priceFilter", r.value)}
+                style={{
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  color: active ? "#2563eb" : "#1e293b",
+                  background: active ? "#eff6ff" : "transparent",
+                  borderLeft: active
+                    ? "3px solid #2563eb"
+                    : "3px solid transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  transition: "all .12s",
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = "#f8fafc";
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <i
+                  className="bi bi-currency-dollar"
+                  style={{
+                    fontSize: 12,
+                    color: active ? "#2563eb" : "#94a3b8",
+                  }}
+                />
+                {r.label}
+              </div>
+            );
+          })}
+
+          {/* Clear all filters */}
+          {(categoryIdsParam || priceFilter || specialFilter) && (
+            <div style={{ padding: "12px 14px" }}>
+              <button
+                onClick={() => setSearchParams({})}
+                style={{
+                  width: "100%",
+                  padding: "7px",
+                  border: "1px dashed #e2e8f0",
+                  borderRadius: 8,
+                  background: "none",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  transition: "all .12s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#2563eb";
+                  e.currentTarget.style.color = "#2563eb";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "#e2e8f0";
+                  e.currentTarget.style.color = "#94a3b8";
+                }}
+              >
+                <i className="bi bi-x-circle me-1" /> Xóa tất cả bộ lọc
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed icons */}
+      {collapsed && (
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            paddingTop: 8,
+            gap: 4,
+          }}
+        >
+          {tree.slice(0, 8).map((cat) => (
+            <button
+              key={cat.id}
+              title={cat.name}
+              onClick={() => onSelect(cat)}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#94a3b8",
+                fontSize: 16,
+                padding: "6px",
+                borderRadius: 6,
+              }}
+            >
+              <i className="bi bi-tag" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Category Mega Menu (navbar) ───────────────────────────────────────────────
 function CategoryMenu({ onSelect, tree }) {
   const [activeParent, setActiveParent] = useState(null);
   const [activeChild, setActiveChild] = useState(null);
@@ -29,7 +546,6 @@ function CategoryMenu({ onSelect, tree }) {
     padding: "8px 0",
     borderRight: active ? "1px solid #f0f0f0" : "none",
   });
-
   const itemStyle = (isActive) => ({
     display: "flex",
     alignItems: "center",
@@ -62,7 +578,6 @@ function CategoryMenu({ onSelect, tree }) {
           style={{ fontSize: 10 }}
         />
       </button>
-
       {open && (
         <div
           style={{
@@ -110,7 +625,6 @@ function CategoryMenu({ onSelect, tree }) {
               </div>
             ))}
           </div>
-
           {activeParent?.children?.length > 0 && (
             <div style={colStyle(!!activeChild)}>
               <div
@@ -120,7 +634,6 @@ function CategoryMenu({ onSelect, tree }) {
                   color: "#94a3b8",
                   fontWeight: 600,
                   textTransform: "uppercase",
-                  letterSpacing: "0.5px",
                 }}
               >
                 {activeParent.name}
@@ -154,7 +667,6 @@ function CategoryMenu({ onSelect, tree }) {
               ))}
             </div>
           )}
-
           {activeChild?.children?.length > 0 && (
             <div style={colStyle(false)}>
               <div
@@ -164,14 +676,13 @@ function CategoryMenu({ onSelect, tree }) {
                   color: "#94a3b8",
                   fontWeight: 600,
                   textTransform: "uppercase",
-                  letterSpacing: "0.5px",
                 }}
               >
                 {activeChild.name}
               </div>
-              {activeChild.children.map((grandchild) => (
+              {activeChild.children.map((gc) => (
                 <div
-                  key={grandchild.id}
+                  key={gc.id}
                   style={{
                     padding: "9px 16px",
                     cursor: "pointer",
@@ -188,7 +699,7 @@ function CategoryMenu({ onSelect, tree }) {
                     (e.currentTarget.style.background = "transparent")
                   }
                   onClick={() => {
-                    onSelect(grandchild);
+                    onSelect(gc);
                     setOpen(false);
                     setActiveParent(null);
                     setActiveChild(null);
@@ -198,7 +709,7 @@ function CategoryMenu({ onSelect, tree }) {
                     className="bi bi-dot me-1"
                     style={{ fontSize: 16, color: "#94a3b8" }}
                   />
-                  {grandchild.name}
+                  {gc.name}
                 </div>
               ))}
             </div>
@@ -232,7 +743,7 @@ function Navbar({
         borderBottom: "1px solid #e9ecef",
       }}
     >
-      <div className="container">
+      <div className="container-fluid px-3">
         <NavLink
           to="/"
           className="navbar-brand d-flex align-items-center gap-2 text-decoration-none"
@@ -245,14 +756,12 @@ function Navbar({
             Digital Books
           </span>
         </NavLink>
-
         <button
           className="navbar-toggler border-0"
           onClick={() => setMenuOpen((v) => !v)}
         >
           <i className={`bi ${menuOpen ? "bi-x-lg" : "bi-list"} fs-5`} />
         </button>
-
         <div className={`collapse navbar-collapse ${menuOpen ? "show" : ""}`}>
           <ul className="navbar-nav me-auto mb-2 mb-lg-0 ms-3">
             <li className="nav-item">
@@ -297,7 +806,6 @@ function Navbar({
               </li>
             )}
           </ul>
-
           {user ? (
             <div className="position-relative">
               <button
@@ -444,7 +952,6 @@ function Navbar({
 // ── Footer ────────────────────────────────────────────────────────────────────
 function Footer({ categoryTree }) {
   const navigate = useNavigate();
-
   return (
     <footer
       style={{
@@ -469,7 +976,6 @@ function Footer({ categoryTree }) {
               Nền tảng sách số hàng đầu Việt Nam — kết nối tác giả và độc giả.
             </p>
           </div>
-
           <div className="col-md-4">
             <h6 style={{ color: "#fff", fontWeight: 600, marginBottom: 12 }}>
               Danh mục
@@ -481,11 +987,9 @@ function Footer({ categoryTree }) {
                 <li key={cat.id} style={{ marginBottom: 6 }}>
                   <button
                     onClick={() => {
-                      const collectIds = (node) => {
-                        const ids = [node.id];
-                        node.children?.forEach((c) =>
-                          ids.push(...collectIds(c)),
-                        );
+                      const collectIds = (n) => {
+                        const ids = [n.id];
+                        n.children?.forEach((c) => ids.push(...collectIds(c)));
                         return ids;
                       };
                       const ids = collectIds(cat);
@@ -513,7 +1017,6 @@ function Footer({ categoryTree }) {
               ))}
             </ul>
           </div>
-
           <div className="col-md-4">
             <h6 style={{ color: "#fff", fontWeight: 600, marginBottom: 12 }}>
               Hỗ trợ
@@ -541,7 +1044,6 @@ function Footer({ categoryTree }) {
             </ul>
           </div>
         </div>
-
         <div
           style={{
             borderTop: "1px solid #2d2d4e",
@@ -629,7 +1131,12 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
         onSelectCategory={handleSelectCategory}
         categoryTree={categoryTree}
       />
-      <main style={{ flex: 1 }}>{children}</main>
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+        <CategorySidebar tree={categoryTree} onSelect={handleSelectCategory} />
+        <main style={{ flex: 1, overflow: "auto", padding: "24px 28px" }}>
+          {children}
+        </main>
+      </div>
       <Footer categoryTree={categoryTree} />
     </div>
   );

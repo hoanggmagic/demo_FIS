@@ -6,24 +6,30 @@ const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
-// GET BOOKS PHÂN TRANG
+const getAuthConfig = (params = {}) => ({
+  ...getHeaders(),
+  params,
+});
+
 export const getBooks = (
   page = 0,
   size = 12,
   keyword = "",
-  categoryId = null,
+  categoryIds = null,
+  priceFilter = null, // ← thêm
+  specialFilter = null, // ← thêm
 ) => {
-  let url = `${BASE}/books?page=${page}&size=${size}`;
+  const params = {
+    page,
+    size,
+  };
 
-  if (keyword) {
-    url += `&keyword=${encodeURIComponent(keyword)}`;
-  }
+  if (keyword) params.keyword = keyword;
+  if (categoryIds) params.categoryIds = categoryIds;
+  if (priceFilter) params.priceFilter = priceFilter;
+  if (specialFilter) params.specialFilter = specialFilter;
 
-  if (categoryId) {
-    url += `&categoryId=${categoryId}`;
-  }
-
-  return axios.get(url, getHeaders());
+  return axios.get(`${BASE}/books`, getAuthConfig(params));
 };
 
 export const getBookById = (id) =>

@@ -140,16 +140,48 @@ public class BookService {
     }
 
 
-    public PaginationResponse<BookDTO> getBooksPagination(String keyword, Integer categoryId,
-            int page, int size, AuthContext ctx) {
+    public PaginationResponse<BookDTO> getBooksPagination(String keyword, List<Integer> categoryIds,
+            int page, int size, AuthContext ctx, String priceFilter, String specialFilter) {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Book> bookPage = bookRepo.searchByKeywordAndCategory(keyword, categoryId, pageable);
+        // Parse priceFilter "50000-100000" → min/max
+        Double minPrice = null;
+        Double maxPrice = null;
+        if (priceFilter != null && priceFilter.contains("-")) {
+            String[] parts = priceFilter.split("-");
+            try {
+                minPrice = Double.parseDouble(parts[0]);
+                maxPrice = Double.parseDouble(parts[1]);
+            } catch (Exception ignored) {
+            }
+        }
 
+        boolean onlySale = "sale".equals(specialFilter);
+
+        boolean hasCat = categoryIds != null && !categoryIds.isEmpty();
+        boolean hasFilter = minPrice != null || maxPrice != null || onlySale;
+
+        Page<Book> bookPage;
+        if (hasCat) {
+            bookPage = bookRepo.searchWithFilters(keyword, categoryIds, minPrice, maxPrice,
+                    onlySale, pageable);
+        } else if (hasFilter) {
+            bookPage = bookRepo.searchWithFiltersNoCat(keyword, minPrice, maxPrice, onlySale,
+                    pageable);
+        } else {
+            bookPage = bookRepo.searchByKeywordAndCategory(keyword, null, pageable);
+        }
+
+        // "bestseller" → sắp xếp theo quantity giảm dần (lọc sau khi query)
         List<BookDTO> content = bookPage.getContent().stream()
                 .filter(b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
                 .map(this::toDTO).collect(Collectors.toList());
+
+        if ("bestseller".equals(specialFilter)) {
+            content.sort((a, b2) -> Integer.compare(b2.getQuantity() != null ? b2.getQuantity() : 0,
+                    a.getQuantity() != null ? a.getQuantity() : 0));
+        }
 
         return new PaginationResponse<>(content, page, size, bookPage.getTotalElements(),
                 bookPage.getTotalPages());

@@ -204,6 +204,15 @@ export default function UserPage({ user }) {
     loadCartCount();
   }, [cartReload, user]);
 
+  // Trong UserBookList, thêm tạm
+  useEffect(() => {
+    console.log("priceFilter:", priceFilter, "specialFilter:", specialFilter);
+  }, [priceFilter, specialFilter]);
+
+  useEffect(() => {
+    console.log("PARAMS:", Object.fromEntries(searchParams));
+  }, [searchParams]);
+
   const handleCartUpdate = () => setCartReload((r) => r + 1);
 
   const requireAuth = (component) => {

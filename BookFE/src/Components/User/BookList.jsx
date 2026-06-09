@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addToCart } from "../../Api/User/CartApi";
 import BranchPickerModal from "./BranchPickerModal";
@@ -34,36 +34,36 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const categoryName = searchParams.get("categoryName");
+  const priceFilter = searchParams.get("priceFilter");
+  const specialFilter = searchParams.get("specialFilter");
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    try {
-      const categoryId = categoryIdsParam
-        ? Number(categoryIdsParam.split(",")[0])
-        : null;
-
-      const res = await getBooks(
-        page - 1,
-        PAGE_SIZE,
-        submittedKeyword,
-        categoryId,
-      );
-
-      setAllBooks(res.data.content || []);
-      setTotalPages(res.data.totalPages || 0);
-      setTotalElements(res.data.totalElements || 0);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, submittedKeyword, categoryIdsParam]);
-
-  useEffect(() => {
-    console.log("page changed:", page);
-  }, [page]);
-  useEffect(() => {
-    console.log("PAGE UPDATED:", page);
-  }, [page]);
-  // Reset khi đổi category (skip lần mount đầu)
+    getBooks(
+      page - 1,
+      PAGE_SIZE,
+      submittedKeyword,
+      categoryIdsParam || null,
+      priceFilter || null,
+      specialFilter || null,
+    )
+      .then((res) => {
+        if (cancelled) return;
+        setAllBooks(res.data.content || []);
+        setTotalPages(res.data.totalPages || 0);
+        setTotalElements(res.data.totalElements || 0);
+      })
+      .catch((err) => {
+        console.error("getBooks ERROR:", err); // ← thêm
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, submittedKeyword, categoryIdsParam, priceFilter, specialFilter]);
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
@@ -71,13 +71,12 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
     }
     setKeyword("");
     setSubmittedKeyword("");
-    changePage(1);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("page", "1");
+      return next;
+    });
   }, [categoryIdsParam]);
-
-  // Load data
-  useEffect(() => {
-    load();
-  }, [load]);
 
   const handleSearch = () => {
     setSubmittedKeyword(keyword);
@@ -108,7 +107,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
 
   const clearCategory = () => {
     setSearchParams({});
-    setPage(1);
   };
 
   return (
@@ -521,39 +519,113 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            gap: 6,
+            gap: 4,
             marginTop: 32,
             flexWrap: "wrap",
           }}
         >
+          {/* Prev */}
           <button
             onClick={() => changePage(Math.max(1, page - 1))}
             disabled={page === 1}
+            style={{
+              padding: "7px 14px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              background: page === 1 ? "#f8fafc" : "#fff",
+              color: page === 1 ? "#cbd5e1" : "#374151",
+              cursor: page === 1 ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
           >
-            Prev
+            ‹ Prev
           </button>
 
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => changePage(p)}
-              style={{
-                padding: "6px 12px",
-                border: "1px solid #ccc",
-                background: p === page ? "#2563eb" : "#fff",
-                color: p === page ? "#fff" : "#000",
-                cursor: "pointer",
-              }}
-            >
-              {p}
-            </button>
-          ))}
+          {/* Page numbers với ellipsis */}
+          {(() => {
+            const pages = [];
+            const delta = 2; // số trang hiện xung quanh trang hiện tại
 
+            // Tính các trang cần hiện
+            const rangeStart = Math.max(2, page - delta);
+            const rangeEnd = Math.min(totalPages - 1, page + delta);
+
+            // Luôn hiện trang 1
+            pages.push(1);
+
+            // Dấu ... bên trái
+            if (rangeStart > 2) pages.push("...-left");
+
+            // Các trang xung quanh
+            for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+
+            // Dấu ... bên phải
+            if (rangeEnd < totalPages - 1) pages.push("...-right");
+
+            // Luôn hiện trang cuối
+            if (totalPages > 1) pages.push(totalPages);
+
+            return pages.map((p) => {
+              if (typeof p === "string") {
+                return (
+                  <span
+                    key={p}
+                    style={{
+                      padding: "7px 4px",
+                      color: "#94a3b8",
+                      fontSize: 13,
+                    }}
+                  >
+                    …
+                  </span>
+                );
+              }
+              const isActive = p === page;
+              return (
+                <button
+                  key={p}
+                  onClick={() => changePage(p)}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    border: isActive ? "none" : "1px solid #e2e8f0",
+                    borderRadius: 8,
+                    background: isActive
+                      ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                      : "#fff",
+                    color: isActive ? "#fff" : "#374151",
+                    cursor: "pointer",
+                    fontWeight: isActive ? 700 : 400,
+                    fontSize: 13,
+                    transition: "all .15s",
+                    boxShadow: isActive
+                      ? "0 2px 8px rgba(37,99,235,.35)"
+                      : "none",
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            });
+          })()}
+
+          {/* Next */}
           <button
             onClick={() => changePage(Math.min(totalPages, page + 1))}
             disabled={page === totalPages}
+            style={{
+              padding: "7px 14px",
+              border: "1px solid #e2e8f0",
+              borderRadius: 8,
+              background: page === totalPages ? "#f8fafc" : "#fff",
+              color: page === totalPages ? "#cbd5e1" : "#374151",
+              cursor: page === totalPages ? "not-allowed" : "pointer",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
           >
-            Next
+            Next ›
           </button>
         </div>
       )}
