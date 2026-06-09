@@ -7,6 +7,7 @@ import java.util.List;
 
 public interface BookImageRepository extends JpaRepository<BookImage, Integer> {
     List<BookImage> findByBookId(int bookId);
+    List<BookImage> findByBookIdIn(List<Integer> bookIds);
 
     @Transactional
     void deleteByBookId(int bookId);

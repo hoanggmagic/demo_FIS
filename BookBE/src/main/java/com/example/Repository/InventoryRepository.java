@@ -13,6 +13,14 @@ public interface InventoryRepository extends JpaRepository<Inventory, InventoryI
     @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i WHERE i.bookId = :bookId")
     int sumQuantityByBookId(@Param("bookId") int bookId);
 
+    @Query(value = """
+            SELECT book_id AS bookId, COALESCE(SUM(quantity), 0) AS totalQuantity
+            FROM inventories
+            WHERE book_id IN (:bookIds)
+            GROUP BY book_id
+            """, nativeQuery = true)
+    List<Object[]> sumQuantityByBookIds(@Param("bookIds") List<Integer> bookIds);
+
     List<Inventory> findByBookId(int bookId);
 
     Optional<Inventory> findByBookIdAndBranchId(int bookId, int branchId);

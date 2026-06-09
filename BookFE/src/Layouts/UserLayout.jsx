@@ -3,6 +3,29 @@ import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { getCart } from "../Api/User/CartApi";
 import { categoryApi } from "../Api/Admin/CategoryApi";
 
+const parseCategoryIdSet = (value) =>
+  new Set(
+    (value ?? "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => Number(part))
+      .filter((id) => Number.isFinite(id)),
+  );
+
+const collectCategoryIds = (node) => {
+  const ids = [node.id];
+  node.children?.forEach((child) => {
+    ids.push(...collectCategoryIds(child));
+  });
+  return ids;
+};
+
+const hasSelectedCategoryInTree = (node, selectedIds) =>
+  selectedIds.has(Number(node.id)) ||
+  (node.children?.some((child) => hasSelectedCategoryInTree(child, selectedIds)) ??
+    false);
+
 // ── Category Sidebar ──────────────────────────────────────────────────────────
 function CategorySidebar({ tree, onSelect }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -12,11 +35,10 @@ function CategorySidebar({ tree, onSelect }) {
   const sidebarRef = useRef();
   const hideTimer = useRef();
 
-  const navigate = useNavigate();
-
   const categoryIdsParam = searchParams.get("categoryIds");
   const priceFilter = searchParams.get("priceFilter");
   const specialFilter = searchParams.get("specialFilter");
+  const selectedCategoryIds = parseCategoryIdSet(categoryIdsParam);
 
   const setFilter = (key, value) => {
     console.log("setFilter called:", key, value);
@@ -127,7 +149,7 @@ function CategorySidebar({ tree, onSelect }) {
           </div>
 
           {tree.map((cat) => {
-            const isActive = categoryIdsParam?.startsWith(String(cat.id));
+            const isActive = hasSelectedCategoryInTree(cat, selectedCategoryIds);
             return (
               <div
                 key={cat.id}
@@ -232,7 +254,7 @@ function CategorySidebar({ tree, onSelect }) {
                         }}
                         onMouseLeave={clearHover}
                       >
-                        <div
+                    <div
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelect(child);
@@ -244,14 +266,48 @@ function CategorySidebar({ tree, onSelect }) {
                             padding: "8px 14px",
                             cursor: "pointer",
                             fontSize: 13,
-                            color: "#1e293b",
+                            fontWeight: hasSelectedCategoryInTree(
+                              child,
+                              selectedCategoryIds,
+                            )
+                              ? 600
+                              : 400,
+                            color: hasSelectedCategoryInTree(
+                              child,
+                              selectedCategoryIds,
+                            )
+                              ? "#2563eb"
+                              : "#1e293b",
+                            background: hasSelectedCategoryInTree(
+                              child,
+                              selectedCategoryIds,
+                            )
+                              ? "#eff6ff"
+                              : "transparent",
+                            borderLeft: hasSelectedCategoryInTree(
+                              child,
+                              selectedCategoryIds,
+                            )
+                              ? "3px solid #2563eb"
+                              : "3px solid transparent",
                             transition: "background .12s",
                           }}
                           onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#f0f7ff")
+                            (e.currentTarget.style.background =
+                              hasSelectedCategoryInTree(
+                                child,
+                                selectedCategoryIds,
+                              )
+                                ? "#eff6ff"
+                                : "#f0f7ff")
                           }
                           onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "transparent")
+                            (e.currentTarget.style.background = hasSelectedCategoryInTree(
+                              child,
+                              selectedCategoryIds,
+                            )
+                              ? "#eff6ff"
+                              : "transparent")
                           }
                         >
                           <span
@@ -316,7 +372,26 @@ function CategorySidebar({ tree, onSelect }) {
                                     padding: "8px 14px",
                                     cursor: "pointer",
                                     fontSize: 13,
-                                    color: "#1e293b",
+                                    fontWeight: selectedCategoryIds.has(
+                                      Number(gc.id),
+                                    )
+                                      ? 600
+                                      : 400,
+                                    color: selectedCategoryIds.has(
+                                      Number(gc.id),
+                                    )
+                                      ? "#2563eb"
+                                      : "#1e293b",
+                                    background: selectedCategoryIds.has(
+                                      Number(gc.id),
+                                    )
+                                      ? "#eff6ff"
+                                      : "transparent",
+                                    borderLeft: selectedCategoryIds.has(
+                                      Number(gc.id),
+                                    )
+                                      ? "3px solid #2563eb"
+                                      : "3px solid transparent",
                                     display: "flex",
                                     alignItems: "center",
                                     gap: 7,
@@ -324,11 +399,15 @@ function CategorySidebar({ tree, onSelect }) {
                                   }}
                                   onMouseEnter={(e) =>
                                     (e.currentTarget.style.background =
-                                      "#f0f7ff")
+                                      selectedCategoryIds.has(Number(gc.id))
+                                        ? "#eff6ff"
+                                        : "#f0f7ff")
                                   }
                                   onMouseLeave={(e) =>
                                     (e.currentTarget.style.background =
-                                      "transparent")
+                                      selectedCategoryIds.has(Number(gc.id))
+                                        ? "#eff6ff"
+                                        : "transparent")
                                   }
                                 >
                                   <i
@@ -986,13 +1065,8 @@ function Footer({ categoryTree }) {
               {categoryTree.map((cat) => (
                 <li key={cat.id} style={{ marginBottom: 6 }}>
                   <button
-                    onClick={() => {
-                      const collectIds = (n) => {
-                        const ids = [n.id];
-                        n.children?.forEach((c) => ids.push(...collectIds(c)));
-                        return ids;
-                      };
-                      const ids = collectIds(cat);
+                  onClick={() => {
+                      const ids = collectCategoryIds(cat);
                       navigate(
                         `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,
                       );
@@ -1083,6 +1157,7 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
   const [cartCount, setCartCount] = useState(0);
   const [categoryTree, setCategoryTree] = useState([]);
   const navigate = useNavigate();
+  const displayedCartCount = user ? cartCount : 0;
 
   useEffect(() => {
     categoryApi
@@ -1092,23 +1167,14 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setCartCount(0);
-      return;
-    }
+    if (!user) return;
     getCart()
       .then((res) => setCartCount(res.data.length))
       .catch(() => setCartCount(0));
   }, [user]);
 
   const handleSelectCategory = (cat) => {
-    const collectIds = (node) => {
-      const ids = [node.id];
-      if (node.children?.length)
-        node.children.forEach((child) => ids.push(...collectIds(child)));
-      return ids;
-    };
-    const ids = collectIds(cat);
+    const ids = collectCategoryIds(cat);
     navigate(
       `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,
     );
@@ -1127,7 +1193,7 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
         user={user}
         onLogout={onLogout}
         onShowLogin={onShowLogin}
-        cartCount={cartCount}
+        cartCount={displayedCartCount}
         onSelectCategory={handleSelectCategory}
         categoryTree={categoryTree}
       />

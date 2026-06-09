@@ -5,8 +5,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
@@ -72,8 +76,9 @@ public class BookService {
         dto.setUpdatedAt(book.getUpdatedAt());
 
         // authorName từ userRepo
-        userRepo.findById(book.getAuthorId())
-                .ifPresent(author -> dto.setAuthorName(author.getFullName()));
+        String authorName = userRepo.findById(book.getAuthorId()).map(User::getFullName)
+                .orElse(null);
+        dto.setAuthorName(authorName);
 
         // quantity tổng từ inventories
         dto.setQuantity(inventoryRepo.sumQuantityByBookId(book.getId()));
@@ -111,6 +116,94 @@ public class BookService {
         }
 
         return dto;
+    }
+
+    private BookDTO toDTO(Book book, String authorName, List<String> images) {
+        return toDTO(book, authorName, images, null);
+    }
+
+    private BookDTO toDTO(Book book, String authorName, List<String> images, Integer quantity) {
+        BookDTO dto = new BookDTO();
+        dto.setId(book.getId());
+        dto.setTitle(book.getTitle());
+        dto.setDescription(book.getDescription());
+        dto.setPublishedYear(book.getPublishedYear());
+        dto.setStatus(book.getStatus());
+        dto.setAuthorId(book.getAuthorId());
+        dto.setCreatedAt(book.getCreatedAt());
+        dto.setUpdatedAt(book.getUpdatedAt());
+        dto.setAuthorName(authorName);
+
+        dto.setQuantity(quantity != null ? quantity : inventoryRepo.sumQuantityByBookId(book.getId()));
+
+        if (book.getCategory() != null) {
+            dto.setCategoryId(book.getCategory().getId());
+            dto.setCategoryName(book.getCategory().getName());
+        }
+
+        dto.setImages(images);
+
+        BookPrice bp = book.getBookPrice();
+        if (bp != null) {
+            Double original = bp.getOriginalPrice() != null ? bp.getOriginalPrice() : 0.0;
+            Double salePrice = bp.getSalePrice();
+            dto.setOriginalPrice(original);
+            LocalDateTime now = LocalDateTime.now();
+            boolean hasSale = salePrice > 0 && bp.getSaleStart() != null && bp.getSaleEnd() != null
+                    && now.isAfter(bp.getSaleStart()) && now.isBefore(bp.getSaleEnd());
+            if (hasSale) {
+                dto.setDiscountedPrice(salePrice);
+                dto.setPrice(salePrice);
+                dto.setDiscountPercent((original - salePrice) / original * 100);
+            } else {
+                dto.setDiscountedPrice(original);
+                dto.setPrice(original);
+                dto.setDiscountPercent(0.0);
+            }
+        } else {
+            dto.setOriginalPrice(0.0);
+            dto.setDiscountedPrice(0.0);
+            dto.setPrice(0.0);
+            dto.setDiscountPercent(0.0);
+        }
+
+        return dto;
+    }
+
+    private List<BookDTO> toDTOs(List<Book> books) {
+        if (books == null || books.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> authorIds = books.stream().map(Book::getAuthorId).distinct()
+                .collect(Collectors.toList());
+        Map<Integer, String> authorNames = new HashMap<>();
+        if (!authorIds.isEmpty()) {
+            userRepo.findAllById(authorIds)
+                    .forEach(user -> authorNames.put(user.getId(), user.getFullName()));
+        }
+
+        List<Integer> bookIds = books.stream().map(Book::getId).collect(Collectors.toList());
+        Map<Integer, List<String>> imagesByBookId = new HashMap<>();
+        if (!bookIds.isEmpty()) {
+            imageRepo.findByBookIdIn(bookIds).forEach(img -> imagesByBookId
+                    .computeIfAbsent(img.getBookId(), k -> new ArrayList<>()).add(img.getImageUrl()));
+        }
+
+        Map<Integer, Integer> quantitiesByBookId = new HashMap<>();
+        if (!bookIds.isEmpty()) {
+            inventoryRepo.sumQuantityByBookIds(bookIds).forEach(row -> {
+                Integer bookId = ((Number) row[0]).intValue();
+                Integer quantity = row[1] != null ? ((Number) row[1]).intValue() : 0;
+                quantitiesByBookId.put(bookId, quantity);
+            });
+        }
+
+        return books.stream()
+                .map(book -> toDTO(book, authorNames.get(book.getAuthorId()),
+                        imagesByBookId.getOrDefault(book.getId(), List.of()),
+                        quantitiesByBookId.get(book.getId())))
+                .collect(Collectors.toList());
     }
 
     public Page<BookDTO> getBooksForContext(AuthContext ctx, Pageable pageable) {
@@ -156,9 +249,39 @@ public class BookService {
         }
 
         boolean onlySale = "sale".equals(specialFilter);
+        boolean bestseller = "bestseller".equals(specialFilter);
 
         boolean hasCat = categoryIds != null && !categoryIds.isEmpty();
         boolean hasFilter = minPrice != null || maxPrice != null || onlySale;
+
+        if (bestseller) {
+            Page<Integer> bestsellerIdsPage;
+            if (hasCat) {
+                bestsellerIdsPage = bookRepo.findBestsellerBookIdsWithCat(keyword, categoryIds,
+                        minPrice, maxPrice, onlySale, pageable);
+            } else {
+                bestsellerIdsPage = bookRepo.findBestsellerBookIdsNoCat(keyword, minPrice,
+                        maxPrice, onlySale, pageable);
+            }
+
+            List<Integer> ids = bestsellerIdsPage.getContent();
+            List<Book> books = new ArrayList<>();
+            if (!ids.isEmpty()) {
+                bookRepo.findAllById(ids).forEach(books::add);
+            }
+
+            Map<Integer, Book> bookById = new HashMap<>();
+            books.stream().filter(b -> ctx == null || !ctx.isAuthor()
+                    || b.getAuthorId() == ctx.getUserId()).forEach(b -> bookById.put(b.getId(), b));
+
+            List<Book> orderedBooks = ids.stream().map(bookById::get).filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            List<BookDTO> orderedContent = toDTOs(orderedBooks);
+
+            int totalElements = (int) bestsellerIdsPage.getTotalElements();
+            int totalPages = size <= 0 ? 0 : (int) Math.ceil(totalElements / (double) size);
+            return new PaginationResponse<>(orderedContent, page, size, totalElements, totalPages);
+        }
 
         Page<Book> bookPage;
         if (hasCat) {
@@ -172,14 +295,9 @@ public class BookService {
         }
 
         // "bestseller" → sắp xếp theo quantity giảm dần (lọc sau khi query)
-        List<BookDTO> content = bookPage.getContent().stream()
+        List<BookDTO> content = toDTOs(bookPage.getContent().stream()
                 .filter(b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
-                .map(this::toDTO).collect(Collectors.toList());
-
-        if ("bestseller".equals(specialFilter)) {
-            content.sort((a, b2) -> Integer.compare(b2.getQuantity() != null ? b2.getQuantity() : 0,
-                    a.getQuantity() != null ? a.getQuantity() : 0));
-        }
+                .collect(Collectors.toList()));
 
         return new PaginationResponse<>(content, page, size, bookPage.getTotalElements(),
                 bookPage.getTotalPages());
