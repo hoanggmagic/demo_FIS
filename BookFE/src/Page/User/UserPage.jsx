@@ -4,7 +4,6 @@ import UserBookList from "../../Components/User/BookList";
 import Cart from "../../Components/User/Cart";
 import Profile from "../../Components/User/UserProfile";
 import { getCart } from "../../Api/User/CartApi";
-import { useSearchParams } from "react-router-dom";
 
 // ── Login required guard ──────────────────────────────────────────────────────
 function LoginRequired({ message = "Bạn cần đăng nhập để tiếp tục." }) {
@@ -190,14 +189,6 @@ export default function UserPage({ user }) {
   const [tab, setTab] = useState("books");
   const [cartReload, setCartReload] = useState(0);
   const [cartCount, setCartCount] = useState(0);
-  // ── Đọc category filter từ URL ──────────────────────────────
-  const [searchParams] = useSearchParams();
-  const categoryIdsParam = searchParams.get("categoryIds");
-  const categoryName = searchParams.get("categoryName");
-
-  const categoryIds = categoryIdsParam
-    ? categoryIdsParam.split(",").map(Number)
-    : [];
 
   const loadCartCount = async () => {
     if (!user) return;

@@ -4,21 +4,12 @@ import { getCart } from "../Api/User/CartApi";
 import { categoryApi } from "../Api/Admin/CategoryApi";
 
 // ── Category Mega Menu ────────────────────────────────────────────────────────
-function CategoryMenu({ onSelect }) {
-  const [tree, setTree] = useState([]);
+function CategoryMenu({ onSelect, tree }) {
   const [activeParent, setActiveParent] = useState(null);
   const [activeChild, setActiveChild] = useState(null);
   const [open, setOpen] = useState(false);
   const ref = useRef();
 
-  useEffect(() => {
-    categoryApi
-      .getTree()
-      .then(setTree)
-      .catch(() => setTree([]));
-  }, []);
-
-  // Đóng khi click ngoài
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
@@ -87,7 +78,6 @@ function CategoryMenu({ onSelect }) {
             minWidth: 220,
           }}
         >
-          {/* ── Cột cấp 1 (cha) ── */}
           <div style={colStyle(!!activeParent)}>
             {tree.map((cat) => (
               <div
@@ -95,7 +85,7 @@ function CategoryMenu({ onSelect }) {
                 style={itemStyle(activeParent?.id === cat.id)}
                 onMouseEnter={() => {
                   setActiveParent(cat);
-                  setActiveChild(null); // reset cấp 3 khi hover sang cha khác
+                  setActiveChild(null);
                 }}
                 onClick={() => {
                   onSelect(cat);
@@ -121,10 +111,8 @@ function CategoryMenu({ onSelect }) {
             ))}
           </div>
 
-          {/* ── Cột cấp 2 (con) ── */}
           {activeParent?.children?.length > 0 && (
             <div style={colStyle(!!activeChild)}>
-              {/* Label cha */}
               <div
                 style={{
                   padding: "6px 16px 8px",
@@ -137,7 +125,6 @@ function CategoryMenu({ onSelect }) {
               >
                 {activeParent.name}
               </div>
-
               {activeParent.children.map((child) => (
                 <div
                   key={child.id}
@@ -168,10 +155,8 @@ function CategoryMenu({ onSelect }) {
             </div>
           )}
 
-          {/* ── Cột cấp 3 (cháu) ── */}
           {activeChild?.children?.length > 0 && (
             <div style={colStyle(false)}>
-              {/* Label con */}
               <div
                 style={{
                   padding: "6px 16px 8px",
@@ -184,7 +169,6 @@ function CategoryMenu({ onSelect }) {
               >
                 {activeChild.name}
               </div>
-
               {activeChild.children.map((grandchild) => (
                 <div
                   key={grandchild.id}
@@ -226,7 +210,14 @@ function CategoryMenu({ onSelect }) {
 }
 
 // ── Navbar ────────────────────────────────────────────────────────────────────
-function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
+function Navbar({
+  user,
+  onLogout,
+  onShowLogin,
+  cartCount,
+  onSelectCategory,
+  categoryTree,
+}) {
   const navigate = useNavigate();
   const [ddOpen, setDdOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -242,7 +233,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
       }}
     >
       <div className="container">
-        {/* Brand */}
         <NavLink
           to="/"
           className="navbar-brand d-flex align-items-center gap-2 text-decoration-none"
@@ -256,7 +246,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
           </span>
         </NavLink>
 
-        {/* Mobile toggle */}
         <button
           className="navbar-toggler border-0"
           onClick={() => setMenuOpen((v) => !v)}
@@ -276,10 +265,7 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
                 <i className="bi bi-grid me-1" /> Danh sách sách
               </NavLink>
             </li>
-
-            {/* ← Category menu */}
-            <CategoryMenu onSelect={onSelectCategory} />
-
+            <CategoryMenu onSelect={onSelectCategory} tree={categoryTree} />
             <li className="nav-item">
               <NavLink
                 to="/cart"
@@ -312,7 +298,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
             )}
           </ul>
 
-          {/* User area — giữ nguyên */}
           {user ? (
             <div className="position-relative">
               <button
@@ -354,7 +339,6 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
                 </span>
                 <i className="bi bi-chevron-down" style={{ fontSize: 10 }} />
               </button>
-
               {ddOpen && (
                 <>
                   <div
@@ -457,16 +441,9 @@ function Navbar({ user, onLogout, onShowLogin, cartCount, onSelectCategory }) {
   );
 }
 
-function Footer() {
-  const [categories, setCategories] = useState([]);
+// ── Footer ────────────────────────────────────────────────────────────────────
+function Footer({ categoryTree }) {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    categoryApi
-      .getTree()
-      .then(setCategories)
-      .catch(() => setCategories([]));
-  }, []);
 
   return (
     <footer
@@ -493,7 +470,6 @@ function Footer() {
             </p>
           </div>
 
-          {/* ── Danh mục động từ API ── */}
           <div className="col-md-4">
             <h6 style={{ color: "#fff", fontWeight: 600, marginBottom: 12 }}>
               Danh mục
@@ -501,11 +477,10 @@ function Footer() {
             <ul
               style={{ listStyle: "none", padding: 0, margin: 0, fontSize: 13 }}
             >
-              {categories.map((cat) => (
+              {categoryTree.map((cat) => (
                 <li key={cat.id} style={{ marginBottom: 6 }}>
                   <button
                     onClick={() => {
-                      // Collect ids của cat + children
                       const collectIds = (node) => {
                         const ids = [node.id];
                         node.children?.forEach((c) =>
@@ -538,6 +513,7 @@ function Footer() {
               ))}
             </ul>
           </div>
+
           <div className="col-md-4">
             <h6 style={{ color: "#fff", fontWeight: 600, marginBottom: 12 }}>
               Hỗ trợ
@@ -565,6 +541,7 @@ function Footer() {
             </ul>
           </div>
         </div>
+
         <div
           style={{
             borderTop: "1px solid #2d2d4e",
@@ -602,8 +579,15 @@ function Footer() {
 // ── Layout wrapper ────────────────────────────────────────────────────────────
 export default function UserLayout({ user, onLogout, onShowLogin, children }) {
   const [cartCount, setCartCount] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryTree, setCategoryTree] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    categoryApi
+      .getTree()
+      .then(setCategoryTree)
+      .catch(() => setCategoryTree([]));
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -616,19 +600,13 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
   }, [user]);
 
   const handleSelectCategory = (cat) => {
-    setSelectedCategory(cat);
-
-    // Thu thập id của cat + toàn bộ children (đệ quy)
     const collectIds = (node) => {
       const ids = [node.id];
-      if (node.children?.length) {
+      if (node.children?.length)
         node.children.forEach((child) => ids.push(...collectIds(child)));
-      }
       return ids;
     };
-
     const ids = collectIds(cat);
-
     navigate(
       `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,
     );
@@ -649,9 +627,10 @@ export default function UserLayout({ user, onLogout, onShowLogin, children }) {
         onShowLogin={onShowLogin}
         cartCount={cartCount}
         onSelectCategory={handleSelectCategory}
+        categoryTree={categoryTree}
       />
       <main style={{ flex: 1 }}>{children}</main>
-      <Footer />
+      <Footer categoryTree={categoryTree} />
     </div>
   );
 }

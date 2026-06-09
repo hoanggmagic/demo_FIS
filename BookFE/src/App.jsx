@@ -322,13 +322,9 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
 
 // ── root ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user, setUser] = useState(undefined);
+  const [user, setUser] = useState(() => loadSession());
   const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setUser(loadSession());
-  }, []);
 
   const handleLogin = (u) => {
     setUser(u);
@@ -344,24 +340,6 @@ export default function App() {
     setUser(null);
     navigate("/"); // về trang chủ, vẫn xem được sách bình thường
   };
-
-  // Đang load session
-  if (user === undefined) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-        }}
-      >
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Đang tải...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>

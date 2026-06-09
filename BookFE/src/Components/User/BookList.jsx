@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getBooks, searchBooks } from "../../Api/User/BookApi";
 import { addToCart } from "../../Api/User/CartApi";
 import BranchPickerModal from "./BranchPickerModal";
 import BookDetail from "./BookDetail";
+import { getBooks } from "../../Api/User/BookApi";
 
 const PAGE_SIZE = 12;
 const IMG_BASE = "http://localhost:8080/uploads/books/";
@@ -11,55 +11,78 @@ const IMG_BASE = "http://localhost:8080/uploads/books/";
 export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [allBooks, setAllBooks] = useState([]);
   const [keyword, setKeyword] = useState("");
+  const [submittedKeyword, setSubmittedKeyword] = useState("");
   const [adding, setAdding] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pickingBook, setPickingBook] = useState(null);
   const [detailBookId, setDetailBookId] = useState(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const page = Number(searchParams.get("page") || "1");
+  const books = allBooks;
+  const isFirstMount = useRef(true);
+
+  const changePage = (value) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("page", String(value));
+      return next;
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const categoryName = searchParams.get("categoryName");
-  const categoryIds = categoryIdsParam
-    ? categoryIdsParam.split(",").map(Number)
-    : [];
-
-  const filtered =
-    categoryIds.length > 0
-      ? allBooks.filter((b) => categoryIds.includes(b.categoryId))
-      : allBooks;
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const books = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      let res;
-      if (keyword.trim()) {
-        res = await searchBooks(keyword);
-      } else {
-        res = await getBooks();
-      }
-      const data = Array.isArray(res.data) ? res.data : [];
-      setAllBooks(data);
-      setPage(1);
-    } catch {
-      setAllBooks([]);
+      const categoryId = categoryIdsParam
+        ? Number(categoryIdsParam.split(",")[0])
+        : null;
+
+      const res = await getBooks(
+        page - 1,
+        PAGE_SIZE,
+        submittedKeyword,
+        categoryId,
+      );
+
+      setAllBooks(res.data.content || []);
+      setTotalPages(res.data.totalPages || 0);
+      setTotalElements(res.data.totalElements || 0);
     } finally {
       setLoading(false);
     }
-  }, [keyword]);
+  }, [page, submittedKeyword, categoryIdsParam]);
 
   useEffect(() => {
+    console.log("page changed:", page);
+  }, [page]);
+  useEffect(() => {
+    console.log("PAGE UPDATED:", page);
+  }, [page]);
+  // Reset khi đổi category (skip lần mount đầu)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     setKeyword("");
-    setPage(1);
+    setSubmittedKeyword("");
+    changePage(1);
   }, [categoryIdsParam]);
 
+  // Load data
   useEffect(() => {
     load();
   }, [load]);
 
-  const handleSearch = () => load();
+  const handleSearch = () => {
+    setSubmittedKeyword(keyword);
+    changePage(1);
+  };
 
   const handleAddToCart = (book) => {
     if (!user) {
@@ -200,7 +223,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
       )}
 
       {/* Empty */}
-      {!loading && filtered.length === 0 && (
+      {!loading && books.length === 0 && (
         <div
           style={{
             textAlign: "center",
@@ -362,10 +385,10 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                       alignSelf: "flex-start",
                     }}
                   >
-                    {b.categoryName} {/* ← đổi từ b.category.name */}
+                    {b.categoryName}
                   </span>
                 )}
-                {/* ✅ Thay bằng: */}
+
                 <div style={{ marginTop: "auto" }}>
                   {b.discountPercent > 0 ? (
                     <div
@@ -448,6 +471,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                     </div>
                   )}
                 </div>
+
                 <span
                   style={{
                     fontSize: 11,
@@ -499,93 +523,42 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
             alignItems: "center",
             gap: 6,
             marginTop: 32,
+            flexWrap: "wrap",
           }}
         >
           <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            onClick={() => changePage(Math.max(1, page - 1))}
             disabled={page === 1}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              background: page === 1 ? "#f8fafc" : "#fff",
-              color: page === 1 ? "#cbd5e1" : "#1e293b",
-              cursor: page === 1 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
           >
-            <i className="bi bi-chevron-left" />
+            Prev
           </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(
-              (p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1,
-            )
-            .reduce((acc, p, idx, arr) => {
-              if (idx > 0 && p - arr[idx - 1] > 1) acc.push("...");
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((p, idx) =>
-              p === "..." ? (
-                <span
-                  key={`dots-${idx}`}
-                  style={{ color: "#94a3b8", fontSize: 13, padding: "0 4px" }}
-                >
-                  ...
-                </span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    border: p === page ? "none" : "1px solid #e2e8f0",
-                    background:
-                      p === page
-                        ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                        : "#fff",
-                    color: p === page ? "#fff" : "#1e293b",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: p === page ? 700 : 400,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow:
-                      p === page ? "0 2px 8px rgba(37,99,235,.3)" : "none",
-                  }}
-                >
-                  {p}
-                </button>
-              ),
-            )}
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => changePage(p)}
+              style={{
+                padding: "6px 12px",
+                border: "1px solid #ccc",
+                background: p === page ? "#2563eb" : "#fff",
+                color: p === page ? "#fff" : "#000",
+                cursor: "pointer",
+              }}
+            >
+              {p}
+            </button>
+          ))}
+
           <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => changePage(Math.min(totalPages, page + 1))}
             disabled={page === totalPages}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              background: page === totalPages ? "#f8fafc" : "#fff",
-              color: page === totalPages ? "#cbd5e1" : "#1e293b",
-              cursor: page === totalPages ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
           >
-            <i className="bi bi-chevron-right" />
+            Next
           </button>
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {!loading && totalElements > 0 && (
         <div
           style={{
             textAlign: "center",
@@ -595,7 +568,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
           }}
         >
           Hiển thị {(page - 1) * PAGE_SIZE + 1}–
-          {Math.min(page * PAGE_SIZE, filtered.length)} / {filtered.length} sách
+          {Math.min(page * PAGE_SIZE, totalElements)} / {totalElements} sách
         </div>
       )}
 

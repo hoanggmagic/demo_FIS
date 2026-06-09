@@ -6,8 +6,25 @@ const getHeaders = () => ({
   headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
 });
 
-export const getBooks = () => axios.get(`${BASE}/books`, getHeaders());
+// GET BOOKS PHÂN TRANG
+export const getBooks = (
+  page = 0,
+  size = 12,
+  keyword = "",
+  categoryId = null,
+) => {
+  let url = `${BASE}/books?page=${page}&size=${size}`;
+
+  if (keyword) {
+    url += `&keyword=${encodeURIComponent(keyword)}`;
+  }
+
+  if (categoryId) {
+    url += `&categoryId=${categoryId}`;
+  }
+
+  return axios.get(url, getHeaders());
+};
+
 export const getBookById = (id) =>
   axios.get(`${BASE}/books/${id}`, getHeaders());
-export const searchBooks = (keyword) =>
-  axios.get(`${BASE}/books/search?keyword=${keyword}`, getHeaders());

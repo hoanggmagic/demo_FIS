@@ -9,6 +9,9 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +27,7 @@ import com.example.Util.AuthContext;
 import com.example.Util.PasswordUtil;
 import com.example.dto.AuthorRequest;
 import com.example.dto.BookDTO;
+import com.example.dto.PaginationResponse;
 
 @Service
 public class BookService {
@@ -124,11 +128,33 @@ public class BookService {
     }
 
     public List<BookDTO> searchBooks(String keyword, Integer categoryId, AuthContext ctx) {
-        List<Book> books = bookRepo.searchByKeywordAndCategory(keyword, categoryId);
+
+        Pageable pageable = PageRequest.of(0, 1000);
+
+        List<Book> books =
+                bookRepo.searchByKeywordAndCategory(keyword, categoryId, pageable).getContent();
+
         return books.stream()
                 .filter(b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
                 .map(this::toDTO).collect(Collectors.toList());
     }
+
+
+    public PaginationResponse<BookDTO> getBooksPagination(String keyword, Integer categoryId,
+            int page, int size, AuthContext ctx) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Book> bookPage = bookRepo.searchByKeywordAndCategory(keyword, categoryId, pageable);
+
+        List<BookDTO> content = bookPage.getContent().stream()
+                .filter(b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
+                .map(this::toDTO).collect(Collectors.toList());
+
+        return new PaginationResponse<>(content, page, size, bookPage.getTotalElements(),
+                bookPage.getTotalPages());
+    }
+
 
     @Transactional
     public BookDTO addBook(Book book, double price, AuthContext ctx) {
@@ -349,7 +375,12 @@ public class BookService {
         return bookRepo.findAll();
     }
 
+
     public List<Book> searchBooks(String keyword) {
-        return bookRepo.searchByKeywordAndCategory(keyword, null);
+
+        Pageable pageable = PageRequest.of(0, 1000);
+
+        return bookRepo.searchByKeywordAndCategory(keyword, null, pageable).getContent();
     }
+
 }
