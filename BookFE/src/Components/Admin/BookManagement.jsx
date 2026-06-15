@@ -67,7 +67,9 @@ export default function BookManagement({ user }) {
       .getAll()
       .then((res) => {
         console.log("CATEGORY RESPONSE:", res);
-        setCategories(res || []);
+        const list =
+          Array.isArray(res) ? res : Array.isArray(res?.content) ? res.content : [];
+        setCategories(list);
       })
       .catch((err) => {
         console.log("CATEGORY ERROR:", err);
@@ -75,7 +77,11 @@ export default function BookManagement({ user }) {
       });
 
     getAuthors()
-      .then((res) => setAuthors(res.data || []))
+      .then((res) => {
+        const list =
+          Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.content) ? res.data.content : [];
+        setAuthors(list);
+      })
       .catch(() => setAuthors([]));
   }, []);
 
@@ -569,7 +575,6 @@ export default function BookManagement({ user }) {
                           <button
                             className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
                             onClick={() => setEditing(b)}
-                            x
                           >
                             <i className="bi bi-pencil" /> Sửa
                           </button>

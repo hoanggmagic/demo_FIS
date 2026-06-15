@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Routes,
   Route,
@@ -6,9 +6,6 @@ import {
   useNavigate,
   useLocation,
 } from "react-router-dom";
-import Login from "./Components/Auth/Login";
-import Register from "./Components/Auth/Register";
-import RegisterAuthor from "./Components/Auth/RegisterAuthor";
 import AuthPage from "./Components/Auth/AuthPage";
 import AdminLayout from "./Layouts/AdminLayout";
 import AuthorsLayout from "./Layouts/AuthorsLayout";
@@ -33,7 +30,6 @@ import Cart from "./Components/User/Cart";
 import Checkout from "./Components/User/CheckOut";
 import Profile from "./Components/User/UserProfile";
 import Payment from "./Components/User/Payment";
-import ForgotPassword from "./Components/Auth/ForgotPassword";
 import useSeo from "./hooks/useSeo";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -50,28 +46,6 @@ function loadSession() {
 function clearSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-}
-
-// ── auth gate ─────────────────────────────────────────────────────────────────
-const AUTH_PAGES = {
-  login: Login,
-  register: Register,
-  "register-author": RegisterAuthor,
-  "forgot-password": ForgotPassword,
-};
-function AuthGate({ onLogin, onGuest }) {
-  const [page, setPage] = useState("login");
-  const Page = AUTH_PAGES[page];
-  return (
-    <Page
-      onSuccess={onLogin}
-      goToLogin={() => setPage("login")}
-      goToRegister={() => setPage("register")}
-      goToRegisterAuthor={() => setPage("register-author")}
-      goToForgotPassword={() => setPage("forgot-password")}
-      onGuest={onGuest}
-    />
-  );
 }
 
 // ── guard: yêu cầu login ──────────────────────────────────────────────────────
@@ -182,53 +156,8 @@ function HeroBanner({ onShowLogin }) {
   );
 }
 
-// ── login modal overlay ───────────────────────────────────────────────────────
-function LoginModal({ onLogin, onClose }) {
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        background: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-      onClick={onClose} // bấm nền ngoài để đóng
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 12,
-          padding: 32,
-          minWidth: 360,
-          position: "relative",
-        }}
-        onClick={(e) => e.stopPropagation()} // không đóng khi bấm vào form
-      >
-        <button
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 16,
-            background: "none",
-            border: "none",
-            fontSize: 20,
-            cursor: "pointer",
-          }}
-          onClick={onClose}
-        >
-          ×
-        </button>
-        <AuthGate onLogin={onLogin} onGuest={onClose} />
-      </div>
-    </div>
-  );
-}
-
 // ── role routes ───────────────────────────────────────────────────────────────
-function RoleRoutes({ user, onLogout, onShowLogin }) {
+function RoleRoutes({ user, onLogin, onLogout, onShowLogin }) {
   // ADMIN
   if (user?.role === "ADMIN") {
     return (
@@ -318,7 +247,11 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
           path="/checkout"
           element={
             <div className="container py-4">
-              {user ? <Checkout /> : <LoginRequired onShowLogin={onShowLogin} />}
+              {user ? (
+                <Checkout />
+              ) : (
+                <LoginRequired onShowLogin={onShowLogin} />
+              )}
             </div>
           }
         />
@@ -338,6 +271,19 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
         />
 
         <Route path="/payment" element={<Payment />} />
+
+        {/* Auth — hiện ngay trong layout user, không tách trang riêng */}
+        <Route path="/login" element={<AuthPage onLogin={onLogin} />} />
+        <Route path="/register" element={<AuthPage onLogin={onLogin} />} />
+        <Route
+          path="/register-author"
+          element={<AuthPage onLogin={onLogin} />}
+        />
+        <Route
+          path="/forgot-password"
+          element={<AuthPage onLogin={onLogin} />}
+        />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </UserLayout>
@@ -347,7 +293,6 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
 // ── root ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(() => loadSession());
-  const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -355,42 +300,29 @@ export default function App() {
 
   const handleLogin = (u) => {
     setUser(u);
-    setShowLogin(false);
     const role = u.role?.toUpperCase();
     if (role === "ADMIN") navigate("/");
     else if (role === "AUTHOR") navigate("/author/books");
-    // USER → ở lại trang hiện tại, không navigate
+    // USER → ở lại trang hiện tại (AuthPage tự navigate về fromPath)
   };
 
   const handleLogout = () => {
     clearSession();
     setUser(null);
-    navigate("/"); // về trang chủ, vẫn xem được sách bình thường
+    navigate("/");
   };
 
-  const authPaths = new Set([
-    "/login",
-    "/register",
-    "/register-author",
-    "/forgot-password",
-  ]);
-
-  if (authPaths.has(location.pathname)) {
-    return <AuthPage onLogin={handleLogin} />;
-  }
+  const goToLogin = () =>
+    navigate("/login", {
+      state: { from: `${location.pathname}${location.search}` },
+    });
 
   return (
-    <>
-      {/* Modal login — hiện khi guest bấm thêm giỏ hàng */}
-      {showLogin && !user && (
-        <LoginModal onLogin={handleLogin} onClose={() => setShowLogin(false)} />
-      )}
-
-      <RoleRoutes
-        user={user}
-        onLogout={handleLogout}
-        onShowLogin={() => setShowLogin(true)}
-      />
-    </>
+    <RoleRoutes
+      user={user}
+      onLogin={handleLogin}
+      onLogout={handleLogout}
+      onShowLogin={goToLogin}
+    />
   );
 }

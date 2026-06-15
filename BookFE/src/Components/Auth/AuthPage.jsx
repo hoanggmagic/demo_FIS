@@ -26,9 +26,7 @@ export default function AuthPage({ onLogin }) {
           : "login";
   const page = queryPage || pathPage;
   const fromPath =
-    location.state?.from ||
-    sessionStorage.getItem("auth_return_to") ||
-    "/";
+    location.state?.from || sessionStorage.getItem("auth_return_to") || "/";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -49,7 +47,10 @@ export default function AuthPage({ onLogin }) {
   }, [fromPath, navigate, page]);
 
   const goTo = (nextPage) => {
-    navigate(`/login?page=${nextPage}`, { replace: true, state: location.state });
+    navigate(`/login?page=${nextPage}`, {
+      replace: true,
+      state: location.state,
+    });
   };
 
   const handleSuccess = (user) => {
@@ -75,13 +76,7 @@ export default function AuthPage({ onLogin }) {
   const Page = PAGES[page] || Login;
 
   return (
-    <div
-      className="min-vh-100 d-flex align-items-center justify-content-center px-3"
-      style={{
-        background:
-          "radial-gradient(circle at top, #e0f2fe 0%, #eff6ff 34%, #f8fafc 100%)",
-      }}
-    >
+    <div className="d-flex align-items-center justify-content-center py-3">
       <div
         className="shadow-lg"
         style={{
@@ -91,7 +86,7 @@ export default function AuthPage({ onLogin }) {
           background: "#fff",
           display: "grid",
           gridTemplateColumns: "1.1fr .9fr",
-          minHeight: 620,
+          minHeight: 560,
         }}
       >
         <div
@@ -113,9 +108,6 @@ export default function AuthPage({ onLogin }) {
             <h2 style={{ fontWeight: 800, lineHeight: 1.2, maxWidth: 420 }}>
               Truy cập kho sách, lịch sử mua hàng và khu vực cá nhân của bạn.
             </h2>
-            <p style={{ maxWidth: 420, opacity: 0.9, marginTop: 16 }}>
-              Một cổng đăng nhập chung cho độc giả, tác giả và quản trị viên.
-            </p>
           </div>
 
           <div
@@ -125,32 +117,17 @@ export default function AuthPage({ onLogin }) {
               background: "rgba(255,255,255,.12)",
               backdropFilter: "blur(8px)",
             }}
-          >
-            <div className="d-flex gap-3 flex-wrap">
-              {["SEO tốt hơn", "Quay lại đúng trang", "Không còn route lệch"].map(
-                (item) => (
-                  <span
-                    key={item}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 999,
-                      background: "rgba(255,255,255,.14)",
-                      fontSize: 13,
-                    }}
-                  >
-                    {item}
-                  </span>
-                ),
-              )}
-            </div>
-          </div>
+          ></div>
         </div>
 
         <div className="p-4 p-lg-5 d-flex align-items-center justify-content-center">
           <div style={{ width: "100%", maxWidth: 420 }}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <div>
-                <div className="text-primary fw-semibold" style={{ fontSize: 13 }}>
+                <div
+                  className="text-primary fw-semibold"
+                  style={{ fontSize: 13 }}
+                >
                   Tài khoản
                 </div>
                 <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>

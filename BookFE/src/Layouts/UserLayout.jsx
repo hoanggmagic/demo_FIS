@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { getCart } from "../Api/User/CartApi";
 import { categoryApi } from "../Api/Admin/CategoryApi";
+import {
+  NavLink,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 
 const parseCategoryIdSet = (value) =>
   new Set(
@@ -812,6 +817,7 @@ function Navbar({
   categoryTree,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [ddOpen, setDdOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -1019,7 +1025,9 @@ function Navbar({
               <button
                 className="btn btn-outline-primary btn-sm"
                 style={{ borderRadius: 20 }}
-                onClick={onShowLogin}
+                onClick={() =>
+                  navigate("/login", { state: { from: location.pathname } })
+                }
               >
                 Đăng nhập
               </button>
