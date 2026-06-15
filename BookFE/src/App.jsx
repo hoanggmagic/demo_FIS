@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import Login from "./Components/Auth/Login";
 import Register from "./Components/Auth/Register";
 import RegisterAuthor from "./Components/Auth/RegisterAuthor";
+import AuthPage from "./Components/Auth/AuthPage";
 import AdminLayout from "./Layouts/AdminLayout";
 import AuthorsLayout from "./Layouts/AuthorsLayout";
 import UserLayout from "./Layouts/UserLayout";
@@ -21,10 +28,12 @@ import AdminPage, {
 } from "./Page/Admin/AdminPage";
 import AuthorsPage from "./Page/Authors/AuthorsPage";
 import UserBookList from "./Components/User/BookList";
+import BookPublicDetail from "./Components/User/BookPublicDetail";
 import Cart from "./Components/User/Cart";
 import Profile from "./Components/User/UserProfile";
 import Payment from "./Components/User/Payment";
 import ForgotPassword from "./Components/Auth/ForgotPassword";
+import useSeo from "./hooks/useSeo";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function loadSession() {
@@ -289,6 +298,11 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
           }
         />
 
+        <Route
+          path="/books/:bookSlug"
+          element={<BookPublicDetail user={user} onShowLogin={onShowLogin} />}
+        />
+
         {/* Giỏ hàng — cần login */}
         <Route
           path="/cart"
@@ -325,6 +339,9 @@ export default function App() {
   const [user, setUser] = useState(() => loadSession());
   const [showLogin, setShowLogin] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useSeo(location.pathname);
 
   const handleLogin = (u) => {
     setUser(u);
@@ -340,6 +357,17 @@ export default function App() {
     setUser(null);
     navigate("/"); // về trang chủ, vẫn xem được sách bình thường
   };
+
+  const authPaths = new Set([
+    "/login",
+    "/register",
+    "/register-author",
+    "/forgot-password",
+  ]);
+
+  if (authPaths.has(location.pathname)) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
 
   return (
     <>

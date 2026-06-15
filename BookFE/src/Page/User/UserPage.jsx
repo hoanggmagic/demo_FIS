@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import UserBookList from "../../Components/User/BookList";
 import Cart from "../../Components/User/Cart";
 import Profile from "../../Components/User/UserProfile";
@@ -8,6 +8,11 @@ import { getCart } from "../../Api/User/CartApi";
 // ── Login required guard ──────────────────────────────────────────────────────
 function LoginRequired({ message = "Bạn cần đăng nhập để tiếp tục." }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const goToLogin = () =>
+    navigate("/login", {
+      state: { from: `${location.pathname}${location.search}` },
+    });
   return (
     <div className="d-flex flex-column align-items-center justify-content-center py-5 text-center">
       <i
@@ -22,7 +27,7 @@ function LoginRequired({ message = "Bạn cần đăng nhập để tiếp tục
         <button
           className="btn btn-primary"
           style={{ borderRadius: 20 }}
-          onClick={() => navigate("/login")}
+          onClick={goToLogin}
         >
           <i className="bi bi-box-arrow-in-right me-1" /> Đăng nhập
         </button>
@@ -93,7 +98,7 @@ function HeroBanner() {
           <button
             className="btn btn-outline-light"
             style={{ borderRadius: 20 }}
-            onClick={() => navigate("/login")}
+          onClick={goToLogin}
           >
             Đăng nhập
           </button>

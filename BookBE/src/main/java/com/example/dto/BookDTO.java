@@ -36,6 +36,8 @@ public class BookDTO {
 
     public BookDTO() {}
 
+    private long soldQuantity;
+
     public Integer getId() {
         return id;
     }
@@ -170,6 +172,14 @@ public class BookDTO {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public long getSoldQuantity() {
+        return soldQuantity;
+    }
+
+    public void setSoldQuantity(long soldQuantity) {
+        this.soldQuantity = soldQuantity;
     }
 
 }

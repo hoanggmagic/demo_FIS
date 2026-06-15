@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { addToCart } from "../../Api/User/CartApi";
 import BranchPickerModal from "./BranchPickerModal";
-import BookDetail from "./BookDetail";
 import { getBooks } from "../../Api/User/BookApi";
+import { slugify } from "../../utils/slugify";
 
 const PAGE_SIZE = 12;
 const IMG_BASE = "http://localhost:8080/uploads/books/";
@@ -16,9 +16,9 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   const [pickingBook, setPickingBook] = useState(null);
-  const [detailBookId, setDetailBookId] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
+  const navigate = useNavigate();
   const page = Number(searchParams.get("page") || "1");
   const books = allBooks;
   const isFirstMount = useRef(true);
@@ -286,7 +286,7 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                 e.currentTarget.style.boxShadow = "none";
                 e.currentTarget.style.transform = "translateY(0)";
               }}
-              onClick={() => setDetailBookId(b.id)}
+              onClick={() => navigate(`/books/${slugify(b.title)}-${b.id}`)}
             >
               {/* Cover image */}
               <div
@@ -470,14 +470,25 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
                   )}
                 </div>
 
-                <span
+                <div
                   style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     fontSize: 11,
-                    color: b.quantity === 0 ? "#ef4444" : "#64748b",
                   }}
                 >
-                  📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
-                </span>
+                  <span
+                    style={{
+                      color: b.quantity === 0 ? "#ef4444" : "#64748b",
+                    }}
+                  >
+                    📦 {b.quantity === 0 ? "Hết hàng" : `Còn ${b.quantity}`}
+                  </span>
+                  <span style={{ color: "#94a3b8" }}>
+                    🔥 Đã bán {Number(b.soldQuantity || 0).toLocaleString()}
+                  </span>
+                </div>
                 <button
                   disabled={adding === b.id || b.quantity === 0}
                   onClick={(e) => {
@@ -648,12 +659,6 @@ export default function UserBookList({ user, onShowLogin, onCartUpdate }) {
         book={pickingBook}
         onConfirm={handleBranchConfirm}
         onClose={() => setPickingBook(null)}
-      />
-      <BookDetail
-        bookId={detailBookId}
-        onClose={() => setDetailBookId(null)}
-        onAddToCart={handleAddToCart}
-        user={user}
       />
     </section>
   );

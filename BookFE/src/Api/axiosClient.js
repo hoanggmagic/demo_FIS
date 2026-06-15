@@ -18,7 +18,11 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login"; // redirect hẳn về login, không reload
+      sessionStorage.setItem(
+        "auth_return_to",
+        `${window.location.pathname}${window.location.search}`,
+      );
+      window.location.assign("/login");
     }
     return Promise.reject(err);
   },

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +27,7 @@ import com.example.Entities.User;
 import com.example.Repository.BookImageRepository;
 import com.example.Repository.BookRepository;
 import com.example.Repository.InventoryRepository;
+import com.example.Repository.OrderItemRepository;
 import com.example.Repository.UserRepository;
 import com.example.Util.AuthContext;
 import com.example.Util.PasswordUtil;
@@ -35,6 +37,8 @@ import com.example.dto.PaginationResponse;
 
 @Service
 public class BookService {
+    @Autowired
+    private OrderItemRepository orderItemRepository;
 
     private final BookRepository bookRepo;
     private final BookImageRepository imageRepo;
@@ -64,6 +68,11 @@ public class BookService {
         }).orElse(0.0);
     }
 
+    private long getSoldQuantity(int bookId) {
+        return orderItemRepository.sumSoldByBookIds(List.of(bookId)).stream().findFirst()
+                .map(row -> ((Number) row[1]).longValue()).orElse(0L);
+    }
+
     private BookDTO toDTO(Book book) {
         BookDTO dto = new BookDTO();
         dto.setId(book.getId());
@@ -76,8 +85,8 @@ public class BookService {
         dto.setUpdatedAt(book.getUpdatedAt());
 
         // authorName từ userRepo
-        String authorName = userRepo.findById(book.getAuthorId()).map(User::getFullName)
-                .orElse(null);
+        String authorName =
+                userRepo.findById(book.getAuthorId()).map(User::getFullName).orElse(null);
         dto.setAuthorName(authorName);
 
         // quantity tổng từ inventories
@@ -115,14 +124,22 @@ public class BookService {
             dto.setDiscountPercent(0.0);
         }
 
+        // Số lượng đã bán (tính riêng cho 1 sách)
+        dto.setSoldQuantity(getSoldQuantity(book.getId()));
+
         return dto;
     }
 
     private BookDTO toDTO(Book book, String authorName, List<String> images) {
-        return toDTO(book, authorName, images, null);
+        return toDTO(book, authorName, images, null, null);
     }
 
     private BookDTO toDTO(Book book, String authorName, List<String> images, Integer quantity) {
+        return toDTO(book, authorName, images, quantity, null);
+    }
+
+    private BookDTO toDTO(Book book, String authorName, List<String> images, Integer quantity,
+            Long soldQuantity) {
         BookDTO dto = new BookDTO();
         dto.setId(book.getId());
         dto.setTitle(book.getTitle());
@@ -134,7 +151,8 @@ public class BookService {
         dto.setUpdatedAt(book.getUpdatedAt());
         dto.setAuthorName(authorName);
 
-        dto.setQuantity(quantity != null ? quantity : inventoryRepo.sumQuantityByBookId(book.getId()));
+        dto.setQuantity(
+                quantity != null ? quantity : inventoryRepo.sumQuantityByBookId(book.getId()));
 
         if (book.getCategory() != null) {
             dto.setCategoryId(book.getCategory().getId());
@@ -167,6 +185,9 @@ public class BookService {
             dto.setDiscountPercent(0.0);
         }
 
+        // Số lượng đã bán: dùng giá trị truyền sẵn (batch) nếu có, nếu không tự tính
+        dto.setSoldQuantity(soldQuantity != null ? soldQuantity : getSoldQuantity(book.getId()));
+
         return dto;
     }
 
@@ -175,8 +196,8 @@ public class BookService {
             return List.of();
         }
 
-        List<Integer> authorIds = books.stream().map(Book::getAuthorId).distinct()
-                .collect(Collectors.toList());
+        List<Integer> authorIds =
+                books.stream().map(Book::getAuthorId).distinct().collect(Collectors.toList());
         Map<Integer, String> authorNames = new HashMap<>();
         if (!authorIds.isEmpty()) {
             userRepo.findAllById(authorIds)
@@ -186,8 +207,10 @@ public class BookService {
         List<Integer> bookIds = books.stream().map(Book::getId).collect(Collectors.toList());
         Map<Integer, List<String>> imagesByBookId = new HashMap<>();
         if (!bookIds.isEmpty()) {
-            imageRepo.findByBookIdIn(bookIds).forEach(img -> imagesByBookId
-                    .computeIfAbsent(img.getBookId(), k -> new ArrayList<>()).add(img.getImageUrl()));
+            imageRepo.findByBookIdIn(bookIds)
+                    .forEach(img -> imagesByBookId
+                            .computeIfAbsent(img.getBookId(), k -> new ArrayList<>())
+                            .add(img.getImageUrl()));
         }
 
         Map<Integer, Integer> quantitiesByBookId = new HashMap<>();
@@ -199,10 +222,21 @@ public class BookService {
             });
         }
 
+        // Số lượng đã bán theo từng bookId (1 query duy nhất cho cả danh sách)
+        Map<Integer, Long> soldByBookId = new HashMap<>();
+        if (!bookIds.isEmpty()) {
+            orderItemRepository.sumSoldByBookIds(bookIds).forEach(row -> {
+                Integer bookId = ((Number) row[0]).intValue();
+                Long sold = row[1] != null ? ((Number) row[1]).longValue() : 0L;
+                soldByBookId.put(bookId, sold);
+            });
+        }
+
         return books.stream()
                 .map(book -> toDTO(book, authorNames.get(book.getAuthorId()),
                         imagesByBookId.getOrDefault(book.getId(), List.of()),
-                        quantitiesByBookId.get(book.getId())))
+                        quantitiesByBookId.get(book.getId()),
+                        soldByBookId.getOrDefault(book.getId(), 0L)))
                 .collect(Collectors.toList());
     }
 
@@ -260,8 +294,8 @@ public class BookService {
                 bestsellerIdsPage = bookRepo.findBestsellerBookIdsWithCat(keyword, categoryIds,
                         minPrice, maxPrice, onlySale, pageable);
             } else {
-                bestsellerIdsPage = bookRepo.findBestsellerBookIdsNoCat(keyword, minPrice,
-                        maxPrice, onlySale, pageable);
+                bestsellerIdsPage = bookRepo.findBestsellerBookIdsNoCat(keyword, minPrice, maxPrice,
+                        onlySale, pageable);
             }
 
             List<Integer> ids = bestsellerIdsPage.getContent();
@@ -271,8 +305,9 @@ public class BookService {
             }
 
             Map<Integer, Book> bookById = new HashMap<>();
-            books.stream().filter(b -> ctx == null || !ctx.isAuthor()
-                    || b.getAuthorId() == ctx.getUserId()).forEach(b -> bookById.put(b.getId(), b));
+            books.stream().filter(
+                    b -> ctx == null || !ctx.isAuthor() || b.getAuthorId() == ctx.getUserId())
+                    .forEach(b -> bookById.put(b.getId(), b));
 
             List<Book> orderedBooks = ids.stream().map(bookById::get).filter(Objects::nonNull)
                     .collect(Collectors.toList());

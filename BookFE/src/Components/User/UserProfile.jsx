@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import "../../Style/User/UserProfile.css";
 
 function UserProfile() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const goToLogin = () =>
+    navigate("/login", {
+      state: { from: `${location.pathname}${location.search}` },
+    });
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -34,7 +39,7 @@ function UserProfile() {
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (!token || !user) {
-      navigate("/login");
+      goToLogin();
       return;
     }
 
@@ -243,7 +248,7 @@ function UserProfile() {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login");
+    goToLogin();
   };
 
   if (loading)

@@ -59,9 +59,6 @@ export default function CategoryManagement() {
     <div>
       {/* Toolbar */}
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <span className="text-muted" style={{ fontSize: 14 }}>
-          {Array.isArray(flat) ? flat.length : 0} danh mục
-        </span>
         <button className="btn btn-primary btn-sm" onClick={openCreate}>
           <i className="bi bi-plus-lg me-1" /> Thêm danh mục
         </button>

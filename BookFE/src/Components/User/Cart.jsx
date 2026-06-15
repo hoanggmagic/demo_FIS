@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   getCart,
   updateCartItem,
@@ -13,6 +13,11 @@ export default function Cart({ reload }) {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const goToLogin = () =>
+    navigate("/login", {
+      state: { from: `${location.pathname}${location.search}` },
+    });
 
   const load = async () => {
     setLoading(true);
@@ -25,7 +30,7 @@ export default function Cart({ reload }) {
       console.error("Lỗi khi lấy giỏ hàng:", err);
       if (err.response?.status === 401) {
         alert("🔒 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
-        navigate("/login");
+        goToLogin();
       }
     } finally {
       setLoading(false);
@@ -76,7 +81,7 @@ export default function Cart({ reload }) {
       const userStr = localStorage.getItem("user");
       if (!userStr) {
         alert("❌ Vui lòng đăng nhập để thanh toán!");
-        navigate("/login");
+        goToLogin();
         return;
       }
       const user = JSON.parse(userStr);

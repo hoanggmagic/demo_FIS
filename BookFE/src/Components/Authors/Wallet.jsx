@@ -11,8 +11,8 @@ export default function Wallet() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [withdrawHistory, setWithdrawHistory] = useState([]);
-  const [incomeByBook, setIncomeByBook] = useState([]); // 👈 THÊM
-  const [incomeDetail, setIncomeDetail] = useState([]); // 👈 THÊM
+  const [incomeByBook, setIncomeByBook] = useState([]); 
+  const [incomeDetail, setIncomeDetail] = useState([]); 
   const [tab, setTab] = useState("overview");
 
   const [form, setForm] = useState({
@@ -31,14 +31,14 @@ export default function Wallet() {
         axios.get(`${API}/balance`, getHeaders()),
         axios.get(`${API}/transactions`, getHeaders()),
         axios.get(`${API}/withdraw-history`, getHeaders()),
-        axios.get(`${API}/income/by-book`, getHeaders()), // 👈 THÊM
-        axios.get(`${API}/income/detail`, getHeaders()), // 👈 THÊM
+        axios.get(`${API}/income/by-book`, getHeaders()),
+        axios.get(`${API}/income/detail`, getHeaders()),
       ]);
       setBalance(balRes.data.balance);
       setTransactions(txRes.data);
       setWithdrawHistory(wdRes.data);
-      setIncomeByBook(byBookRes.data); // 👈 THÊM
-      setIncomeDetail(detailRes.data); // 👈 THÊM
+      setIncomeByBook(byBookRes.data);
+      setIncomeDetail(detailRes.data);
     } catch (err) {
       console.error("Load wallet error:", err);
     }
