@@ -32,7 +32,6 @@ public class WalletController {
     @Autowired
     private WalletTransactionRepository walletTransactionRepository;
 
-    // Xem số dư
     @GetMapping("/balance")
     public ResponseEntity<?> getBalance(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {
@@ -56,33 +55,29 @@ public class WalletController {
             AuthContext ctx = RequestAuth.require(request);
             int currentUserId = ctx.getUserId();
 
-            // Câu SQL gốc lấy hết để đối chiếu, không dùng WHERE chặt chẽ nữa
-            String sql =
-                    """
-                                SELECT
-                                    wt.id, wt.amount, wt.transaction_type, wt.description, wt.created_at, wt.book_id, wt.user_id,
-                                    b.title AS book_name, b.author_id
-                                FROM wallet_transactions wt
-                                LEFT JOIN books b ON wt.book_id = b.id
-                                ORDER BY wt.created_at DESC
-                            """;
+            String sql = """
+                        SELECT
+                            wt.id, wt.amount, wt.transaction_type, wt.description, wt.created_at,
+                            wt.book_id, wt.user_id,
+                            b.title AS book_name
+                        FROM wallet_transactions wt
+                        LEFT JOIN books b ON wt.book_id = b.id
+                        ORDER BY wt.created_at DESC
+                    """;
 
             PreparedStatement ps = conn.prepareStatement(sql);
             ResultSet rs = ps.executeQuery();
 
             List<Map<String, Object>> list = new ArrayList<>();
-
-            // Map tạm để gom nhóm sách: Key = bookId, Value = Thống kê sách
             Map<Integer, Map<String, Object>> bookGroupMap = new LinkedHashMap<>();
 
             while (rs.next()) {
                 int dbUserId = rs.getInt("user_id");
-                int dbAuthorId = rs.getInt("author_id");
                 String type = rs.getString("transaction_type");
                 int bookId = rs.getInt("book_id");
 
-                // KIỂM TRA ĐIỀU KIỆN 1: Nếu là giao dịch bán sách của tác giả này
-                if ("INCOME".equals(type) && bookId > 0 && dbAuthorId == currentUserId) {
+                // Lọc theo user_id của wallet_transactions để giữ lịch sử đúng kể cả khi đổi tác giả sau này
+                if ("INCOME".equals(type) && bookId > 0 && dbUserId == currentUserId) {
                     String bookName = rs.getString("book_name");
                     BigDecimal amount = rs.getBigDecimal("amount");
 
@@ -103,9 +98,7 @@ public class WalletController {
                         group.put("quantity", currentQty + 1);
                         group.put("amount", currentAmt.add(amount));
                     }
-                }
-                // KIỂM TRA ĐIỀU KIỆN 2: Nếu là giao dịch rút tiền của chính user này
-                else if ("WITHDRAW".equals(type) && dbUserId == currentUserId) {
+                } else if ("WITHDRAW".equals(type) && dbUserId == currentUserId) {
                     Map<String, Object> withdrawRow = new LinkedHashMap<>();
                     withdrawRow.put("type", "WITHDRAW");
                     withdrawRow.put("bookName", null);
@@ -117,9 +110,7 @@ public class WalletController {
                 }
             }
 
-            // Đẩy tất cả sách đã gom nhóm vào danh sách trả về
             list.addAll(bookGroupMap.values());
-
             return ResponseEntity.ok(list);
         } catch (Exception e) {
             e.printStackTrace();
@@ -134,7 +125,6 @@ public class WalletController {
 
             AuthContext ctx = RequestAuth.require(request);
 
-            // 1. Tổng doanh thu
             String totalSql = """
                         SELECT COALESCE(SUM(amount), 0) as total
                         FROM wallet_transactions wt
@@ -152,7 +142,6 @@ public class WalletController {
                 }
             }
 
-            // 2. Danh sách giao dịch
             String listSql = """
                         SELECT
                             wt.amount,
@@ -186,7 +175,6 @@ public class WalletController {
         }
     }
 
-    // Danh sách doanh thu chi tiết (từng giao dịch)
     @GetMapping("/income/detail")
     public ResponseEntity<?> getIncomeDetail(HttpServletRequest request) {
         try {
@@ -211,7 +199,6 @@ public class WalletController {
         }
     }
 
-    // Tổng doanh thu gom theo từng sách
     @GetMapping("/income/by-book")
     public ResponseEntity<?> getIncomeByBook(HttpServletRequest request) {
         try {
@@ -234,7 +221,6 @@ public class WalletController {
         }
     }
 
-    // Yêu cầu rút tiền
     @PostMapping("/withdraw")
     public ResponseEntity<?> withdraw(@RequestBody Map<String, Object> body,
             HttpServletRequest request) {
@@ -249,7 +235,6 @@ public class WalletController {
                 return ResponseEntity.badRequest().body("Số tiền rút tối thiểu 50,000 VND");
             }
 
-            // Kiểm tra số dư
             String checkSql = "SELECT balance FROM wallets WHERE user_id = ?";
             PreparedStatement check = conn.prepareStatement(checkSql);
             check.setInt(1, ctx.getUserId());
@@ -258,14 +243,12 @@ public class WalletController {
                 return ResponseEntity.badRequest().body("Số dư không đủ!");
             }
 
-            // Trừ ví
             String deductSql = "UPDATE wallets SET balance = balance - ? WHERE user_id = ?";
             PreparedStatement deduct = conn.prepareStatement(deductSql);
             deduct.setBigDecimal(1, amount);
             deduct.setInt(2, ctx.getUserId());
             deduct.executeUpdate();
 
-            // Tạo yêu cầu rút
             String insertSql =
                     """
                                 INSERT INTO withdraw_requests (user_id, amount, bank_name, account_number, account_holder, status)
@@ -285,7 +268,6 @@ public class WalletController {
         }
     }
 
-    // Xem lịch sử rút tiền
     @GetMapping("/withdraw-history")
     public ResponseEntity<?> getWithdrawHistory(HttpServletRequest request) {
         try (Connection conn = dataSource.getConnection()) {

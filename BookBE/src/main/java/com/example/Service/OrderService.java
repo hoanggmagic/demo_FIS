@@ -239,6 +239,70 @@ public class OrderService {
         }
     }
 
+    @Transactional
+    public void distributeIncomeForSuccessfulOrder(int orderId) {
+        Order order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        if (!"SUCCESS".equals(order.getStatus())) {
+            throw new RuntimeException("Đơn hàng chưa ở trạng thái SUCCESS");
+        }
+
+        if (walletTransactionRepository.existsByOrderIdAndTransactionType(orderId, "INCOME")) {
+            return;
+        }
+
+        BigDecimal authorRate = BigDecimal.valueOf(0.68);
+        BigDecimal platformRate = BigDecimal.valueOf(0.32);
+        BigDecimal total = order.getTotalPrice() != null ? order.getTotalPrice() : BigDecimal.ZERO;
+
+        BigDecimal authorIncome = total.multiply(authorRate);
+        BigDecimal platformIncome = total.multiply(platformRate);
+
+        for (OrderItem item : order.getItems()) {
+            Book book = item.getBook();
+            int authorId = book.getAuthorId();
+
+            BigDecimal itemTotal = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal itemAuthorIncome = itemTotal.multiply(authorRate);
+            BigDecimal itemPlatformIncome = itemTotal.multiply(platformRate);
+
+            Wallet authorWallet = walletRepository.findByUserId(authorId).orElseGet(() -> {
+                Wallet wallet = new Wallet();
+                wallet.setUserId(authorId);
+                wallet.setBalance(BigDecimal.ZERO);
+                return walletRepository.save(wallet);
+            });
+
+            authorWallet.setBalance(authorWallet.getBalance().add(itemAuthorIncome));
+            walletRepository.save(authorWallet);
+
+            WalletTransaction authorTx = new WalletTransaction();
+            authorTx.setWalletId(authorWallet.getId());
+            authorTx.setUserId(authorId);
+            authorTx.setOrderId(orderId);
+            authorTx.setBookId(book.getId());
+            authorTx.setAmount(itemAuthorIncome);
+            authorTx.setTransactionType("INCOME");
+            authorTx.setDescription(
+                    "Doanh thu từ sách: " + book.getTitle() + " (x" + item.getQuantity() + ")");
+            walletTransactionRepository.save(authorTx);
+
+            Wallet adminWallet = walletRepository.findByUserId(7).orElseGet(() -> {
+                Wallet wallet = new Wallet();
+                wallet.setUserId(7);
+                wallet.setBalance(BigDecimal.ZERO);
+                return walletRepository.save(wallet);
+            });
+            adminWallet.setBalance(adminWallet.getBalance().add(itemPlatformIncome));
+            walletRepository.save(adminWallet);
+        }
+
+        order.setAuthorIncome(authorIncome);
+        order.setPlatformIncome(platformIncome);
+        orderRepo.save(order);
+    }
+
     // ── 4. Lấy đơn hàng theo user ────────────────────────────────────────────
     public List<Order> getOrdersByUser(int userId) {
         return orderRepo.findByUserId(userId);

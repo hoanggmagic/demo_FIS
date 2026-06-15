@@ -10,6 +10,8 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     List<WalletTransaction> findByWalletIdOrderByCreatedAtDesc(int walletId);
 
+    boolean existsByOrderIdAndTransactionType(int orderId, String transactionType);
+
     // Lấy toàn bộ giao dịch INCOME của tác giả, kèm tên sách
     @Query(value = """
             SELECT

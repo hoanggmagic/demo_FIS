@@ -75,11 +75,15 @@ export default function OrderManagement() {
   const handleUpdateStatus = async (id, status) => {
     try {
       await updateOrderStatus(id, status);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status } : o)),
+      );
+      setSelected((prev) => (prev?.id === id ? { ...prev, status } : prev));
       showToast("success", "Cập nhật trạng thái thành công!");
       load(page);
-      if (selected?.id === id) setSelected({ ...selected, status });
     } catch (err) {
-      showToast("danger", "Cập nhật thất bại");
+      console.error(err);
+      showToast("danger", "Cập nhật trạng thái thất bại!");
     }
   };
 
@@ -449,19 +453,24 @@ export default function OrderManagement() {
                 }}
               >
                 <span style={{ color: "#64748b" }}>Trạng thái</span>
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: 140 }}
-                  value={selected.status}
-                  onChange={(e) =>
-                    handleUpdateStatus(selected.id, e.target.value)
-                  }
-                >
-                  <option value="PENDING">Chờ thanh toán</option>
-                  <option value="SUCCESS">Thành công</option>
-                  <option value="CANCELLED">Đã hủy</option>
-                  <option value="FAILED">Thất bại</option>
-                </select>
+                {(() => {
+                  const s =
+                    STATUS_COLORS[selected.status] || STATUS_COLORS.PENDING;
+                  return (
+                    <span
+                      style={{
+                        background: s.bg,
+                        color: s.color,
+                        padding: "3px 10px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {s.label}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
 

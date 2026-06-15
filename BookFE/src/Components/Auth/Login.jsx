@@ -12,6 +12,10 @@ export default function Login({
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
+  const showError = (message) => {
+    setError(message);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -29,8 +33,7 @@ export default function Login({
         message = "Tài khoản đã bị ngừng hoạt động";
       else if (typeof data === "string") message = data;
       else if (data?.message) message = data.message;
-      setError(message);
-      setTimeout(() => setError(""), 8000);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -136,7 +139,10 @@ export default function Login({
             type="email"
             placeholder="Email"
             value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, email: e.target.value });
+              if (error) setError("");
+            }}
             required
           />
         </div>
@@ -149,7 +155,10 @@ export default function Login({
             type={showPass ? "text" : "password"}
             placeholder="Mật khẩu"
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) => {
+              setForm({ ...form, password: e.target.value });
+              if (error) setError("");
+            }}
             required
           />
           <span style={styles.eyeBtn} onClick={() => setShowPass((v) => !v)}>
@@ -173,15 +182,15 @@ export default function Login({
       </div>
 
       <div style={styles.links}>
-        <button style={styles.linkBtn} onClick={goToForgotPassword}>
+        <button type="button" style={styles.linkBtn} onClick={goToForgotPassword}>
           Quên mật khẩu?
         </button>
         <span style={{ color: "#cbd5e1" }}>·</span>
-        <button style={styles.linkBtn} onClick={goToRegister}>
+        <button type="button" style={styles.linkBtn} onClick={goToRegister}>
           Tạo tài khoản mới
         </button>
         <span style={{ color: "#cbd5e1" }}>·</span>
-        <button style={styles.linkBtn} onClick={goToRegisterAuthor}>
+        <button type="button" style={styles.linkBtn} onClick={goToRegisterAuthor}>
           Đăng ký tác giả
         </button>
       </div>

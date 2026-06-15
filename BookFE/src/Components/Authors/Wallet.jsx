@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 
 const API = "http://localhost:8080/api/author/wallet";
@@ -24,6 +24,7 @@ export default function Wallet() {
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const refreshRef = useRef(null);
 
   const loadData = async () => {
     try {
@@ -46,6 +47,26 @@ export default function Wallet() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  useEffect(() => {
+    refreshRef.current = setInterval(() => {
+      loadData();
+    }, 10000);
+
+    const handleFocus = () => loadData();
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") loadData();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisible);
+
+    return () => {
+      if (refreshRef.current) clearInterval(refreshRef.current);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
   }, []);
 
   const handleWithdraw = async (e) => {

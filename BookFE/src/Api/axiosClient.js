@@ -16,6 +16,13 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
+      const url = err.config?.url || "";
+      const isAuthRequest = url.includes("/auth/");
+
+      if (isAuthRequest) {
+        return Promise.reject(err);
+      }
+
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       sessionStorage.setItem(

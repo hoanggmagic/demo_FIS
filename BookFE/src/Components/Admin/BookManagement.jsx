@@ -19,6 +19,8 @@ const empty = {
 };
 import { categoryApi } from "../../Api/Admin/CategoryApi";
 
+const AUTHOR_LOAD_SIZE = 1000;
+
 export default function BookManagement({ user }) {
   const [books, setBooks] = useState([]);
   const [page, setPage] = useState(0);
@@ -76,7 +78,7 @@ export default function BookManagement({ user }) {
         setCategories([]);
       });
 
-    getAuthors()
+    getAuthors(0, AUTHOR_LOAD_SIZE, "")
       .then((res) => {
         const list =
           Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.content) ? res.data.content : [];
@@ -446,7 +448,7 @@ export default function BookManagement({ user }) {
                         .filter((a) => a.active !== false)
                         .map((a) => (
                           <option key={a.id} value={a.id}>
-                            {a.name} (@{a.username})
+                            {a.name || a.fullName || a.username || `Tác giả #${a.id}`}
                           </option>
                         ))}
                     </select>
