@@ -26,7 +26,6 @@ public class Order {
     @Column(name = "user_id", nullable = false)
     private int userId;
 
-    // Chi nhánh khách chọn khi đặt hàng
     @ManyToOne
     @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
@@ -40,7 +39,20 @@ public class Order {
     @Column(name = "platform_income")
     private BigDecimal platformIncome;
 
-    private String status; // PENDING, CONFIRMED, SHIPPING, COMPLETED, CANCELLED
+    private String status;
+
+    // STORE | DELIVERY
+    @Column(name = "delivery_type")
+    private String deliveryType;
+
+    @Column(name = "receiver_name")
+    private String receiverName;
+
+    @Column(name = "receiver_phone")
+    private String receiverPhone;
+
+    @Column(name = "delivery_address", columnDefinition = "TEXT")
+    private String deliveryAddress;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Timestamp createdAt;
@@ -50,7 +62,8 @@ public class Order {
 
     public Order() {}
 
-    // --- Getters and Setters ---
+    // GETTER SETTER
+
     public int getId() {
         return id;
     }
@@ -105,6 +118,38 @@ public class Order {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getDeliveryType() {
+        return deliveryType;
+    }
+
+    public void setDeliveryType(String deliveryType) {
+        this.deliveryType = deliveryType;
+    }
+
+    public String getReceiverName() {
+        return receiverName;
+    }
+
+    public void setReceiverName(String receiverName) {
+        this.receiverName = receiverName;
+    }
+
+    public String getReceiverPhone() {
+        return receiverPhone;
+    }
+
+    public void setReceiverPhone(String receiverPhone) {
+        this.receiverPhone = receiverPhone;
+    }
+
+    public String getDeliveryAddress() {
+        return deliveryAddress;
+    }
+
+    public void setDeliveryAddress(String deliveryAddress) {
+        this.deliveryAddress = deliveryAddress;
     }
 
     public Timestamp getCreatedAt() {

@@ -23,7 +23,9 @@ const collectCategoryIds = (node) => {
 
 const hasSelectedCategoryInTree = (node, selectedIds) =>
   selectedIds.has(Number(node.id)) ||
-  (node.children?.some((child) => hasSelectedCategoryInTree(child, selectedIds)) ??
+  (node.children?.some((child) =>
+    hasSelectedCategoryInTree(child, selectedIds),
+  ) ??
     false);
 
 // ── Category Sidebar ──────────────────────────────────────────────────────────
@@ -34,6 +36,7 @@ function CategorySidebar({ tree, onSelect }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const sidebarRef = useRef();
   const hideTimer = useRef();
+  const navigate = useNavigate();
 
   const categoryIdsParam = searchParams.get("categoryIds");
   const priceFilter = searchParams.get("priceFilter");
@@ -41,18 +44,14 @@ function CategorySidebar({ tree, onSelect }) {
   const selectedCategoryIds = parseCategoryIdSet(categoryIdsParam);
 
   const setFilter = (key, value) => {
-    console.log("setFilter called:", key, value);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (next.get(key) === value) {
-        next.delete(key);
-      } else {
-        next.set(key, value);
-        next.set("page", "1");
-      }
-      console.log("navigating to:", `/?${next.toString()}`);
-      return next;
-    });
+    const next = new URLSearchParams(searchParams);
+    if (next.get(key) === value) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+      next.set("page", "1");
+    }
+    navigate(`/?${next.toString()}`);
   };
 
   const clearHover = () => {
@@ -149,7 +148,10 @@ function CategorySidebar({ tree, onSelect }) {
           </div>
 
           {tree.map((cat) => {
-            const isActive = hasSelectedCategoryInTree(cat, selectedCategoryIds);
+            const isActive = hasSelectedCategoryInTree(
+              cat,
+              selectedCategoryIds,
+            );
             return (
               <div
                 key={cat.id}
@@ -254,7 +256,7 @@ function CategorySidebar({ tree, onSelect }) {
                         }}
                         onMouseLeave={clearHover}
                       >
-                    <div
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelect(child);
@@ -302,12 +304,13 @@ function CategorySidebar({ tree, onSelect }) {
                                 : "#f0f7ff")
                           }
                           onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = hasSelectedCategoryInTree(
-                              child,
-                              selectedCategoryIds,
-                            )
-                              ? "#eff6ff"
-                              : "transparent")
+                            (e.currentTarget.style.background =
+                              hasSelectedCategoryInTree(
+                                child,
+                                selectedCategoryIds,
+                              )
+                                ? "#eff6ff"
+                                : "transparent")
                           }
                         >
                           <span
@@ -535,7 +538,7 @@ function CategorySidebar({ tree, onSelect }) {
           {(categoryIdsParam || priceFilter || specialFilter) && (
             <div style={{ padding: "12px 14px" }}>
               <button
-                onClick={() => setSearchParams({})}
+                onClick={() => navigate("/")}
                 style={{
                   width: "100%",
                   padding: "7px",
@@ -1065,7 +1068,7 @@ function Footer({ categoryTree }) {
               {categoryTree.map((cat) => (
                 <li key={cat.id} style={{ marginBottom: 6 }}>
                   <button
-                  onClick={() => {
+                    onClick={() => {
                       const ids = collectCategoryIds(cat);
                       navigate(
                         `/?categoryIds=${ids.join(",")}&categoryName=${encodeURIComponent(cat.name)}`,

@@ -84,6 +84,7 @@ public class BookService {
         dto.setCreatedAt(book.getCreatedAt());
         dto.setUpdatedAt(book.getUpdatedAt());
 
+
         // authorName từ userRepo
         String authorName =
                 userRepo.findById(book.getAuthorId()).map(User::getFullName).orElse(null);
@@ -117,6 +118,8 @@ public class BookService {
                 dto.setPrice(original);
                 dto.setDiscountPercent(0.0);
             }
+            dto.setSaleStart(bp.getSaleStart());
+            dto.setSaleEnd(bp.getSaleEnd());
         } else {
             dto.setOriginalPrice(0.0);
             dto.setDiscountedPrice(0.0);
@@ -178,6 +181,8 @@ public class BookService {
                 dto.setPrice(original);
                 dto.setDiscountPercent(0.0);
             }
+            dto.setSaleStart(bp.getSaleStart());
+            dto.setSaleEnd(bp.getSaleEnd());
         } else {
             dto.setOriginalPrice(0.0);
             dto.setDiscountedPrice(0.0);

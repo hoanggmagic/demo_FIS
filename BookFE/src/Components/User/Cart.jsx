@@ -6,7 +6,6 @@ import {
   removeCartItem,
   clearCart,
 } from "../../Api/User/CartApi";
-import { createOrder } from "../../Api/User/OrderApi";
 
 export default function Cart({ reload }) {
   const [items, setItems] = useState([]);
@@ -84,8 +83,6 @@ export default function Cart({ reload }) {
         goToLogin();
         return;
       }
-      const user = JSON.parse(userStr);
-
       const branchIds = [...new Set(selectedItems.map((i) => i.branchId))];
       if (branchIds.length > 1) {
         alert(
@@ -95,37 +92,20 @@ export default function Cart({ reload }) {
       }
 
       const branchId = branchIds[0] || 1;
+      const branchName =
+        selectedItems.find((i) => i.branchId === branchId)?.branchName || "";
 
-      const orderPayload = {
-        userId: user.id,
-        branchId,
-        items: selectedItems.map((i) => ({
-          bookId: Number(i.bookId),
-          qty: Number(i.quantity || 1),
-        })),
-      };
-
-      const orderRes = await createOrder(orderPayload);
-      const orderId = orderRes.data.orderId;
-
-      navigate("/payment", {
+      navigate("/checkout", {
         state: {
-          orderId,
-          amount: total,
-          selectedCartItemIds: selectedItems.map((i) => i.cartItemId),
+          selectedItems,
+          total,
+          branchId,
+          branchName,
         },
       });
     } catch (err) {
-      console.error("Lỗi khi đặt hàng:", err);
-      const data = err.response?.data;
-      if (data?.alternatives?.length > 0) {
-        const list = data.alternatives
-          .map((a) => `• ${a.branchName} (còn ${a.quantity} cuốn)`)
-          .join("\n");
-        alert(`❌ ${data.error}\n\nChi nhánh còn hàng:\n${list}`);
-      } else {
-        alert("❌ " + (data?.error || data || "Đặt hàng thất bại"));
-      }
+      console.error("Lỗi khi chuẩn bị thanh toán:", err);
+      alert("❌ Không thể chuyển sang bước thanh toán. Vui lòng thử lại.");
     }
   };
 
@@ -193,55 +173,147 @@ export default function Cart({ reload }) {
     acc[key].items.push(item);
     return acc;
   }, {});
+
+  const pageBg = {
+    minHeight: "100vh",
+    background:
+      "radial-gradient(circle at top left, rgba(37,99,235,0.10), transparent 34%), radial-gradient(circle at top right, rgba(14,165,233,0.08), transparent 28%), linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)",
+    padding: "28px 16px 40px",
+    fontFamily: "Segoe UI, sans-serif",
+  };
+
+  const card = {
+    background: "rgba(255,255,255,0.92)",
+    border: "1px solid rgba(226,232,240,0.9)",
+    borderRadius: 24,
+    boxShadow: "0 18px 50px rgba(15,23,42,0.08)",
+    backdropFilter: "blur(8px)",
+  };
+
+  const primaryButton = {
+    width: "100%",
+    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+    color: "#fff",
+    border: "none",
+    padding: "14px 16px",
+    borderRadius: 14,
+    fontSize: 15,
+    fontWeight: 800,
+    cursor: "pointer",
+    boxShadow: "0 12px 30px rgba(37,99,235,0.24)",
+  };
+
   return (
     <div
       style={{
-        maxWidth: 1200,
-        margin: "0 auto",
-        padding: "20px 15px",
-        fontFamily: "Segoe UI, sans-serif",
-        backgroundColor: "#f8fafc",
+        ...pageBg,
       }}
     >
-      <h3
+      <div
         style={{
-          fontWeight: 700,
-          marginBottom: 24,
-          color: "#1e293b",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
+          maxWidth: 1200,
+          margin: "0 auto",
         }}
       >
-        🛒 Giỏ hàng{" "}
-        <span style={{ fontSize: 14, fontWeight: 400, color: "#64748b" }}>
-          ({items.length} sản phẩm)
-        </span>
-      </h3>
+        <div
+          style={{
+            ...card,
+            padding: "24px 24px 20px",
+            marginBottom: 20,
+            background:
+              "linear-gradient(135deg, rgba(37,99,235,0.96), rgba(29,78,216,0.92))",
+            color: "#fff",
+            border: "none",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.12)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 0.3,
+                  marginBottom: 12,
+                }}
+              >
+                🛒 Giỏ hàng của bạn
+              </div>
+              <h3 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
+                Sẵn sàng chốt đơn
+              </h3>
+              <p style={{ margin: "10px 0 0", color: "rgba(255,255,255,0.84)" }}>
+                Kiểm tra số lượng, chọn chi nhánh và chuyển sang bước nhập địa
+                chỉ trước khi thanh toán.
+              </p>
+            </div>
+
+            <div
+              style={{
+                minWidth: 180,
+                padding: "14px 16px",
+                borderRadius: 16,
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.16)",
+              }}
+            >
+              <div style={{ fontSize: 12, opacity: 0.8 }}>Số sản phẩm</div>
+              <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+                {items.length}
+              </div>
+            </div>
+          </div>
+        </div>
 
       {items.length === 0 ? (
         <div
           style={{
+            ...card,
             textAlign: "center",
-            padding: "60px 20px",
-            background: "#fff",
-            borderRadius: 16,
-            boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+            padding: "64px 24px",
           }}
         >
-          <p style={{ color: "#64748b", fontSize: 16, marginBottom: 16 }}>
-            Giỏ hàng của bạn đang trống.
+          <div
+            style={{
+              width: 84,
+              height: 84,
+              borderRadius: "50%",
+              margin: "0 auto 18px",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 34,
+              color: "#2563eb",
+              background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
+            }}
+          >
+            🛒
+          </div>
+          <h4 style={{ margin: "0 0 8px", fontSize: 22, color: "#0f172a" }}>
+            Giỏ hàng đang trống
+          </h4>
+          <p style={{ color: "#64748b", fontSize: 15, margin: "0 0 20px" }}>
+            Thêm vài cuốn sách yêu thích vào giỏ rồi quay lại thanh toán nhé.
           </p>
           <button
             onClick={() => navigate("/")}
             style={{
-              background: "#3b82f6",
-              color: "#fff",
+              ...primaryButton,
+              width: "auto",
+              minWidth: 180,
               border: "none",
-              padding: "10px 20px",
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: "pointer",
             }}
           >
             Tiếp tục mua sắm
@@ -267,11 +339,7 @@ export default function Cart({ reload }) {
                 <div
                   key={branchId}
                   style={{
-                    background: "#fff",
-                    borderRadius: 16,
-                    boxShadow:
-                      "0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.006)",
-                    border: "1px solid #e2e8f0",
+                    ...card,
                     padding: 20,
                     marginBottom: 20,
                   }}
@@ -299,7 +367,6 @@ export default function Cart({ reload }) {
                         accentColor: "#2563eb",
                       }}
                     />
-                    {/* 👇 Thay span này */}
                     <span
                       style={{
                         display: "flex",
@@ -308,9 +375,9 @@ export default function Cart({ reload }) {
                         fontWeight: 700,
                         fontSize: 14,
                         color: "#1e3a8a",
-                        background: "#eff6ff",
+                        background: "linear-gradient(135deg, #eff6ff, #dbeafe)",
                         padding: "6px 12px",
-                        borderRadius: 8,
+                        borderRadius: 999,
                       }}
                     >
                       🏪 {group.branchName}
@@ -368,8 +435,7 @@ export default function Cart({ reload }) {
                             }}
                           />
 
-                          {/* Thông tin tên sách + Giá bán */}
-                          {/* ✅ Thay toàn bộ div đó bằng: */}
+                              {/* Thông tin tên sách + Giá bán */}
                           <div>
                             <h5
                               style={{
@@ -558,22 +624,24 @@ export default function Cart({ reload }) {
             })}
 
             {/* Nút dọn dẹp giỏ ở dưới cùng cột trái */}
-            <button
-              onClick={handleClear}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#64748b",
-                cursor: "pointer",
-                fontSize: 13,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "8px 4px",
-              }}
-            >
-              🗑️ Xóa toàn bộ giỏ hàng
-            </button>
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={handleClear}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "8px 4px",
+                }}
+              >
+                🗑️ Xóa toàn bộ giỏ hàng
+              </button>
+            </div>
           </div>
 
           {/* CỘT PHẢI: THÔNG TIN THANH TOÁN (STIKY SUMMARY BINDING) */}
@@ -581,11 +649,8 @@ export default function Cart({ reload }) {
             style={{
               position: "sticky",
               top: 20,
-              background: "#fff",
-              borderRadius: 16,
-              border: "1px solid #e2e8f0",
+              ...card,
               padding: 24,
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)",
             }}
           >
             <h4
@@ -629,7 +694,7 @@ export default function Cart({ reload }) {
               <span style={{ fontSize: 15, fontWeight: 600, color: "#1e293b" }}>
                 Tổng tiền thanh toán:
               </span>
-              <span style={{ fontSize: 20, fontWeight: 800, color: "#ef4444" }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#dc2626" }}>
                 {Number(total).toLocaleString()} VND
               </span>
             </div>
@@ -637,19 +702,7 @@ export default function Cart({ reload }) {
             <button
               type="button"
               onClick={handleCheckout}
-              style={{
-                width: "100%",
-                background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-                color: "#fff",
-                border: "none",
-                padding: "14px",
-                borderRadius: 12,
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(37,99,235,0.2)",
-                transition: "opacity 0.2s",
-              }}
+              style={primaryButton}
               onMouseEnter={(e) => (e.target.style.opacity = 0.9)}
               onMouseLeave={(e) => (e.target.style.opacity = 1)}
             >
@@ -672,5 +725,6 @@ export default function Cart({ reload }) {
         </div>
       )}
     </div>
+  </div>
   );
 }

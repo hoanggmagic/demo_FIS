@@ -123,6 +123,19 @@ export default function SaleManagement() {
       (b.authorName || "").toLowerCase().includes(search.toLowerCase()),
   );
 
+  const getSaleStatus = (b) => {
+    const now = new Date();
+    const start = b.saleStart ? new Date(b.saleStart) : null;
+    const end = b.saleEnd ? new Date(b.saleEnd) : null;
+    const hasPrice =
+      b.discountedPrice > 0 && b.discountedPrice < b.originalPrice;
+
+    if (!hasPrice || !start || !end) return "none";
+    if (now < start) return "upcoming";
+    if (now >= start && now <= end) return "active";
+    return "expired";
+  };
+
   return (
     <div>
       {/* Toast */}
@@ -376,6 +389,7 @@ export default function SaleManagement() {
                 ) : (
                   filtered.map((b) => {
                     const onSale = isOnSale(b);
+                    const saleStatus = getSaleStatus(b);
                     const pct = onSale
                       ? Math.round(
                           (1 - b.discountedPrice / b.originalPrice) * 100,
@@ -410,8 +424,12 @@ export default function SaleManagement() {
                           {Number(b.originalPrice || 0).toLocaleString()} VND
                         </td>
                         <td className="text-nowrap">
-                          {onSale ? (
+                          {saleStatus === "active" ? (
                             <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                              {Number(b.discountedPrice).toLocaleString()} VND
+                            </span>
+                          ) : saleStatus === "upcoming" ? (
+                            <span style={{ color: "#f59e0b", fontWeight: 700 }}>
                               {Number(b.discountedPrice).toLocaleString()} VND
                             </span>
                           ) : (
@@ -419,8 +437,12 @@ export default function SaleManagement() {
                           )}
                         </td>
                         <td>
-                          {onSale ? (
+                          {saleStatus === "active" ? (
                             <span className="badge bg-danger">-{pct}%</span>
+                          ) : saleStatus === "upcoming" ? (
+                            <span className="badge bg-warning text-dark">
+                              -{pct}%
+                            </span>
                           ) : (
                             <span style={{ color: "#94a3b8", fontSize: 12 }}>
                               —

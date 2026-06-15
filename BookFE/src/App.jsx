@@ -30,6 +30,7 @@ import AuthorsPage from "./Page/Authors/AuthorsPage";
 import UserBookList from "./Components/User/BookList";
 import BookPublicDetail from "./Components/User/BookPublicDetail";
 import Cart from "./Components/User/Cart";
+import Checkout from "./Components/User/CheckOut";
 import Profile from "./Components/User/UserProfile";
 import Payment from "./Components/User/Payment";
 import ForgotPassword from "./Components/Auth/ForgotPassword";
@@ -309,6 +310,15 @@ function RoleRoutes({ user, onLogout, onShowLogin }) {
           element={
             <div className="container py-4">
               {user ? <Cart /> : <LoginRequired onShowLogin={onShowLogin} />}
+            </div>
+          }
+        />
+
+        <Route
+          path="/checkout"
+          element={
+            <div className="container py-4">
+              {user ? <Checkout /> : <LoginRequired onShowLogin={onShowLogin} />}
             </div>
           }
         />

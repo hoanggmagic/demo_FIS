@@ -34,6 +34,10 @@ public class BookDTO {
 
     private double price;
 
+    private java.time.LocalDateTime saleStart;
+    private java.time.LocalDateTime saleEnd;
+
+
     public BookDTO() {}
 
     private long soldQuantity;
@@ -180,6 +184,22 @@ public class BookDTO {
 
     public void setSoldQuantity(long soldQuantity) {
         this.soldQuantity = soldQuantity;
+    }
+
+    public java.time.LocalDateTime getSaleStart() {
+        return saleStart;
+    }
+
+    public void setSaleStart(java.time.LocalDateTime saleStart) {
+        this.saleStart = saleStart;
+    }
+
+    public java.time.LocalDateTime getSaleEnd() {
+        return saleEnd;
+    }
+
+    public void setSaleEnd(java.time.LocalDateTime saleEnd) {
+        this.saleEnd = saleEnd;
     }
 
 }

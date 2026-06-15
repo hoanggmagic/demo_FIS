@@ -112,8 +112,11 @@ public class OrderController {
             int orderId;
             try (PreparedStatement orderStmt = conn.prepareStatement(
                     """
-                            INSERT INTO orders (user_id, branch_id, total_price, author_income, platform_income, status)
-                            VALUES (?, ?, ?, ?, ?, 'PENDING')
+                            INSERT INTO orders (
+                                user_id, branch_id, total_price, author_income, platform_income,
+                                status, delivery_type, receiver_name, receiver_phone, delivery_address
+                            )
+                            VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)
                             RETURNING id
                             """)) {
                 orderStmt.setInt(1, userId);
@@ -121,6 +124,10 @@ public class OrderController {
                 orderStmt.setDouble(3, totalPrice);
                 orderStmt.setDouble(4, totalPrice * 0.68);
                 orderStmt.setDouble(5, totalPrice * 0.32);
+                orderStmt.setString(6, req.getDeliveryType());
+                orderStmt.setString(7, req.getReceiverName());
+                orderStmt.setString(8, req.getReceiverPhone());
+                orderStmt.setString(9, req.getDeliveryAddress());
                 try (ResultSet orderRs = orderStmt.executeQuery()) {
                     orderRs.next();
                     orderId = orderRs.getInt("id");
