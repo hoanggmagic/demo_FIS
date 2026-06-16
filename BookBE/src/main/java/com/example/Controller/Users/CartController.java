@@ -96,6 +96,24 @@ public class CartController {
         }
     }
 
+    // đổi chi nhánh trong cart
+    @PutMapping("/{cartItemId}/branch")
+    public ResponseEntity<String> updateBranch(@PathVariable int cartItemId,
+            @RequestBody Map<String, Integer> body, HttpServletRequest request) {
+        try (Connection conn = dataSource.getConnection()) {
+            AuthContext ctx = RequestAuth.require(request);
+            Integer newBranchId = body.get("branchId");
+            if (newBranchId == null) {
+                return ResponseEntity.badRequest().body("Thiếu trường branchId");
+            }
+            CartDAO dao = new CartDAO(conn);
+            dao.updateBranch(cartItemId, ctx.getUserId(), newBranchId);
+            return ResponseEntity.ok("Đổi chi nhánh thành công!");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{cartItemId}")
     public ResponseEntity<String> removeItem(@PathVariable int cartItemId,
             HttpServletRequest request) {

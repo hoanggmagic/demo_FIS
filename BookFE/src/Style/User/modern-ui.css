@@ -1,0 +1,198 @@
+/* =========================
+   GLOBAL
+========================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #f8fafc;
+  overflow-x: hidden;
+}
+
+/* =========================
+   GLASS EFFECT
+========================= */
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.modern-navbar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.hover-link {
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.hover-link::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 10px;
+  width: 0%;
+  height: 2px;
+  background: #2563eb;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.hover-link:hover::after {
+  width: calc(100% - 20px);
+}
+
+/* =========================
+   DROPDOWN
+========================= */
+
+.dropdown-modern {
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow:
+    0 10px 35px rgba(15, 23, 42, 0.08),
+    0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar-item {
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background: #f8fafc;
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+.btn-modern {
+  border: none;
+  border-radius: 14px;
+  padding: 10px 18px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+}
+
+/* =========================
+   CARD
+========================= */
+
+.modern-card {
+  background: #fff;
+  border-radius: 22px;
+  border: 1px solid #edf2f7;
+  box-shadow:
+    0 4px 18px rgba(15, 23, 42, 0.04),
+    0 1px 4px rgba(15, 23, 42, 0.03);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.modern-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 14px 40px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================
+   BADGE ANIMATION
+========================= */
+
+.pulse-badge {
+  animation: pulseBadge 1.8s infinite;
+}
+
+@keyframes pulseBadge {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+.footer-link {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #fff;
+  transform: translateX(2px);
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 991px) {
+  .navbar-collapse {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(12px);
+  }
+}
+
+@media (max-width: 768px) {
+  .dropdown-modern {
+    min-width: 100% !important;
+  }
+}

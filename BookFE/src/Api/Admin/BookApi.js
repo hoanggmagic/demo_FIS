@@ -15,4 +15,4 @@ export const createBook = (formData) => api.post(API, formData);
 export const updateBook = (id, formData) => api.put(`${API}/${id}`, formData);
 // KHÔNG set Content-Type — axios tự set multipart + boundary
 
-export const deleteBook = (id) => api.delete(`${API}/${id}`);
+export const toggleBookStatus = (id) => api.put(`${API}/${id}/toggle-status`);

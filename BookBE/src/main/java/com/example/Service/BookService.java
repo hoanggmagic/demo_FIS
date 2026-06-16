@@ -571,4 +571,15 @@ public class BookService {
         return bookRepo.searchByKeywordAndCategory(keyword, null, pageable).getContent();
     }
 
+
+    @Transactional
+    public String toggleStatus(int id, AuthContext ctx) {
+        Book existing = bookRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy sách"));
+        assertCanModifyBook(existing, ctx);
+        String newStatus = "ACTIVE".equals(existing.getStatus()) ? "INACTIVE" : "ACTIVE";
+        existing.setStatus(newStatus);
+        bookRepo.save(existing);
+        return newStatus;
+    }
 }

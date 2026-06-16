@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Routes,
   Route,
@@ -31,6 +31,7 @@ import Checkout from "./Components/User/CheckOut";
 import Profile from "./Components/User/UserProfile";
 import Payment from "./Components/User/Payment";
 import useSeo from "./hooks/useSeo";
+import { initAllEffects } from "./utils/scrollEffects";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function loadSession() {
@@ -297,6 +298,11 @@ export default function App() {
   const location = useLocation();
 
   useSeo(location.pathname);
+
+  // Initialize all scroll and interaction effects
+  useEffect(() => {
+    initAllEffects();
+  }, []);
 
   const handleLogin = (u) => {
     setUser(u);

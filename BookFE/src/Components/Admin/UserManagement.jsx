@@ -161,7 +161,7 @@ export default function UserManagement() {
           <input
             type="text"
             className="form-control"
-            placeholder="Tìm theo username, email, họ tên..."
+            placeholder="Tìm người dùng"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}

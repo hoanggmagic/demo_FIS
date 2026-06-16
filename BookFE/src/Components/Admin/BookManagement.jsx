@@ -3,7 +3,7 @@ import {
   getBooks,
   createBook,
   updateBook,
-  deleteBook,
+  toggleBookStatus,
 } from "../../Api/Admin/BookApi";
 import { getAuthors } from "../../Api/Admin/authorApi";
 
@@ -18,6 +18,7 @@ const empty = {
   status: "ACTIVE",
 };
 import { categoryApi } from "../../Api/Admin/CategoryApi";
+import Select from "react-select";
 
 const AUTHOR_LOAD_SIZE = 1000;
 
@@ -66,11 +67,13 @@ export default function BookManagement({ user }) {
 
   useEffect(() => {
     categoryApi
-      .getAll()
+      .getAll(0, 1000)
       .then((res) => {
-        console.log("CATEGORY RESPONSE:", res);
-        const list =
-          Array.isArray(res) ? res : Array.isArray(res?.content) ? res.content : [];
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.content)
+            ? res.content
+            : [];
         setCategories(list);
       })
       .catch((err) => {
@@ -80,8 +83,11 @@ export default function BookManagement({ user }) {
 
     getAuthors(0, AUTHOR_LOAD_SIZE, "")
       .then((res) => {
-        const list =
-          Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.content) ? res.data.content : [];
+        const list = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.content)
+            ? res.data.content
+            : [];
         setAuthors(list);
       })
       .catch(() => setAuthors([]));
@@ -99,7 +105,7 @@ export default function BookManagement({ user }) {
         categoryId: String(editing.categoryId || ""),
         status: editing.status || "ACTIVE",
       });
-      setExistingImages(editing.images || []); // ← load ảnh cũ
+      setExistingImages(editing.images || []);
       setShowForm(true);
       setImages([]); // reset ảnh mới
     } else {
@@ -179,14 +185,17 @@ export default function BookManagement({ user }) {
     }
   };
 
-  const handleDelete = async (id, title) => {
-    if (!window.confirm(`Xóa sách "${title}"?`)) return;
+  const handleToggle = async (id, title, currentStatus) => {
+    const action =
+      currentStatus === "ACTIVE" ? "ngừng phát hành" : "phát hành lại";
+    if (!window.confirm(`Bạn muốn ${action} sách "${title}"?`)) return;
     try {
-      await deleteBook(id);
-      showToast("success", "Đã xóa sách!");
+      await toggleBookStatus(id);
+      showToast("success", "Đã đổi trạng thái sách!");
       load();
-    } catch {
-      showToast("danger", "Xóa thất bại");
+    } catch (err) {
+      console.error("TOGGLE ERROR:", err.response?.data || err.message);
+      showToast("danger", err.response?.data || "Thao tác thất bại");
     }
   };
 
@@ -288,13 +297,11 @@ export default function BookManagement({ user }) {
                 <div className="col-md-6">
                   <label className="form-label">Danh mục</label>
                   <select
-                    name="categoryId"
-                    className="form-select"
-                    value={book.categoryId}
-                    onChange={handleChange}
+                    style={{
+                      maxHeight: 100,
+                      overflowY: "auto",
+                    }}
                   >
-                    <option value="">-- Chọn danh mục --</option>
-
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -448,7 +455,10 @@ export default function BookManagement({ user }) {
                         .filter((a) => a.active !== false)
                         .map((a) => (
                           <option key={a.id} value={a.id}>
-                            {a.name || a.fullName || a.username || `Tác giả #${a.id}`}
+                            {a.name ||
+                              a.fullName ||
+                              a.username ||
+                              `Tác giả #${a.id}`}
                           </option>
                         ))}
                     </select>
@@ -581,10 +591,21 @@ export default function BookManagement({ user }) {
                             <i className="bi bi-pencil" /> Sửa
                           </button>
                           <button
-                            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                            onClick={() => handleDelete(b.id, b.title)}
+                            className={`btn btn-sm d-flex align-items-center gap-1 ${
+                              b.status === "ACTIVE"
+                                ? "btn-outline-warning"
+                                : "btn-outline-success"
+                            }`}
+                            onClick={() =>
+                              handleToggle(b.id, b.title, b.status)
+                            }
                           >
-                            <i className="bi bi-trash" /> Xóa
+                            <i
+                              className={`bi ${b.status === "ACTIVE" ? "bi-toggle-on" : "bi-toggle-off"}`}
+                            />
+                            {b.status === "ACTIVE"
+                              ? "Ngừng phát hành"
+                              : "Phát hành"}
                           </button>
                         </div>
                       </td>

@@ -1,7 +1,9 @@
 package com.example.Controller.Admin;
 
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,9 +22,6 @@ import com.example.Util.AuthContext;
 import com.example.Util.RequestAuth;
 import com.example.dto.BookDTO;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 @RestController
 @RequestMapping("/api/admin/books")
@@ -34,25 +33,21 @@ public class BookController {
     private BookService bookService;
 
     @GetMapping
-public ResponseEntity<Page<BookDTO>> getAllBooks(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "15") int size,
-        HttpServletRequest request) {
+    public ResponseEntity<Page<BookDTO>> getAllBooks(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size, HttpServletRequest request) {
 
-    try {
-        AuthContext ctx = RequestAuth.require(request);
+        try {
+            AuthContext ctx = RequestAuth.require(request);
 
-        Pageable pageable = PageRequest.of(page, size);
+            Pageable pageable = PageRequest.of(page, size);
 
-        return ResponseEntity.ok(
-                bookService.getBooksForContext(ctx, pageable)
-        );
+            return ResponseEntity.ok(bookService.getBooksForContext(ctx, pageable));
 
-    } catch (Exception e) {
-        e.printStackTrace();
-        return ResponseEntity.status(500).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
     }
-}
 
     // GET: Xem chi tiết sách qua ID
     @GetMapping("/{id}")
@@ -171,6 +166,21 @@ public ResponseEntity<Page<BookDTO>> getAllBooks(
 
             bookService.deleteBook(id, ctx);
             return ResponseEntity.ok("Xóa sách thành công!");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Lỗi: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/toggle-status")
+    public ResponseEntity<String> toggleBookStatus(@PathVariable int id,
+            HttpServletRequest request) {
+        try {
+            AuthContext ctx = RequestAuth.require(request);
+            RequestAuth.requireAdminOrAuthor(ctx);
+            String newStatus = bookService.toggleStatus(id, ctx);
+            return ResponseEntity.ok("Đã chuyển trạng thái sách sang " + newStatus);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Lỗi: " + e.getMessage());
         } catch (Exception e) {

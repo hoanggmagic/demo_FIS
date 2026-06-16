@@ -19,3 +19,6 @@ export const removeCartItem = (cartItemId) =>
   axios.delete(`${BASE}/${cartItemId}`, getHeaders());
 
 export const clearCart = () => axios.delete(BASE, getHeaders());
+
+export const updateCartBranch = (cartItemId, branchId) =>
+  axios.put(`${BASE}/${cartItemId}/branch`, { branchId }, getHeaders());

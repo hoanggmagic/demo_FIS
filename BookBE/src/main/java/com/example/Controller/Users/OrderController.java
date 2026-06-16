@@ -40,6 +40,20 @@ public class OrderController {
             int finalBranchId =
                     (req.getBranchId() != null && req.getBranchId() > 0) ? req.getBranchId() : 1;
 
+            // 0. Kiểm tra sách INACTIVE trong đơn hàng
+            for (OrderRequest.Item item : req.getItems()) {
+                try (PreparedStatement ps =
+                        conn.prepareStatement("SELECT status, title FROM books WHERE id = ?")) {
+                    ps.setInt(1, item.getBookId());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next() && !"ACTIVE".equals(rs.getString("status"))) {
+                            return ResponseEntity.status(400).body("Sách \"" + rs.getString("title")
+                                    + "\" đã ngừng phát hành, vui lòng xóa khỏi giỏ hàng trước khi thanh toán");
+                        }
+                    }
+                }
+            }
+
             // 1. Kiểm tra tồn kho
             for (OrderRequest.Item item : req.getItems()) {
                 try (PreparedStatement ps = conn.prepareStatement(
@@ -110,15 +124,14 @@ public class OrderController {
 
             // 3. Insert order
             int orderId;
-            try (PreparedStatement orderStmt = conn.prepareStatement(
-                    """
-                            INSERT INTO orders (
-                                user_id, branch_id, total_price, author_income, platform_income,
-                                status, delivery_type, receiver_name, receiver_phone, delivery_address
-                            )
-                            VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)
-                            RETURNING id
-                            """)) {
+            try (PreparedStatement orderStmt = conn.prepareStatement("""
+                    INSERT INTO orders (
+                        user_id, branch_id, total_price, author_income, platform_income,
+                        status, delivery_type, receiver_name, receiver_phone, delivery_address
+                    )
+                    VALUES (?, ?, ?, ?, ?, 'PENDING', ?, ?, ?, ?)
+                    RETURNING id
+                    """)) {
                 orderStmt.setInt(1, userId);
                 orderStmt.setInt(2, finalBranchId);
                 orderStmt.setDouble(3, totalPrice);

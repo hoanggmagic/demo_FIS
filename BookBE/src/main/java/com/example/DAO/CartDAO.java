@@ -25,6 +25,7 @@ public class CartDAO {
                        c.book_id,
                        b.title,
                        b.author_id,
+                       b.status AS book_status,
                        c.quantity,
                        p.original_price,
                        COALESCE(NULLIF(p.sale_price, 0), p.original_price) AS final_price,
@@ -56,6 +57,7 @@ public class CartDAO {
                     item.put("branchId", rs.getInt("branch_id"));
                     item.put("branchName", rs.getString("branch_name"));
                     item.put("branchStatus", rs.getString("branch_status"));
+                    item.put("bookStatus", rs.getString("book_status"));
                     cart.add(item);
                 }
             }
@@ -120,4 +122,94 @@ public class CartDAO {
             stmt.executeUpdate();
         }
     }
+
+    public boolean hasInactiveBooks(int userId) throws SQLException {
+        String sql = """
+                SELECT COUNT(*) AS cnt
+                FROM cart c
+                JOIN books b ON c.book_id = b.id
+                WHERE c.user_id = ? AND b.status != 'ACTIVE'
+                """;
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next())
+                    return rs.getInt("cnt") > 0;
+            }
+        }
+        return false;
+    }
+
+    public void updateBranch(int cartItemId, int userId, int newBranchId) throws SQLException {
+        // Lấy thông tin item hiện tại
+        int bookId, quantity;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT book_id, quantity FROM cart WHERE id = ? AND user_id = ?")) {
+            ps.setInt(1, cartItemId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next())
+                    throw new SQLException("Không tìm thấy sản phẩm trong giỏ");
+                bookId = rs.getInt("book_id");
+                quantity = rs.getInt("quantity");
+            }
+        }
+
+        // Tồn kho ở chi nhánh mới
+        int stock = 0;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT quantity FROM inventories WHERE book_id = ? AND branch_id = ?")) {
+            ps.setInt(1, bookId);
+            ps.setInt(2, newBranchId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next())
+                    stock = rs.getInt("quantity");
+            }
+        }
+        int finalQty = Math.min(quantity, Math.max(stock, 0));
+
+        // Kiểm tra đã có dòng cùng book_id + branch_id mới chưa
+        Integer existingId = null;
+        int existingQty = 0;
+        try (PreparedStatement ps = conn.prepareStatement(
+                "SELECT id, quantity FROM cart WHERE user_id = ? AND book_id = ? AND branch_id = ? AND id != ?")) {
+            ps.setInt(1, userId);
+            ps.setInt(2, bookId);
+            ps.setInt(3, newBranchId);
+            ps.setInt(4, cartItemId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    existingId = rs.getInt("id");
+                    existingQty = rs.getInt("quantity");
+                }
+            }
+        }
+
+        if (existingId != null) {
+            // Gộp vào dòng đã tồn tại, giới hạn theo tồn kho, xóa dòng cũ
+            int mergedQty = Math.min(existingQty + finalQty, Math.max(stock, 0));
+            try (PreparedStatement update =
+                    conn.prepareStatement("UPDATE cart SET quantity = ? WHERE id = ?")) {
+                update.setInt(1, mergedQty);
+                update.setInt(2, existingId);
+                update.executeUpdate();
+            }
+            try (PreparedStatement delete =
+                    conn.prepareStatement("DELETE FROM cart WHERE id = ?")) {
+                delete.setInt(1, cartItemId);
+                delete.executeUpdate();
+            }
+        } else {
+            // Không trùng, đổi branch + cập nhật quantity cho item hiện tại
+            try (PreparedStatement update = conn.prepareStatement(
+                    "UPDATE cart SET branch_id = ?, quantity = ? WHERE id = ? AND user_id = ?")) {
+                update.setInt(1, newBranchId);
+                update.setInt(2, Math.max(finalQty, 1));
+                update.setInt(3, cartItemId);
+                update.setInt(4, userId);
+                update.executeUpdate();
+            }
+        }
+    }
+
 }

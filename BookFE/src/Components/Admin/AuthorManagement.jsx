@@ -172,7 +172,7 @@ export default function AuthorManagement({ user }) {
           <input
             type="text"
             className="form-control"
-            placeholder="Tìm theo tên, username, email..."
+            placeholder="Tìm tác giả"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}

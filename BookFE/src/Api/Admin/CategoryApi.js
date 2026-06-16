@@ -3,7 +3,8 @@ import axiosClient from "../axiosClient";
 const BASE = "/categories";
 
 export const categoryApi = {
-  getAll: () => axiosClient.get(BASE).then((r) => r.data),
+  getAll: (page = 0, size = 1000) =>
+    axiosClient.get(`${BASE}?page=${page}&size=${size}`).then((r) => r.data),
 
   getTree: () => axiosClient.get(`${BASE}/tree`).then((r) => r.data),
 
